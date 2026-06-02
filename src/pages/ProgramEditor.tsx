@@ -21,7 +21,7 @@ const CATEGORIES: ProgramCategory[] = [
   'Bodyweight',
 ]
 const LEVELS: Difficulty[] = ['Beginner', 'Intermediate', 'Advanced']
-const ACCENTS = ['#355e3b', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ec4899']
+const ACCENTS = ['#e9b949', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ec4899']
 
 function blankExercise(): PlannedExercise {
   const ex = EXERCISES[0]

@@ -344,7 +344,7 @@ export function ProgramEditor() {
                   <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
                     <div className="flex items-center gap-2">
                       <input
-                        value={exerciseLabel(pe)}
+                        value={pe.name ?? ex?.name ?? ''}
                         onChange={(e) => setExerciseName(dayIdx, exIdx, e.target.value, pe)}
                         list={datalistId}
                         placeholder="Type an exercise name"

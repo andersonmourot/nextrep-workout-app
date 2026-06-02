@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import {
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Minus,
-  Plus,
-  SkipForward,
-  Timer,
-  X,
-} from 'lucide-react'
+import { Check, Info, Minus, Plus, SkipForward, Timer, X } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
@@ -28,7 +18,6 @@ export function Workout() {
   const day = program?.days.find((d) => d.id === dayId)
   const { unit, addLog, startProgram, activeProgramId } = useStore()
 
-  const [index, setIndex] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [rest, setRest] = useState<{ remaining: number; total: number } | null>(null)
   const [finished, setFinished] = useState<WorkoutLog | null>(null)
@@ -84,10 +73,6 @@ export function Workout() {
     )
   }
 
-  const pe = day.exercises[index]
-  const ex = getExercise(pe.exerciseId)
-  const exerciseSets = sets[index] ?? []
-
   function updateSet(exIdx: number, setIdx: number, patch: Partial<SetLog>) {
     setSets((prev) =>
       prev.map((arr, i) =>
@@ -96,12 +81,14 @@ export function Workout() {
     )
   }
 
-  function toggleComplete(setIdx: number) {
-    const current = exerciseSets[setIdx]
+  function toggleComplete(exIdx: number, setIdx: number) {
+    const current = sets[exIdx]?.[setIdx]
+    if (!current) return
     const willComplete = !current.completed
-    updateSet(index, setIdx, { completed: willComplete })
-    if (willComplete && pe.restSec > 0) {
-      setRest({ remaining: pe.restSec, total: pe.restSec })
+    const restSec = day!.exercises[exIdx].restSec
+    updateSet(exIdx, setIdx, { completed: willComplete })
+    if (willComplete && restSec > 0) {
+      setRest({ remaining: restSec, total: restSec })
     }
   }
 
@@ -134,8 +121,6 @@ export function Workout() {
     return <Summary log={finished} unit={unit} onClose={() => navigate('/')} />
   }
 
-  const isLast = index === day.exercises.length - 1
-
   return (
     <div className="min-h-full pb-40">
       {/* Top bar */}
@@ -166,131 +151,92 @@ export function Workout() {
       </header>
 
       <main className="container-app space-y-5 py-5">
-        {/* Exercise switcher */}
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
-          {day.exercises.map((p, i) => {
-            const done = sets[i].every((s) => s.completed)
-            return (
-              <button
-                key={`${p.exerciseId}-${i}`}
-                onClick={() => setIndex(i)}
-                className={cn(
-                  'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition',
-                  i === index
-                    ? 'border-gold bg-gold text-white'
-                    : done
-                      ? 'border-gold/30 bg-gold/10 text-gold'
-                      : 'border-white/10 bg-ink-850 text-zinc-400',
-                )}
-              >
-                {done && <Check className="mr-1 inline h-3 w-3" />}
-                {exerciseLabel(p).split(' ').slice(-1)[0] || `#${i + 1}`}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Current exercise */}
-        <div className="card p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                Exercise {index + 1} of {day.exercises.length}
-              </span>
-              <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
-              <p className="mt-0.5 text-sm text-zinc-400">
-                {pe.sets} sets × {pe.reps} reps · tempo {pe.tempo}
-              </p>
-            </div>
-            {ex && (
-              <Link
-                to={`/exercises/${pe.exerciseId}`}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
-                aria-label="Exercise info"
-              >
-                <Info className="h-5 w-5" />
-              </Link>
-            )}
-          </div>
-
-          {pe.notes && (
-            <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
-          )}
-
-          {/* Sets table */}
-          <div className="mt-4">
-            <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-              <span>Set</span>
-              <span>Weight ({unit})</span>
-              <span>Reps</span>
-              <span className="text-right">Done</span>
-            </div>
-            <div className="space-y-2">
-              {exerciseSets.map((s, j) => (
-                <div
-                  key={j}
-                  className={cn(
-                    'grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 rounded-xl border p-2 transition',
-                    s.completed
-                      ? 'border-gold/40 bg-gold/[0.07]'
-                      : 'border-white/5 bg-ink-900',
-                  )}
-                >
-                  <span className="grid h-7 w-7 place-items-center rounded-md bg-ink-800 text-sm font-bold text-zinc-300">
-                    {j + 1}
+        {day.exercises.map((pe, exIdx) => {
+          const ex = getExercise(pe.exerciseId)
+          const exerciseSets = sets[exIdx] ?? []
+          return (
+            <div key={`${pe.exerciseId}-${exIdx}`} className="card p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Exercise {exIdx + 1} of {day.exercises.length}
                   </span>
-                  <Stepper
-                    value={s.weight}
-                    step={5}
-                    onChange={(v) => updateSet(index, j, { weight: v })}
-                  />
-                  <Stepper
-                    value={s.reps}
-                    step={1}
-                    onChange={(v) => updateSet(index, j, { reps: v })}
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      onClick={() => toggleComplete(j)}
-                      className={cn(
-                        'grid h-9 w-9 place-items-center rounded-lg border transition active:scale-95',
-                        s.completed
-                          ? 'border-gold bg-gold text-white'
-                          : 'border-white/15 bg-ink-800 text-zinc-500 hover:border-gold/50',
-                      )}
-                      aria-label={s.completed ? 'Mark set incomplete' : 'Mark set complete'}
-                    >
-                      <Check className="h-5 w-5" />
-                    </button>
-                  </div>
+                  <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
+                  <p className="mt-0.5 text-sm text-zinc-400">
+                    {pe.sets} sets × {pe.reps} reps · tempo {pe.tempo}
+                  </p>
                 </div>
-              ))}
+                {ex && (
+                  <Link
+                    to={`/exercises/${pe.exerciseId}`}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                    aria-label="Exercise info"
+                  >
+                    <Info className="h-5 w-5" />
+                  </Link>
+                )}
+              </div>
+
+              {pe.notes && (
+                <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
+              )}
+
+              {/* Sets table */}
+              <div className="mt-4">
+                <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  <span>Set</span>
+                  <span>Weight ({unit})</span>
+                  <span>Reps</span>
+                  <span className="text-right">Done</span>
+                </div>
+                <div className="space-y-2">
+                  {exerciseSets.map((s, j) => (
+                    <div
+                      key={j}
+                      className={cn(
+                        'grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 rounded-xl border p-2 transition',
+                        s.completed
+                          ? 'border-gold/40 bg-gold/[0.07]'
+                          : 'border-white/5 bg-ink-900',
+                      )}
+                    >
+                      <span className="grid h-7 w-7 place-items-center rounded-md bg-ink-800 text-sm font-bold text-zinc-300">
+                        {j + 1}
+                      </span>
+                      <Stepper
+                        value={s.weight}
+                        step={5}
+                        onChange={(v) => updateSet(exIdx, j, { weight: v })}
+                      />
+                      <Stepper
+                        value={s.reps}
+                        step={1}
+                        onChange={(v) => updateSet(exIdx, j, { reps: v })}
+                      />
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => toggleComplete(exIdx, j)}
+                          className={cn(
+                            'grid h-9 w-9 place-items-center rounded-lg border transition active:scale-95',
+                            s.completed
+                              ? 'border-gold bg-gold text-white'
+                              : 'border-white/15 bg-ink-800 text-zinc-500 hover:border-gold/50',
+                          )}
+                          aria-label={s.completed ? 'Mark set incomplete' : 'Mark set complete'}
+                        >
+                          <Check className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          )
+        })}
 
-          {/* Prev / Next */}
-          <div className="mt-5 flex gap-2">
-            <button
-              onClick={() => setIndex((i) => Math.max(0, i - 1))}
-              disabled={index === 0}
-              className="btn-ghost"
-            >
-              <ChevronLeft className="h-4 w-4" /> Prev
-            </button>
-            {isLast ? (
-              <button onClick={finish} className="btn-gold flex-1">
-                <Check className="h-4 w-4" /> Finish Workout
-              </button>
-            ) : (
-              <button onClick={() => setIndex((i) => i + 1)} className="btn-gold flex-1">
-                Next Exercise <ChevronRight className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <button onClick={finish} className="w-full text-center text-xs font-medium text-zinc-500 hover:text-zinc-300">
-          End & save workout now
+        <button onClick={finish} className="btn-gold w-full">
+          <Check className="h-4 w-4" /> Finish Workout
         </button>
       </main>
 

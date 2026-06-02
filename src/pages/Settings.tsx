@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, LogOut, Trash2 } from 'lucide-react'
 import { useProgram, useStore } from '../store'
+import { useAuth } from '../auth'
 import { cn } from '../lib/utils'
 import type { Unit } from '../types'
 
 export function Settings() {
   const navigate = useNavigate()
   const { name, unit, activeProgramId, setName, setUnit, clearProgram, resetAll } = useStore()
+  const logout = useAuth((s) => s.logout)
+  const currentUserId = useAuth((s) => s.currentUserId)
+  const account = useAuth((s) => s.users.find((u) => u.id === currentUserId))
   const [confirmReset, setConfirmReset] = useState(false)
   const program = useProgram(activeProgramId ?? undefined)
 
@@ -83,6 +87,25 @@ export function Settings() {
           </div>
         )}
       </section>
+
+      {account && (
+        <section className="card space-y-3 p-5">
+          <h2 className="heading text-lg font-bold text-zinc-50">Account</h2>
+          <div>
+            <p className="text-sm font-medium text-zinc-200">{account.name}</p>
+            <p className="text-xs text-zinc-500">{account.email}</p>
+          </div>
+          <button
+            onClick={() => {
+              logout()
+              navigate('/login', { replace: true })
+            }}
+            className="btn-ghost w-full"
+          >
+            <LogOut className="h-4 w-4" /> Log out
+          </button>
+        </section>
+      )}
 
       <section className="card border-red-500/20 p-5">
         <h2 className="heading text-lg font-bold text-red-300">Danger Zone</h2>

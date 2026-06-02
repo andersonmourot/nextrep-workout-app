@@ -1,7 +1,30 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import type { BodyWeightEntry, Program, Unit, WorkoutLog } from './types'
 import { PROGRAMS, getProgram } from './data/programs'
+import { getCurrentUserId } from './auth'
+
+const DEFAULTS = {
+  name: 'Athlete',
+  unit: 'lb' as Unit,
+  activeProgramId: null as string | null,
+  logs: [] as WorkoutLog[],
+  bodyWeight: [] as BodyWeightEntry[],
+  customPrograms: [] as Program[],
+  hiddenProgramIds: [] as string[],
+}
+
+/** Resolve the per-user storage key so each account keeps isolated data. */
+function dataKey(fallback: string): string {
+  const id = getCurrentUserId()
+  return id ? `smellis-data-${id}` : fallback
+}
+
+const perUserStorage = createJSONStorage(() => ({
+  getItem: (name: string) => localStorage.getItem(dataKey(name)),
+  setItem: (name: string, value: string) => localStorage.setItem(dataKey(name), value),
+  removeItem: (name: string) => localStorage.removeItem(dataKey(name)),
+}))
 
 interface AppState {
   name: string
@@ -30,13 +53,7 @@ interface AppState {
 export const useStore = create<AppState>()(
   persist(
     (set) => ({
-      name: 'Athlete',
-      unit: 'lb',
-      activeProgramId: null,
-      logs: [],
-      bodyWeight: [],
-      customPrograms: [],
-      hiddenProgramIds: [],
+      ...DEFAULTS,
 
       setName: (name) => set({ name }),
       setUnit: (unit) => set({ unit }),
@@ -79,9 +96,27 @@ export const useStore = create<AppState>()(
           hiddenProgramIds: [],
         }),
     }),
-    { name: 'smellis-store-v1' },
+    { name: 'smellis-store-v1', storage: perUserStorage, skipHydration: true },
   ),
 )
+
+/** Load the current user's saved data into the store (defaults if none). */
+export async function loadCurrentUserData(): Promise<void> {
+  const id = getCurrentUserId()
+  const key = id ? `smellis-data-${id}` : 'smellis-store-v1'
+  let next: typeof DEFAULTS = { ...DEFAULTS }
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      const state = (parsed?.state ?? parsed) as Partial<typeof DEFAULTS>
+      next = { ...DEFAULTS, ...state }
+    }
+  } catch {
+    next = { ...DEFAULTS }
+  }
+  useStore.setState(next)
+}
 
 /** All programs: user-created first, then the built-in library (minus hidden). */
 export function useAllPrograms(): Program[] {

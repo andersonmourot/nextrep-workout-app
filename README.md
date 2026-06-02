@@ -7,6 +7,8 @@ A polished, mobile-first workout app inspired by the [STNDRD](https://www.stndrd
 ## Features
 
 - **Programs library** — 6 seeded programs across Bodybuilding, Strength, HIIT, Powerlifting, Functional, and Bodyweight, each with a multi-day split, tempo prescriptions, and rest targets.
+- **Custom programs** — build your own program with the same options as the built-ins (name, category, level, goal, duration, accent color, and a day-by-day exercise builder with sets/reps/tempo/rest). Custom programs are editable, persist locally, and work everywhere the built-ins do.
+- **Manage & delete** — a Manage toggle on the Programs page lets you delete any program (including the seeded built-ins) with a confirm step, and restore the default programs at any time.
 - **Guided workout player** — work through each exercise set-by-set, log weight & reps with quick steppers, mark sets complete, and get an automatic rest-timer countdown (with skip / +15s). Finish to a workout summary.
 - **Exercise library** — 30+ exercises with primary/secondary muscles, equipment, difficulty, step-by-step instructions, coaching cues, and recommended tempo. Searchable and filterable by muscle group.
 - **Progress tracking** — body-weight log with a trend chart, workout history, streaks, and total training volume.
@@ -42,7 +44,7 @@ npm run lint     # run ESLint
 src/
   components/    # Layout, BottomNav, Logo, ProgressRing, ...
   data/          # exercises.ts, programs.ts (seed content)
-  pages/         # Dashboard, Programs, ProgramDetail, Workout, Exercises, ExerciseDetail, Progress, Settings
+  pages/         # Dashboard, Programs, ProgramDetail, ProgramEditor, Workout, Exercises, ExerciseDetail, Progress, Settings
   lib/utils.ts   # formatting + progress helpers
   store.ts       # zustand store (persisted)
   types.ts       # shared types

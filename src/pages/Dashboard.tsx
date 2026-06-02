@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Calendar, Dumbbell, Flame, Play, TrendingUp } from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { PROGRAMS } from '../data/programs'
-import { getExercise } from '../data/exercises'
+import { exerciseLabel } from '../data/exercises'
 import { ProgressRing } from '../components/ProgressRing'
 import {
   computeStreak,
@@ -47,14 +47,11 @@ export function Dashboard() {
             <p className="text-sm text-zinc-400">{nextDay.focus}</p>
 
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {nextDay.exercises.slice(0, 4).map((pe) => {
-                const ex = getExercise(pe.exerciseId)
-                return (
-                  <span key={pe.exerciseId} className="chip">
-                    {ex?.name ?? pe.exerciseId}
-                  </span>
-                )
-              })}
+              {nextDay.exercises.slice(0, 4).map((pe, i) => (
+                <span key={`${pe.exerciseId}-${i}`} className="chip">
+                  {exerciseLabel(pe)}
+                </span>
+              ))}
               {nextDay.exercises.length > 4 && (
                 <span className="chip">+{nextDay.exercises.length - 4} more</span>
               )}

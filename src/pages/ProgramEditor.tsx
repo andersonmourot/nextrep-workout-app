@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, GripVertical, Plus, Trash2 } from 'lucide-react'
-import { EXERCISES, getExercise } from '../data/exercises'
+import { EXERCISES, exerciseLabel, findExerciseByName, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type {
   Difficulty,
@@ -53,13 +53,39 @@ export function ProgramEditor() {
   const [days, setDays] = useState<ProgramDay[]>(existing?.days ?? [blankDay(1)])
   const [error, setError] = useState('')
 
-  const exerciseOptions = useMemo(
-    () => [...EXERCISES].sort((a, b) => a.name.localeCompare(b.name)),
-    [],
-  )
+  const datalistId = useId()
+  const pastExercises = useStore((s) => s.customPrograms)
+  const logs = useStore((s) => s.logs)
+
+  // Suggest exercise names the user has used before (their programs + logged workouts
+  // + anything typed so far in this editor) rather than the full default library.
+  const suggestions = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of pastExercises)
+      for (const d of p.days) for (const pe of d.exercises) set.add(exerciseLabel(pe))
+    for (const l of logs)
+      for (const le of l.exercises) {
+        const n = getExercise(le.exerciseId)?.name
+        if (n) set.add(n)
+      }
+    for (const d of days) for (const pe of d.exercises) set.add(exerciseLabel(pe))
+    return Array.from(set)
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b))
+  }, [pastExercises, logs, days])
 
   function updateDay(dayIdx: number, patch: Partial<ProgramDay>) {
     setDays((prev) => prev.map((d, i) => (i === dayIdx ? { ...d, ...patch } : d)))
+  }
+
+  function setExerciseName(dayIdx: number, exIdx: number, typed: string, prev: PlannedExercise) {
+    const match = findExerciseByName(typed)
+    if (match) {
+      updateExercise(dayIdx, exIdx, { exerciseId: match.id, name: undefined, tempo: match.tempo })
+      return
+    }
+    const id = prev.exerciseId.startsWith('custom-') ? prev.exerciseId : `custom-${uid()}`
+    updateExercise(dayIdx, exIdx, { exerciseId: id, name: typed })
   }
 
   function updateExercise(dayIdx: number, exIdx: number, patch: Partial<PlannedExercise>) {
@@ -317,23 +343,13 @@ export function ProgramEditor() {
                 return (
                   <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
                     <div className="flex items-center gap-2">
-                      <select
-                        value={pe.exerciseId}
-                        onChange={(e) => {
-                          const picked = getExercise(e.target.value)
-                          updateExercise(dayIdx, exIdx, {
-                            exerciseId: e.target.value,
-                            tempo: picked?.tempo ?? pe.tempo,
-                          })
-                        }}
+                      <input
+                        value={exerciseLabel(pe)}
+                        onChange={(e) => setExerciseName(dayIdx, exIdx, e.target.value, pe)}
+                        list={datalistId}
+                        placeholder="Type an exercise name"
                         className="input flex-1"
-                      >
-                        {exerciseOptions.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.name}
-                          </option>
-                        ))}
-                      </select>
+                      />
                       <button
                         onClick={() => removeExercise(dayIdx, exIdx)}
                         disabled={day.exercises.length === 1}
@@ -344,7 +360,7 @@ export function ProgramEditor() {
                       </button>
                     </div>
                     <p className="mt-1 px-1 text-[11px] text-zinc-500">
-                      {ex?.primaryMuscle} · {ex?.equipment}
+                      {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
                     </p>
                     <div className="mt-2 grid grid-cols-4 gap-2">
                       <NumField
@@ -385,6 +401,12 @@ export function ProgramEditor() {
           <Plus className="h-4 w-4" /> Add training day
         </button>
       </section>
+
+      <datalist id={datalistId}>
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
 
       {error && (
         <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>

@@ -1,4 +1,4 @@
-import type { Exercise } from '../types'
+import type { Exercise, PlannedExercise } from '../types'
 
 export const EXERCISES: Exercise[] = [
   {
@@ -460,4 +460,18 @@ export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(
 
 export function getExercise(id: string): Exercise | undefined {
   return EXERCISE_MAP[id]
+}
+
+/** Find a built-in exercise by its display name (case-insensitive). */
+export function findExerciseByName(name: string): Exercise | undefined {
+  const q = name.trim().toLowerCase()
+  if (!q) return undefined
+  return EXERCISES.find((e) => e.name.toLowerCase() === q)
+}
+
+/** Display label for a planned exercise: custom name, else the built-in name, else the id. */
+export function exerciseLabel(pe: Pick<PlannedExercise, 'exerciseId' | 'name'>): string {
+  const custom = pe.name?.trim()
+  if (custom) return custom
+  return getExercise(pe.exerciseId)?.name ?? pe.exerciseId
 }

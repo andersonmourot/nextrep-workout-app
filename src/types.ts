@@ -46,6 +46,8 @@ export interface Exercise {
 
 export interface PlannedExercise {
   exerciseId: string
+  /** Free-text exercise name for user-typed exercises not in the built-in library. */
+  name?: string
   sets: number
   /** Target rep range as a display string, e.g. "8-12". */
   reps: string

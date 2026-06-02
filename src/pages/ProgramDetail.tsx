@@ -11,7 +11,7 @@ import {
   Target,
   Trash2,
 } from 'lucide-react'
-import { getExercise } from '../data/exercises'
+import { exerciseLabel, getExercise } from '../data/exercises'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
 
 export function ProgramDetail() {
@@ -140,22 +140,29 @@ export function ProgramDetail() {
             <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
               {day.exercises.map((pe, j) => {
                 const ex = getExercise(pe.exerciseId)
+                const meta = (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-100">
+                      {exerciseLabel(pe)}
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      {pe.sets} × {pe.reps} · tempo {pe.tempo} · {pe.restSec}s rest
+                    </p>
+                  </div>
+                )
                 return (
                   <li key={`${pe.exerciseId}-${j}`}>
-                    <Link
-                      to={`/exercises/${pe.exerciseId}`}
-                      className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-100">
-                          {ex?.name ?? pe.exerciseId}
-                        </p>
-                        <p className="text-xs text-zinc-500">
-                          {pe.sets} × {pe.reps} · tempo {pe.tempo} · {pe.restSec}s rest
-                        </p>
-                      </div>
-                      <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
-                    </Link>
+                    {ex ? (
+                      <Link
+                        to={`/exercises/${pe.exerciseId}`}
+                        className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"
+                      >
+                        {meta}
+                        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
+                      </Link>
+                    ) : (
+                      <div className="px-4 py-3">{meta}</div>
+                    )}
                   </li>
                 )
               })}

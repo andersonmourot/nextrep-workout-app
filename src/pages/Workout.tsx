@@ -11,7 +11,7 @@ import {
   Timer,
   X,
 } from 'lucide-react'
-import { getExercise } from '../data/exercises'
+import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
 import { cn, formatClock, uid } from '../lib/utils'
@@ -169,11 +169,10 @@ export function Workout() {
         {/* Exercise switcher */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
           {day.exercises.map((p, i) => {
-            const e = getExercise(p.exerciseId)
             const done = sets[i].every((s) => s.completed)
             return (
               <button
-                key={p.exerciseId}
+                key={`${p.exerciseId}-${i}`}
                 onClick={() => setIndex(i)}
                 className={cn(
                   'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition',
@@ -185,7 +184,7 @@ export function Workout() {
                 )}
               >
                 {done && <Check className="mr-1 inline h-3 w-3" />}
-                {e?.name.split(' ').slice(-1)[0] ?? `#${i + 1}`}
+                {exerciseLabel(p).split(' ').slice(-1)[0] || `#${i + 1}`}
               </button>
             )
           })}
@@ -198,18 +197,20 @@ export function Workout() {
               <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                 Exercise {index + 1} of {day.exercises.length}
               </span>
-              <h1 className="heading text-2xl font-bold text-zinc-50">{ex?.name}</h1>
+              <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
               <p className="mt-0.5 text-sm text-zinc-400">
                 {pe.sets} sets × {pe.reps} reps · tempo {pe.tempo}
               </p>
             </div>
-            <Link
-              to={`/exercises/${pe.exerciseId}`}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
-              aria-label="Exercise info"
-            >
-              <Info className="h-5 w-5" />
-            </Link>
+            {ex && (
+              <Link
+                to={`/exercises/${pe.exerciseId}`}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                aria-label="Exercise info"
+              >
+                <Info className="h-5 w-5" />
+              </Link>
+            )}
           </div>
 
           {pe.notes && (

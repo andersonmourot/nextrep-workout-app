@@ -12,17 +12,18 @@ import { Progress } from './pages/Progress'
 import { Settings } from './pages/Settings'
 import { Auth } from './pages/Auth'
 import { useAuth } from './auth'
-import { loadCurrentUserData } from './store'
 
 function RequireAuth() {
-  const currentUserId = useAuth((s) => s.currentUserId)
-  if (!currentUserId) return <Navigate to="/login" replace />
+  const token = useAuth((s) => s.token)
+  const ready = useAuth((s) => s.ready)
+  if (!ready) return null
+  if (!token) return <Navigate to="/login" replace />
   return <Outlet />
 }
 
 export default function App() {
   useEffect(() => {
-    void loadCurrentUserData()
+    void useAuth.getState().init()
   }, [])
 
   return (

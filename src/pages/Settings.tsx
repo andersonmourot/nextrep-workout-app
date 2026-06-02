@@ -10,8 +10,7 @@ export function Settings() {
   const navigate = useNavigate()
   const { name, unit, activeProgramId, setName, setUnit, clearProgram, resetAll } = useStore()
   const logout = useAuth((s) => s.logout)
-  const currentUserId = useAuth((s) => s.currentUserId)
-  const account = useAuth((s) => s.users.find((u) => u.id === currentUserId))
+  const account = useAuth((s) => s.user)
   const [confirmReset, setConfirmReset] = useState(false)
   const program = useProgram(activeProgramId ?? undefined)
 

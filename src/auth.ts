@@ -1,15 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { useStore, loadCurrentUserData } from './store'
-
-export interface AuthUser {
-  id: string
-  name: string
-  email: string
-  salt: string
-  passwordHash: string
-  createdAt: string
-}
+import { apiLogin, apiMe, apiSignup, type SessionUser } from './api'
+import { useStore, loadCurrentUserData, syncFromServer, clearStore } from './store'
 
 interface AuthResult {
   ok: boolean
@@ -17,23 +9,13 @@ interface AuthResult {
 }
 
 interface AuthState {
-  users: AuthUser[]
-  currentUserId: string | null
+  token: string | null
+  user: SessionUser | null
+  ready: boolean
   signUp: (name: string, email: string, password: string) => Promise<AuthResult>
   login: (email: string, password: string) => Promise<AuthResult>
   logout: () => void
-}
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
-}
-
-async function hashPassword(password: string, salt: string): Promise<string> {
-  const data = new TextEncoder().encode(`${salt}:${password}`)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+  init: () => Promise<void>
 }
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -41,8 +23,9 @@ const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
-      users: [],
-      currentUserId: null,
+      token: null,
+      user: null,
+      ready: false,
 
       signUp: async (name, email, password) => {
         const cleanName = name.trim()
@@ -51,45 +34,65 @@ export const useAuth = create<AuthState>()(
         if (!EMAIL_RE.test(cleanEmail)) return { ok: false, error: 'Enter a valid email address.' }
         if (password.length < 6)
           return { ok: false, error: 'Password must be at least 6 characters.' }
-        if (get().users.some((u) => u.email === cleanEmail))
-          return { ok: false, error: 'An account with that email already exists.' }
 
-        const salt = uid()
-        const passwordHash = await hashPassword(password, salt)
-        const user: AuthUser = {
-          id: uid(),
-          name: cleanName,
-          email: cleanEmail,
-          salt,
-          passwordHash,
-          createdAt: new Date().toISOString(),
-        }
-        set((s) => ({ users: [...s.users, user], currentUserId: user.id }))
+        const res = await apiSignup(cleanName, cleanEmail, password)
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? 'Sign up failed.' }
+        set({ token: res.data.token, user: res.data.user })
         await loadCurrentUserData()
-        useStore.getState().setName(cleanName)
+        await syncFromServer()
+        useStore.getState().setName(res.data.user.name)
         return { ok: true }
       },
 
       login: async (email, password) => {
         const cleanEmail = email.trim().toLowerCase()
-        const user = get().users.find((u) => u.email === cleanEmail)
-        if (!user) return { ok: false, error: 'No account found for that email.' }
-        const hash = await hashPassword(password, user.salt)
-        if (hash !== user.passwordHash) return { ok: false, error: 'Incorrect password.' }
-        set({ currentUserId: user.id })
+        if (!EMAIL_RE.test(cleanEmail)) return { ok: false, error: 'Enter a valid email address.' }
+
+        const res = await apiLogin(cleanEmail, password)
+        if (!res.ok || !res.data) return { ok: false, error: res.error ?? 'Login failed.' }
+        set({ token: res.data.token, user: res.data.user })
         await loadCurrentUserData()
+        await syncFromServer()
         return { ok: true }
       },
 
       logout: () => {
-        set({ currentUserId: null })
-        void loadCurrentUserData()
+        set({ token: null, user: null })
+        clearStore()
+      },
+
+      init: async () => {
+        const token = get().token
+        if (!token) {
+          set({ ready: true })
+          return
+        }
+        // Optimistic hydrate from the local cache for instant UI.
+        await loadCurrentUserData()
+        const res = await apiMe(token)
+        if (!res.ok || !res.data) {
+          // Token invalid/expired — drop the session.
+          set({ token: null, user: null })
+          clearStore()
+          set({ ready: true })
+          return
+        }
+        set({ user: res.data })
+        await syncFromServer()
+        set({ ready: true })
       },
     }),
-    { name: 'smellis-auth-v1' },
+    {
+      name: 'smellis-auth-v2',
+      partialize: (s) => ({ token: s.token, user: s.user }),
+    },
   ),
 )
 
+export function getToken(): string | null {
+  return useAuth.getState().token
+}
+
 export function getCurrentUserId(): string | null {
-  return useAuth.getState().currentUserId
+  return useAuth.getState().user?.id ?? null
 }

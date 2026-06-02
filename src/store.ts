@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { BodyWeightEntry, Program, Unit, WorkoutLog } from './types'
 import { PROGRAMS, getProgram } from './data/programs'
-import { getCurrentUserId } from './auth'
+import { getCurrentUserId, getToken } from './auth'
+import { apiGetData, apiPutData } from './api'
 
 const DEFAULTS = {
   name: 'Athlete',
@@ -100,7 +101,44 @@ export const useStore = create<AppState>()(
   ),
 )
 
-/** Load the current user's saved data into the store (defaults if none). */
+/** The persisted slice of state that syncs to the server (no actions). */
+function snapshot(s: AppState): typeof DEFAULTS {
+  return {
+    name: s.name,
+    unit: s.unit,
+    activeProgramId: s.activeProgramId,
+    logs: s.logs,
+    bodyWeight: s.bodyWeight,
+    customPrograms: s.customPrograms,
+    hiddenProgramIds: s.hiddenProgramIds,
+  }
+}
+
+// Guard so applying server/cache data doesn't immediately push it back up.
+let applyingRemote = false
+let syncTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Debounced push of the current state to the backend (when logged in). */
+useStore.subscribe((state) => {
+  if (applyingRemote) return
+  const token = getToken()
+  if (!token) return
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    void apiPutData(token, snapshot(state))
+  }, 600)
+})
+
+function applyState(next: typeof DEFAULTS): void {
+  applyingRemote = true
+  try {
+    useStore.setState(next)
+  } finally {
+    applyingRemote = false
+  }
+}
+
+/** Load the current user's locally-cached data into the store (defaults if none). */
 export async function loadCurrentUserData(): Promise<void> {
   const id = getCurrentUserId()
   const key = id ? `smellis-data-${id}` : 'smellis-store-v1'
@@ -115,7 +153,22 @@ export async function loadCurrentUserData(): Promise<void> {
   } catch {
     next = { ...DEFAULTS }
   }
-  useStore.setState(next)
+  applyState(next)
+}
+
+/** Pull authoritative data from the server and hydrate the store. */
+export async function syncFromServer(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const res = await apiGetData<Partial<typeof DEFAULTS>>(token)
+  if (res.ok && res.data) {
+    applyState({ ...DEFAULTS, ...res.data })
+  }
+}
+
+/** Reset the in-memory store to defaults (used on logout). */
+export function clearStore(): void {
+  applyState({ ...DEFAULTS })
 }
 
 /** All programs: user-created first, then the built-in library (minus hidden). */

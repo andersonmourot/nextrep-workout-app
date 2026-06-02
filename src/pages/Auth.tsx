@@ -5,7 +5,7 @@ import { useAuth } from '../auth'
 
 export function Auth({ mode }: { mode: 'login' | 'signup' }) {
   const navigate = useNavigate()
-  const currentUserId = useAuth((s) => s.currentUserId)
+  const token = useAuth((s) => s.token)
   const signUp = useAuth((s) => s.signUp)
   const login = useAuth((s) => s.login)
 
@@ -15,7 +15,7 @@ export function Auth({ mode }: { mode: 'login' | 'signup' }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  if (currentUserId) return <Navigate to="/" replace />
+  if (token) return <Navigate to="/" replace />
 
   const isSignup = mode === 'signup'
 

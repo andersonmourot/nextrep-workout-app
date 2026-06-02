@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-zinc-100 font-sans antialiased;
+    background-image: radial-gradient(
+        80rem 40rem at 50% -10%,
+        rgba(233, 185, 73, 0.08),
+        transparent 60%
+      ),
+      radial-gradient(60rem 30rem at 100% 0%, rgba(233, 185, 73, 0.04), transparent 55%);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-md px-4;
+  }
+
+  .card {
+    @apply rounded-2xl border border-white/5 bg-ink-850 shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-gold {
+    @apply btn bg-gold text-ink-950 hover:bg-gold-400;
+  }
+  .btn-ghost {
+    @apply btn bg-ink-800 text-zinc-200 hover:bg-ink-700 border border-white/5;
+  }
+  .btn-outline {
+    @apply btn border border-gold/40 text-gold hover:bg-gold/10;
+  }
+
+  .label-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80;
+  }
+
+  .heading {
+    @apply font-display uppercase tracking-wide;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-white/10 bg-ink-800 px-2.5 py-1 text-[11px] font-medium text-zinc-300;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-white/10 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-gold/60;
+  }
+}

@@ -79,7 +79,7 @@ export const useStore = create<AppState>()(
           hiddenProgramIds: [],
         }),
     }),
-    { name: 'stndrd-store-v1' },
+    { name: 'smellis-store-v1' },
   ),
 )
 

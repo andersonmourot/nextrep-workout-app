@@ -115,7 +115,7 @@ export function Settings() {
       </section>
 
       <p className="pb-2 text-center text-xs text-zinc-600">
-        SMELLIS · Set the standard. Inspired by the STNDRD training app.
+        SMELLIS · Train with intent.
       </p>
     </div>
   )

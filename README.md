@@ -1,8 +1,8 @@
 # SMELLIS — Workout App
 
-A polished, mobile-first workout app inspired by the [STNDRD](https://www.stndrd.app/) (CBUM) training app. Browse training programs, run guided workouts with set/rep/tempo tracking and a rest timer, study an exercise library, and track your progress over time.
+A polished, mobile-first workout app for serious training. Browse training programs, run guided workouts with set/rep/tempo tracking and a rest timer, study an exercise library, and track your progress over time.
 
-> Built as an independent, open-source homage. Not affiliated with or endorsed by STNDRD / Set The Standard, LLC.
+> Built as an independent, open-source project.
 
 ## Features
 

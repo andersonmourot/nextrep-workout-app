@@ -11,9 +11,8 @@ import {
   Timer,
   X,
 } from 'lucide-react'
-import { getProgram } from '../data/programs'
 import { getExercise } from '../data/exercises'
-import { useStore } from '../store'
+import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
 import { cn, formatClock, uid } from '../lib/utils'
 
@@ -25,7 +24,7 @@ function parseReps(reps: string): number {
 export function Workout() {
   const { programId, dayId } = useParams()
   const navigate = useNavigate()
-  const program = programId ? getProgram(programId) : undefined
+  const program = useProgram(programId)
   const day = program?.days.find((d) => d.id === dayId)
   const { unit, addLog, startProgram, activeProgramId } = useStore()
 

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Calendar, Dumbbell, Flame, Play, TrendingUp } from 'lucide-react'
-import { useStore } from '../store'
-import { getProgram, PROGRAMS } from '../data/programs'
+import { useProgram, useStore } from '../store'
+import { PROGRAMS } from '../data/programs'
 import { getExercise } from '../data/exercises'
 import { ProgressRing } from '../components/ProgressRing'
 import {
@@ -14,7 +14,7 @@ import {
 
 export function Dashboard() {
   const { name, activeProgramId, logs, unit } = useStore()
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined
+  const program = useProgram(activeProgramId ?? undefined)
 
   const streak = computeStreak(logs)
   const weekCount = workoutsThisWeek(logs)

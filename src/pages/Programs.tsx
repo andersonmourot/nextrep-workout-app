@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, Clock, Dumbbell } from 'lucide-react'
-import { PROGRAMS } from '../data/programs'
-import { useStore } from '../store'
+import { CheckCircle2, Clock, Dumbbell, Plus } from 'lucide-react'
+import { useAllPrograms, useStore } from '../store'
 import type { ProgramCategory } from '../types'
 import { cn } from '../lib/utils'
 
@@ -19,17 +18,24 @@ const CATEGORIES: Array<ProgramCategory | 'All'> = [
 export function Programs() {
   const [filter, setFilter] = useState<ProgramCategory | 'All'>('All')
   const activeProgramId = useStore((s) => s.activeProgramId)
+  const customIds = useStore((s) => s.customPrograms.map((p) => p.id))
+  const allPrograms = useAllPrograms()
 
   const list = useMemo(
-    () => (filter === 'All' ? PROGRAMS : PROGRAMS.filter((p) => p.category === filter)),
-    [filter],
+    () => (filter === 'All' ? allPrograms : allPrograms.filter((p) => p.category === filter)),
+    [filter, allPrograms],
   )
 
   return (
     <div className="animate-fade-in space-y-5">
-      <div>
-        <p className="label-eyebrow">Train with intent</p>
-        <h1 className="heading text-3xl font-bold text-zinc-50">Programs</h1>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="label-eyebrow">Train with intent</p>
+          <h1 className="heading text-3xl font-bold text-zinc-50">Programs</h1>
+        </div>
+        <Link to="/programs/new" className="btn-gold shrink-0 px-3 py-2 text-sm">
+          <Plus className="h-4 w-4" /> Create
+        </Link>
       </div>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -52,21 +58,25 @@ export function Programs() {
       <div className="space-y-3">
         {list.map((p) => {
           const isActive = p.id === activeProgramId
+          const isCustom = customIds.includes(p.id)
           return (
-            <Link
-              key={p.id}
-              to={`/programs/${p.id}`}
-              className="card block overflow-hidden p-0"
-            >
+            <Link key={p.id} to={`/programs/${p.id}`} className="card block overflow-hidden p-0">
               <div
                 className="p-5"
                 style={{ background: `linear-gradient(150deg, ${p.accent}1f, transparent 60%)` }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <span className="label-eyebrow" style={{ color: p.accent }}>
-                      {p.category} · {p.level}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="label-eyebrow" style={{ color: p.accent }}>
+                        {p.category} · {p.level}
+                      </span>
+                      {isCustom && (
+                        <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                          Custom
+                        </span>
+                      )}
+                    </div>
                     <h2 className="heading mt-1 text-xl font-bold text-zinc-50">{p.name}</h2>
                   </div>
                   {isActive && (

@@ -1,14 +1,26 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronRight, Clock, Dumbbell, Play, Target } from 'lucide-react'
-import { getProgram } from '../data/programs'
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  Clock,
+  Dumbbell,
+  Pencil,
+  Play,
+  Target,
+  Trash2,
+} from 'lucide-react'
 import { getExercise } from '../data/exercises'
-import { useStore } from '../store'
+import { useIsCustomProgram, useProgram, useStore } from '../store'
 
 export function ProgramDetail() {
   const { programId } = useParams()
   const navigate = useNavigate()
-  const program = programId ? getProgram(programId) : undefined
-  const { activeProgramId, startProgram } = useStore()
+  const program = useProgram(programId)
+  const isCustom = useIsCustomProgram(programId)
+  const { activeProgramId, startProgram, deleteProgram } = useStore()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   if (!program) {
     return (
@@ -36,9 +48,16 @@ export function ProgramDetail() {
         className="card p-5"
         style={{ background: `linear-gradient(160deg, ${program.accent}24, #141417 60%)` }}
       >
-        <span className="label-eyebrow" style={{ color: program.accent }}>
-          {program.category} · {program.level}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="label-eyebrow" style={{ color: program.accent }}>
+            {program.category} · {program.level}
+          </span>
+          {isCustom && (
+            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+              Custom
+            </span>
+          )}
+        </div>
         <h1 className="heading mt-1 text-3xl font-bold text-zinc-50">{program.name}</h1>
         <p className="mt-2 text-sm text-zinc-300">{program.description}</p>
 
@@ -69,6 +88,32 @@ export function ProgramDetail() {
             'Set as Active Program'
           )}
         </button>
+
+        {isCustom && (
+          <div className="mt-2 flex gap-2">
+            <Link to={`/programs/${program.id}/edit`} className="btn-ghost flex-1">
+              <Pencil className="h-4 w-4" /> Edit
+            </Link>
+            {confirmDelete ? (
+              <button
+                onClick={() => {
+                  deleteProgram(program.id)
+                  navigate('/programs')
+                }}
+                className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
+              >
+                <Trash2 className="h-4 w-4" /> Confirm
+              </button>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="btn-ghost flex-1 text-red-300 hover:text-red-200"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <section className="space-y-3">
@@ -93,10 +138,10 @@ export function ProgramDetail() {
               </Link>
             </div>
             <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
-              {day.exercises.map((pe) => {
+              {day.exercises.map((pe, j) => {
                 const ex = getExercise(pe.exerciseId)
                 return (
-                  <li key={pe.exerciseId}>
+                  <li key={`${pe.exerciseId}-${j}`}>
                     <Link
                       to={`/exercises/${pe.exerciseId}`}
                       className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"

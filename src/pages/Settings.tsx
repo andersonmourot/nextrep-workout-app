@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Trash2 } from 'lucide-react'
-import { useStore } from '../store'
-import { getProgram } from '../data/programs'
+import { useProgram, useStore } from '../store'
 import { cn } from '../lib/utils'
 import type { Unit } from '../types'
 
@@ -10,7 +9,7 @@ export function Settings() {
   const navigate = useNavigate()
   const { name, unit, activeProgramId, setName, setUnit, clearProgram, resetAll } = useStore()
   const [confirmReset, setConfirmReset] = useState(false)
-  const program = activeProgramId ? getProgram(activeProgramId) : undefined
+  const program = useProgram(activeProgramId ?? undefined)
 
   return (
     <div className="animate-fade-in space-y-6">

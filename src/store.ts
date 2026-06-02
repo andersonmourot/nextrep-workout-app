@@ -10,6 +10,7 @@ interface AppState {
   logs: WorkoutLog[]
   bodyWeight: BodyWeightEntry[]
   customPrograms: Program[]
+  hiddenProgramIds: string[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -22,6 +23,7 @@ interface AppState {
   addProgram: (program: Program) => void
   updateProgram: (program: Program) => void
   deleteProgram: (id: string) => void
+  restorePrograms: () => void
   resetAll: () => void
 }
 
@@ -34,6 +36,7 @@ export const useStore = create<AppState>()(
       logs: [],
       bodyWeight: [],
       customPrograms: [],
+      hiddenProgramIds: [],
 
       setName: (name) => set({ name }),
       setUnit: (unit) => set({ unit }),
@@ -56,21 +59,35 @@ export const useStore = create<AppState>()(
           customPrograms: s.customPrograms.map((p) => (p.id === program.id ? program : p)),
         })),
       deleteProgram: (id) =>
-        set((s) => ({
-          customPrograms: s.customPrograms.filter((p) => p.id !== id),
-          activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
-        })),
+        set((s) => {
+          const isCustom = s.customPrograms.some((p) => p.id === id)
+          return {
+            customPrograms: s.customPrograms.filter((p) => p.id !== id),
+            hiddenProgramIds: isCustom
+              ? s.hiddenProgramIds
+              : Array.from(new Set([...s.hiddenProgramIds, id])),
+            activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
+          }
+        }),
+      restorePrograms: () => set({ hiddenProgramIds: [] }),
       resetAll: () =>
-        set({ activeProgramId: null, logs: [], bodyWeight: [], customPrograms: [] }),
+        set({
+          activeProgramId: null,
+          logs: [],
+          bodyWeight: [],
+          customPrograms: [],
+          hiddenProgramIds: [],
+        }),
     }),
     { name: 'stndrd-store-v1' },
   ),
 )
 
-/** All programs: user-created first, then the built-in library. */
+/** All programs: user-created first, then the built-in library (minus hidden). */
 export function useAllPrograms(): Program[] {
   const custom = useStore((s) => s.customPrograms)
-  return [...custom, ...PROGRAMS]
+  const hidden = useStore((s) => s.hiddenProgramIds)
+  return [...custom, ...PROGRAMS.filter((p) => !hidden.includes(p.id))]
 }
 
 /** Look up a program by id across custom and built-in programs. */

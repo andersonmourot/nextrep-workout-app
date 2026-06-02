@@ -18,7 +18,8 @@ const CATEGORIES: Array<ProgramCategory | 'All'> = [
 export function Programs() {
   const [filter, setFilter] = useState<ProgramCategory | 'All'>('All')
   const activeProgramId = useStore((s) => s.activeProgramId)
-  const customIds = useStore((s) => s.customPrograms.map((p) => p.id))
+  const customPrograms = useStore((s) => s.customPrograms)
+  const customIds = useMemo(() => new Set(customPrograms.map((p) => p.id)), [customPrograms])
   const allPrograms = useAllPrograms()
 
   const list = useMemo(
@@ -58,7 +59,7 @@ export function Programs() {
       <div className="space-y-3">
         {list.map((p) => {
           const isActive = p.id === activeProgramId
-          const isCustom = customIds.includes(p.id)
+          const isCustom = customIds.has(p.id)
           return (
             <Link key={p.id} to={`/programs/${p.id}`} className="card block overflow-hidden p-0">
               <div

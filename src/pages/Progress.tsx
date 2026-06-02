@@ -196,14 +196,14 @@ function WeightChart({ entries }: { entries: BodyWeightEntry[] }) {
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="wg" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#e9b949" stopOpacity="0.35" />
-            <stop offset="100%" stopColor="#e9b949" stopOpacity="0" />
+            <stop offset="0%" stopColor="#4c8a55" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#4c8a55" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path d={area} fill="url(#wg)" />
-        <path d={path} fill="none" stroke="#e9b949" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={path} fill="none" stroke="#4c8a55" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
         {points.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={2.5} fill="#e9b949" />
+          <circle key={i} cx={x} cy={y} r={2.5} fill="#4c8a55" />
         ))}
       </svg>
     </div>

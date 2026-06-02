@@ -71,7 +71,7 @@ export function Programs() {
             className={cn(
               'whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition',
               filter === c
-                ? 'border-gold bg-gold text-ink-950'
+                ? 'border-gold bg-gold text-white'
                 : 'border-white/10 bg-ink-850 text-zinc-300 hover:border-white/20',
             )}
           >

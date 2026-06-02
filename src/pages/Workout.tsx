@@ -178,7 +178,7 @@ export function Workout() {
                 className={cn(
                   'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition',
                   i === index
-                    ? 'border-gold bg-gold text-ink-950'
+                    ? 'border-gold bg-gold text-white'
                     : done
                       ? 'border-gold/30 bg-gold/10 text-gold'
                       : 'border-white/10 bg-ink-850 text-zinc-400',
@@ -254,7 +254,7 @@ export function Workout() {
                       className={cn(
                         'grid h-9 w-9 place-items-center rounded-lg border transition active:scale-95',
                         s.completed
-                          ? 'border-gold bg-gold text-ink-950'
+                          ? 'border-gold bg-gold text-white'
                           : 'border-white/15 bg-ink-800 text-zinc-500 hover:border-gold/50',
                       )}
                       aria-label={s.completed ? 'Mark set incomplete' : 'Mark set complete'}
@@ -377,7 +377,7 @@ function Summary({
   const completedSets = log.exercises.reduce((a, e) => a + e.sets.length, 0)
   return (
     <div className="container-app flex min-h-full flex-col items-center justify-center gap-6 py-12 text-center">
-      <div className="grid h-20 w-20 place-items-center rounded-full bg-gold text-ink-950 shadow-glow animate-fade-in">
+      <div className="grid h-20 w-20 place-items-center rounded-full bg-gold text-white shadow-glow animate-fade-in">
         <Check className="h-10 w-10" strokeWidth={3} />
       </div>
       <div className="animate-fade-in">

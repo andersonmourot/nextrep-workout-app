@@ -13,10 +13,10 @@ export default {
           600: '#3a3a41',
         },
         gold: {
-          DEFAULT: '#e9b949',
-          400: '#f0cd72',
-          500: '#e9b949',
-          600: '#d39e2a',
+          DEFAULT: '#355e3b',
+          400: '#4c8a55',
+          500: '#355e3b',
+          600: '#284a30',
         },
       },
       fontFamily: {
@@ -25,7 +25,7 @@ export default {
       },
       boxShadow: {
         card: '0 1px 0 0 rgba(255,255,255,0.04) inset, 0 8px 24px -12px rgba(0,0,0,0.8)',
-        glow: '0 0 0 1px rgba(233,185,73,0.35), 0 8px 30px -8px rgba(233,185,73,0.25)',
+        glow: '0 0 0 1px rgba(53,94,59,0.45), 0 8px 30px -8px rgba(53,94,59,0.35)',
       },
       keyframes: {
         'fade-in': {

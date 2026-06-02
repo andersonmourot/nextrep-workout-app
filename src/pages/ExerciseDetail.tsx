@@ -45,7 +45,7 @@ export function ExerciseDetail() {
       <div className="card grid place-items-center p-8">
         <div
           className="grid h-28 w-28 place-items-center rounded-full"
-          style={{ background: 'radial-gradient(circle, rgba(233,185,73,0.18), transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(53,94,59,0.22), transparent 70%)' }}
         >
           <span className="heading text-center text-lg font-bold leading-tight text-gold">
             {ex.primaryMuscle}
@@ -67,7 +67,7 @@ export function ExerciseDetail() {
         <ol className="card divide-y divide-white/5 p-0">
           {ex.instructions.map((step, i) => (
             <li key={i} className="flex gap-3 p-4">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-bold text-ink-950">
+              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-bold text-white">
                 {i + 1}
               </span>
               <p className="text-sm text-zinc-300">{step}</p>

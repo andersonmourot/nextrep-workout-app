@@ -10,7 +10,7 @@ export const PROGRAMS: Program[] = [
     coach: 'Coach CBUM',
     durationWeeks: 8,
     daysPerWeek: 5,
-    accent: '#e9b949',
+    accent: '#355e3b',
     summary: 'A hypertrophy-focused split chasing the golden-era aesthetic — full, balanced, and detailed.',
     description:
       'Train each muscle group with intent across a 5-day split. Controlled tempos and quality reps over ego lifting. Push, Pull, Legs, Upper, then a dedicated Arms & Shoulders day to bring up the details.',

@@ -46,7 +46,7 @@ export function Settings() {
                 className={cn(
                   'rounded-xl border py-2.5 text-sm font-semibold uppercase transition',
                   unit === u
-                    ? 'border-gold bg-gold text-ink-950'
+                    ? 'border-gold bg-gold text-white'
                     : 'border-white/10 bg-ink-900 text-zinc-300',
                 )}
               >

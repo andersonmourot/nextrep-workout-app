@@ -62,7 +62,7 @@ export function Exercises() {
             className={cn(
               'whitespace-nowrap rounded-full border px-3.5 py-1.5 text-xs font-semibold transition',
               muscle === m
-                ? 'border-gold bg-gold text-ink-950'
+                ? 'border-gold bg-gold text-white'
                 : 'border-white/10 bg-ink-850 text-zinc-300 hover:border-white/20',
             )}
           >
@@ -83,7 +83,7 @@ export function Exercises() {
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-zinc-100">{e.name}</p>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className="chip" style={{ color: '#e9b949' }}>
+                  <span className="chip" style={{ color: '#4c8a55' }}>
                     {e.primaryMuscle}
                   </span>
                   <span className="chip">{e.equipment}</span>

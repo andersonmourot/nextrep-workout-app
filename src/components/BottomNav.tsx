@@ -27,7 +27,7 @@ export function BottomNav() {
           >
             {({ isActive }) => (
               <>
-                <Icon className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_rgba(233,185,73,0.5)]')} />
+                <Icon className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_rgba(76,138,85,0.6)]')} />
                 {label}
               </>
             )}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Plus, Search, X } from 'lucide-react'
+import { ChevronRight, Plus, Search, Trash2, X } from 'lucide-react'
 import { EXERCISES } from '../data/exercises'
 import { useStore } from '../store'
 import type { Difficulty, Equipment, Exercise, Muscle } from '../types'
@@ -52,7 +53,9 @@ export function Exercises() {
   const [q, setQ] = useState('')
   const [muscle, setMuscle] = useState<Muscle | 'All'>('All')
   const [creating, setCreating] = useState(false)
+  const [confirmRemove, setConfirmRemove] = useState<Exercise | null>(null)
   const customExercises = useStore((s) => s.customExercises)
+  const removeCustomExercise = useStore((s) => s.removeCustomExercise)
 
   // Custom exercises first, then the built-in library.
   const all = useMemo(() => [...customExercises, ...EXERCISES], [customExercises])
@@ -116,39 +119,83 @@ export function Exercises() {
       <p className="text-xs text-zinc-500">{list.length} exercises</p>
 
       <ul className="space-y-2">
-        {list.map((e) => (
-          <li key={e.id}>
-            <Link
-              to={`/exercises/${e.id}`}
-              className="card flex items-center justify-between p-4 hover:border-white/10"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-zinc-100">
-                  {e.name}
-                  {customIds.has(e.id) && (
-                    <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
-                      Custom
+        {list.map((e) => {
+          const isCustom = customIds.has(e.id)
+          return (
+            <li key={e.id} className="relative">
+              <Link
+                to={`/exercises/${e.id}`}
+                className={cn(
+                  'card flex items-center justify-between p-4 hover:border-white/10',
+                  isCustom && 'pr-12',
+                )}
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-zinc-100">
+                    {e.name}
+                    {isCustom && (
+                      <span className="ml-2 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                        Custom
+                      </span>
+                    )}
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    <span className="chip" style={{ color: '#4c8a55' }}>
+                      {e.primaryMuscle}
                     </span>
-                  )}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  <span className="chip" style={{ color: '#4c8a55' }}>
-                    {e.primaryMuscle}
-                  </span>
-                  <span className="chip">{e.equipment}</span>
-                  <span className="chip">{e.difficulty}</span>
+                    <span className="chip">{e.equipment}</span>
+                    <span className="chip">{e.difficulty}</span>
+                  </div>
                 </div>
-              </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
-            </Link>
-          </li>
-        ))}
+                {!isCustom && <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />}
+              </Link>
+              {isCustom && (
+                <button
+                  onClick={() => setConfirmRemove(e)}
+                  className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-lg bg-ink-800 text-zinc-400 transition hover:text-red-300"
+                  title="Remove exercise"
+                  aria-label={`Remove ${e.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+            </li>
+          )
+        })}
         {list.length === 0 && (
           <li className="card p-6 text-center text-sm text-zinc-400">No exercises match your search.</li>
         )}
       </ul>
 
       {creating && <NewExerciseModal onClose={() => setCreating(false)} />}
+
+      {confirmRemove &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-ink-900 p-5">
+              <h2 className="heading text-lg font-bold text-zinc-50">Remove exercise?</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                “{confirmRemove.name}” will be removed from your custom exercises. This won’t change
+                programs that already use it.
+              </p>
+              <div className="mt-5 flex gap-2">
+                <button onClick={() => setConfirmRemove(null)} className="btn-ghost flex-1">
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    removeCustomExercise(confirmRemove.id)
+                    setConfirmRemove(null)
+                  }}
+                  className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-4 w-4" /> Remove
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }
@@ -192,9 +239,9 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-0 sm:items-center sm:p-4">
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-ink-900 p-5 sm:rounded-2xl">
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-0 py-6 sm:items-center sm:p-4">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-ink-900 p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="heading text-xl font-bold text-zinc-50">New Exercise</h2>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-200">
@@ -295,7 +342,8 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

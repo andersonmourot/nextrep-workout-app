@@ -51,6 +51,7 @@ interface AppState {
   updateProgram: (program: Program) => void
   deleteProgram: (id: string) => void
   addCustomExercise: (exercise: Exercise) => void
+  removeCustomExercise: (id: string) => void
   restorePrograms: () => void
   resetAll: () => void
 }
@@ -83,6 +84,12 @@ export const useStore = create<AppState>()(
       addCustomExercise: (exercise) =>
         set((s) => {
           const next = [exercise, ...s.customExercises.filter((e) => e.id !== exercise.id)]
+          setCustomExercises(next)
+          return { customExercises: next }
+        }),
+      removeCustomExercise: (id) =>
+        set((s) => {
+          const next = s.customExercises.filter((e) => e.id !== id)
           setCustomExercises(next)
           return { customExercises: next }
         }),

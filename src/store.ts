@@ -15,6 +15,7 @@ const DEFAULTS = {
   customPrograms: [] as Program[],
   customExercises: [] as Exercise[],
   hiddenProgramIds: [] as string[],
+  hiddenExerciseIds: [] as string[],
 }
 
 /** Resolve the per-user storage key so each account keeps isolated data. */
@@ -38,6 +39,7 @@ interface AppState {
   customPrograms: Program[]
   customExercises: Exercise[]
   hiddenProgramIds: string[]
+  hiddenExerciseIds: string[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -52,6 +54,8 @@ interface AppState {
   deleteProgram: (id: string) => void
   addCustomExercise: (exercise: Exercise) => void
   removeCustomExercise: (id: string) => void
+  deleteExercise: (id: string) => void
+  restoreExercises: () => void
   restorePrograms: () => void
   resetAll: () => void
 }
@@ -93,6 +97,21 @@ export const useStore = create<AppState>()(
           setCustomExercises(next)
           return { customExercises: next }
         }),
+      deleteExercise: (id) =>
+        set((s) => {
+          // Custom exercises are removed outright; built-in/default exercises
+          // are hidden so they can be restored later.
+          const isCustom = s.customExercises.some((e) => e.id === id)
+          const nextCustom = s.customExercises.filter((e) => e.id !== id)
+          setCustomExercises(nextCustom)
+          return {
+            customExercises: nextCustom,
+            hiddenExerciseIds: isCustom
+              ? s.hiddenExerciseIds
+              : Array.from(new Set([...s.hiddenExerciseIds, id])),
+          }
+        }),
+      restoreExercises: () => set({ hiddenExerciseIds: [] }),
       deleteProgram: (id) =>
         set((s) => {
           const isCustom = s.customPrograms.some((p) => p.id === id)
@@ -114,6 +133,7 @@ export const useStore = create<AppState>()(
           customPrograms: [],
           customExercises: [],
           hiddenProgramIds: [],
+          hiddenExerciseIds: [],
         })
       },
     }),
@@ -132,6 +152,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     customPrograms: s.customPrograms,
     customExercises: s.customExercises,
     hiddenProgramIds: s.hiddenProgramIds,
+    hiddenExerciseIds: s.hiddenExerciseIds,
   }
 }
 

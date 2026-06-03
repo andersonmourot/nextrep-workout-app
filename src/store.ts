@@ -1,9 +1,10 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { BodyWeightEntry, Program, Unit, WorkoutLog } from './types'
+import type { BodyWeightEntry, Exercise, Program, Unit, WorkoutLog } from './types'
 import { PROGRAMS, getProgram } from './data/programs'
+import { setCustomExercises } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
-import { apiGetData, apiPutData } from './api'
+import { apiGetData, apiProgramsBatch, apiPutData } from './api'
 
 const DEFAULTS = {
   name: 'Athlete',
@@ -12,6 +13,7 @@ const DEFAULTS = {
   logs: [] as WorkoutLog[],
   bodyWeight: [] as BodyWeightEntry[],
   customPrograms: [] as Program[],
+  customExercises: [] as Exercise[],
   hiddenProgramIds: [] as string[],
 }
 
@@ -34,6 +36,7 @@ interface AppState {
   logs: WorkoutLog[]
   bodyWeight: BodyWeightEntry[]
   customPrograms: Program[]
+  customExercises: Exercise[]
   hiddenProgramIds: string[]
 
   setName: (name: string) => void
@@ -47,6 +50,7 @@ interface AppState {
   addProgram: (program: Program) => void
   updateProgram: (program: Program) => void
   deleteProgram: (id: string) => void
+  addCustomExercise: (exercise: Exercise) => void
   restorePrograms: () => void
   resetAll: () => void
 }
@@ -76,6 +80,12 @@ export const useStore = create<AppState>()(
         set((s) => ({
           customPrograms: s.customPrograms.map((p) => (p.id === program.id ? program : p)),
         })),
+      addCustomExercise: (exercise) =>
+        set((s) => {
+          const next = [exercise, ...s.customExercises.filter((e) => e.id !== exercise.id)]
+          setCustomExercises(next)
+          return { customExercises: next }
+        }),
       deleteProgram: (id) =>
         set((s) => {
           const isCustom = s.customPrograms.some((p) => p.id === id)
@@ -88,14 +98,17 @@ export const useStore = create<AppState>()(
           }
         }),
       restorePrograms: () => set({ hiddenProgramIds: [] }),
-      resetAll: () =>
+      resetAll: () => {
+        setCustomExercises([])
         set({
           activeProgramId: null,
           logs: [],
           bodyWeight: [],
           customPrograms: [],
+          customExercises: [],
           hiddenProgramIds: [],
-        }),
+        })
+      },
     }),
     { name: 'smellis-store-v1', storage: perUserStorage, skipHydration: true },
   ),
@@ -110,6 +123,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     logs: s.logs,
     bodyWeight: s.bodyWeight,
     customPrograms: s.customPrograms,
+    customExercises: s.customExercises,
     hiddenProgramIds: s.hiddenProgramIds,
   }
 }
@@ -133,6 +147,7 @@ function applyState(next: typeof DEFAULTS): void {
   applyingRemote = true
   try {
     useStore.setState(next)
+    setCustomExercises(next.customExercises ?? [])
   } finally {
     applyingRemote = false
   }
@@ -164,6 +179,35 @@ export async function syncFromServer(): Promise<void> {
   if (res.ok && res.data) {
     applyState({ ...DEFAULTS, ...res.data })
   }
+  await refreshSharedPrograms()
+}
+
+/**
+ * Pull the newest version of every shared program the user has added and
+ * replace local copies whose content is stale. This is what propagates an
+ * owner's (or collaborator's) edits across all accounts. Logged history lives
+ * in separate `logs` records, so updating a program never erases past data —
+ * only future workouts use the new version.
+ */
+export async function refreshSharedPrograms(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const mine = useStore.getState().customPrograms
+  const ids = mine.filter((p) => p.ownerId && p.id).map((p) => p.id)
+  if (ids.length === 0) return
+  const res = await apiProgramsBatch<Program>(token, ids)
+  if (!res.ok || !res.data) return
+  const canon = new Map(res.data.programs.map((p) => [p.id, p]))
+  let changed = false
+  const updated = mine.map((p) => {
+    const c = canon.get(p.id)
+    if (c && (c.version ?? 0) > (p.version ?? 0)) {
+      changed = true
+      return { ...c }
+    }
+    return p
+  })
+  if (changed) useStore.setState({ customPrograms: updated })
 }
 
 /** Reset the in-memory store to defaults (used on logout). */

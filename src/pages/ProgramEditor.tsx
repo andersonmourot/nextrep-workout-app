@@ -1,8 +1,10 @@
-import { useId, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, GripVertical, Plus, Trash2 } from 'lucide-react'
-import { EXERCISES, exerciseLabel, findExerciseByName, getExercise } from '../data/exercises'
+import { EXERCISES, findExerciseByName, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
+import { apiUpsertProgram } from '../api'
+import { getToken, useAuth } from '../auth'
 import type {
   Difficulty,
   PlannedExercise,
@@ -50,29 +52,16 @@ export function ProgramEditor() {
   const [summary, setSummary] = useState(existing?.summary ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
   const [tags, setTags] = useState((existing?.tags ?? []).join(', '))
+  const [collaborative, setCollaborative] = useState(existing?.collaborative ?? false)
   const [days, setDays] = useState<ProgramDay[]>(existing?.days ?? [blankDay(1)])
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
 
-  const datalistId = useId()
-  const pastExercises = useStore((s) => s.customPrograms)
-  const logs = useStore((s) => s.logs)
-
-  // Suggest exercise names the user has used before (their programs + logged workouts
-  // + anything typed so far in this editor) rather than the full default library.
-  const suggestions = useMemo(() => {
-    const set = new Set<string>()
-    for (const p of pastExercises)
-      for (const d of p.days) for (const pe of d.exercises) set.add(exerciseLabel(pe))
-    for (const l of logs)
-      for (const le of l.exercises) {
-        const n = getExercise(le.exerciseId)?.name
-        if (n) set.add(n)
-      }
-    for (const d of days) for (const pe of d.exercises) set.add(exerciseLabel(pe))
-    return Array.from(set)
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b))
-  }, [pastExercises, logs, days])
+  const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
+  // You're the owner of a brand-new program, or of one with no recorded owner
+  // (legacy), or one you created. Only the owner may toggle collaboration.
+  const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
 
   function updateDay(dayIdx: number, patch: Partial<ProgramDay>) {
     setDays((prev) => prev.map((d, i) => (i === dayIdx ? { ...d, ...patch } : d)))
@@ -120,7 +109,7 @@ export function ProgramEditor() {
     setDays((prev) => prev.filter((_, i) => i !== dayIdx))
   }
 
-  function save() {
+  async function save() {
     if (!name.trim()) return setError('Give your program a name.')
     if (days.length === 0) return setError('Add at least one training day.')
     for (const d of days) {
@@ -146,11 +135,32 @@ export function ProgramEditor() {
         .map((t) => t.trim())
         .filter(Boolean),
       days: days.map((d) => ({ ...d, name: d.name.trim() || 'Day', focus: d.focus.trim() })),
+      ownerId: existing?.ownerId ?? currentUserId,
+      ownerName: existing?.ownerName ?? currentUserName ?? coach.trim() ?? 'You',
+      // Owner controls the flag; collaborators keep the existing setting.
+      collaborative: isOwner ? collaborative : existing?.collaborative,
+      version: Date.now(),
     }
 
+    // Persist locally first so the UI is responsive even if the network is slow.
     if (isEdit && existing) updateProgram(program)
     else addProgram(program)
-    navigate(`/programs/${program.id}`)
+
+    // Publish to the shared store so edits propagate to every account that has
+    // this program. Use the canonical copy the server returns (authoritative
+    // owner/version) when available.
+    setSaving(true)
+    const token = getToken()
+    if (token) {
+      const res = await apiUpsertProgram<Program>(token, program)
+      if (res.ok && res.data) updateProgram(res.data.program)
+    }
+    setSaving(false)
+
+    // After creating, go to the full Programs list (replace so Back doesn't
+    // return to the editor). After editing, return to the program's page.
+    if (isEdit) navigate(`/programs/${program.id}`)
+    else navigate('/programs', { replace: true })
   }
 
   if (isEdit && !existing) {
@@ -299,6 +309,43 @@ export function ProgramEditor() {
             className="input"
           />
         </Field>
+
+        <Field label="Collaborative">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={!isOwner}
+              onClick={() => setCollaborative(true)}
+              className={cn(
+                'flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:opacity-50',
+                collaborative
+                  ? 'border-gold bg-gold/15 text-gold'
+                  : 'border-white/10 bg-ink-850 text-zinc-300 hover:border-white/30',
+              )}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              disabled={!isOwner}
+              onClick={() => setCollaborative(false)}
+              className={cn(
+                'flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition disabled:opacity-50',
+                !collaborative
+                  ? 'border-gold bg-gold/15 text-gold'
+                  : 'border-white/10 bg-ink-850 text-zinc-300 hover:border-white/30',
+              )}
+            >
+              No
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs text-zinc-500">
+            {collaborative
+              ? 'Anyone who adds this program can edit it. Edits apply to everyone who has it.'
+              : 'Only you can edit this program. Your edits apply to everyone who has it.'}
+            {!isOwner && ' Only the original creator can change this setting.'}
+          </p>
+        </Field>
       </section>
 
       {/* Days */}
@@ -346,7 +393,6 @@ export function ProgramEditor() {
                       <input
                         value={pe.name ?? ex?.name ?? ''}
                         onChange={(e) => setExerciseName(dayIdx, exIdx, e.target.value, pe)}
-                        list={datalistId}
                         placeholder="Type an exercise name"
                         className="input flex-1"
                       />
@@ -365,6 +411,7 @@ export function ProgramEditor() {
                     <div className="mt-2 grid grid-cols-4 gap-2">
                       <NumField
                         label="Sets"
+                        noStepper
                         value={pe.sets}
                         onChange={(v) => updateExercise(dayIdx, exIdx, { sets: v })}
                       />
@@ -402,12 +449,6 @@ export function ProgramEditor() {
         </button>
       </section>
 
-      <datalist id={datalistId}>
-        {suggestions.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
-
       {error && (
         <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
       )}
@@ -416,8 +457,8 @@ export function ProgramEditor() {
         <button onClick={() => navigate(-1)} className="btn-ghost flex-1">
           Cancel
         </button>
-        <button onClick={save} className="btn-gold flex-1">
-          {isEdit ? 'Save Changes' : 'Create Program'}
+        <button onClick={() => void save()} disabled={saving} className="btn-gold flex-1 disabled:opacity-60">
+          {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Program'}
         </button>
       </div>
     </div>
@@ -437,10 +478,12 @@ function NumField({
   label,
   value,
   onChange,
+  noStepper,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
+  noStepper?: boolean
 }) {
   return (
     <label className="block">
@@ -448,10 +491,16 @@ function NumField({
         {label}
       </span>
       <input
-        type="number"
+        // text + numeric inputmode keeps the numeric keypad but drops the
+        // up/down spinner arrows that `type="number"` adds.
+        type={noStepper ? 'text' : 'number'}
+        inputMode="numeric"
         min={0}
         value={value}
-        onChange={(e) => onChange(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^0-9]/g, '')
+          onChange(raw === '' ? 0 : Math.max(0, Number(raw)))
+        }}
         className="input px-2 py-2 text-center text-sm"
       />
     </label>

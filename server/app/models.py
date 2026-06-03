@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -29,4 +29,37 @@ class Follow(Base):
 
     follower_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     following_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class SharedProgram(Base):
+    """Canonical, cross-account store for a user-created program.
+
+    All accounts that add the program reference it by this same id, so an
+    edit by the owner (or any collaborator, when collaborative) propagates to
+    everyone who has it.
+    """
+
+    __tablename__ = "shared_programs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    owner_name: Mapped[str] = mapped_column(String, nullable=False, default="")
+    collaborative: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Full program JSON (source of truth for content).
+    data: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    # Epoch-ms of the last edit; clients pull when this exceeds their copy.
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    updated_by: Mapped[str] = mapped_column(String, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class ProgramMember(Base):
+    """Records that a user has added a shared program (and may edit it when
+    the program is collaborative). The owner is always a member."""
+
+    __tablename__ = "program_members"
+
+    program_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, Plus, Search, UserMinus, UserPlus, Users } from 'lucide-react'
 import {
+  apiAddProgram,
   apiFollow,
   apiFollowing,
   apiSearchUsers,
@@ -12,7 +13,7 @@ import {
 import { getToken } from '../auth'
 import { useStore } from '../store'
 import type { Program } from '../types'
-import { cn, uid } from '../lib/utils'
+import { cn } from '../lib/utils'
 
 export function People() {
   const [query, setQuery] = useState('')
@@ -207,13 +208,14 @@ function FollowingCard({
     }
   }
 
-  function addToMine(p: Program) {
-    const copy: Program = {
-      ...p,
-      id: uid(),
-      coach: p.coach || user.name,
-    }
-    addProgram(copy)
+  async function addToMine(p: Program) {
+    const token = getToken()
+    if (!token) return
+    // Keep the same id so this account references the shared (canonical)
+    // program; edits by the owner/collaborators then sync to everyone.
+    const res = await apiAddProgram<Program>(token, p.id)
+    const program = res.ok && res.data ? res.data.program : { ...p, coach: p.coach || user.name }
+    addProgram({ ...program, coach: program.coach || user.name })
     setAdded((prev) => new Set(prev).add(p.id))
   }
 
@@ -263,7 +265,7 @@ function FollowingCard({
                       </p>
                     </div>
                     <button
-                      onClick={() => addToMine(p)}
+                      onClick={() => void addToMine(p)}
                       disabled={isAdded}
                       className={cn(
                         'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',
@@ -278,7 +280,7 @@ function FollowingCard({
                         </>
                       ) : (
                         <>
-                          <Plus className="h-4 w-4" /> Add to mine
+                          <Plus className="h-4 w-4" /> Add
                         </>
                       )}
                     </button>

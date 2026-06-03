@@ -1,6 +1,7 @@
 import json
 import os
 import secrets
+import time
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,8 +11,12 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
-from .models import Follow, User
+from .models import Follow, ProgramMember, SharedProgram, User
 from .security import create_token, decode_token, hash_password, verify_password
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
 
 Base.metadata.create_all(bind=engine)
 
@@ -76,6 +81,14 @@ class SharedPrograms(BaseModel):
     programs: list[dict]
 
 
+class ProgramBody(BaseModel):
+    program: dict
+
+
+class BatchBody(BaseModel):
+    ids: list[str]
+
+
 # ---- Helpers ----
 def _public(user: User) -> PublicUser:
     return PublicUser(id=user.id, name=user.name, email=user.email)
@@ -89,6 +102,58 @@ def _custom_programs(user: User) -> list[dict]:
         return []
     progs = blob.get("customPrograms")
     return progs if isinstance(progs, list) else []
+
+
+def _enrich(program: dict, sp: SharedProgram) -> dict:
+    """Stamp the authoritative sharing metadata onto a program dict."""
+    out = dict(program)
+    out["id"] = sp.id
+    out["ownerId"] = sp.owner_id
+    out["ownerName"] = sp.owner_name
+    out["collaborative"] = sp.collaborative
+    out["version"] = sp.version
+    return out
+
+
+def _ensure_member(db: Session, program_id: str, user_id: str) -> None:
+    exists = (
+        db.query(ProgramMember)
+        .filter(ProgramMember.program_id == program_id, ProgramMember.user_id == user_id)
+        .first()
+    )
+    if not exists:
+        db.add(ProgramMember(program_id=program_id, user_id=user_id))
+
+
+def _publish_owned_programs(db: Session, owner: User) -> list[dict]:
+    """Ensure every program in the owner's blob exists in the shared store, then
+    return the canonical list of programs this user owns."""
+    blob_progs = _custom_programs(owner)
+    changed = False
+    for p in blob_progs:
+        pid = p.get("id")
+        if not pid:
+            continue
+        sp = db.get(SharedProgram, pid)
+        if sp is None:
+            version = int(p.get("version") or _now_ms())
+            sp = SharedProgram(
+                id=pid,
+                owner_id=owner.id,
+                owner_name=owner.name,
+                collaborative=bool(p.get("collaborative")),
+                data=json.dumps(p),
+                version=version,
+                updated_by=owner.id,
+            )
+            sp.data = json.dumps(_enrich(p, sp))
+            db.add(sp)
+            _ensure_member(db, pid, owner.id)
+            changed = True
+    if changed:
+        db.commit()
+    owned = db.query(SharedProgram).filter(SharedProgram.owner_id == owner.id).all()
+    return [json.loads(sp.data) for sp in owned]
 
 
 def current_user(
@@ -278,8 +343,110 @@ def user_programs(
         raise HTTPException(status_code=404, detail="User not found.")
     return SharedPrograms(
         user=SharedUser(id=target.id, name=target.name),
-        programs=_custom_programs(target),
+        programs=_publish_owned_programs(db, target),
     )
+
+
+@app.put("/api/programs/{program_id}")
+def upsert_program(
+    program_id: str,
+    body: ProgramBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    program = dict(body.program)
+    program["id"] = program_id
+    sp = db.get(SharedProgram, program_id)
+    version = _now_ms()
+    if sp is None:
+        sp = SharedProgram(
+            id=program_id,
+            owner_id=user.id,
+            owner_name=user.name,
+            collaborative=bool(program.get("collaborative")),
+            version=version,
+            updated_by=user.id,
+        )
+        sp.data = json.dumps(_enrich(program, sp))
+        db.add(sp)
+        _ensure_member(db, program_id, user.id)
+    else:
+        is_owner = sp.owner_id == user.id
+        is_member = (
+            db.query(ProgramMember)
+            .filter(
+                ProgramMember.program_id == program_id,
+                ProgramMember.user_id == user.id,
+            )
+            .first()
+            is not None
+        )
+        if is_owner:
+            sp.collaborative = bool(program.get("collaborative"))
+        elif sp.collaborative and is_member:
+            pass  # collaborator may edit content; ownership/flag unchanged
+        else:
+            raise HTTPException(status_code=403, detail="You can't edit this program.")
+        sp.version = version
+        sp.updated_by = user.id
+        sp.data = json.dumps(_enrich(program, sp))
+    db.commit()
+    db.refresh(sp)
+    return {"program": json.loads(sp.data)}
+
+
+@app.get("/api/programs/{program_id}")
+def get_program(
+    program_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    sp = db.get(SharedProgram, program_id)
+    if sp is None:
+        raise HTTPException(status_code=404, detail="Program not found.")
+    return {"program": json.loads(sp.data)}
+
+
+@app.post("/api/programs/batch")
+def programs_batch(
+    body: BatchBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    out: list[dict] = []
+    for pid in body.ids[:200]:
+        sp = db.get(SharedProgram, pid)
+        if sp is not None:
+            out.append(json.loads(sp.data))
+    return {"programs": out}
+
+
+@app.post("/api/programs/{program_id}/add")
+def add_program_member(
+    program_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    sp = db.get(SharedProgram, program_id)
+    if sp is None:
+        raise HTTPException(status_code=404, detail="Program not found.")
+    _ensure_member(db, program_id, user.id)
+    db.commit()
+    return {"program": json.loads(sp.data)}
+
+
+@app.delete("/api/programs/{program_id}/member")
+def remove_program_member(
+    program_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(ProgramMember).filter(
+        ProgramMember.program_id == program_id,
+        ProgramMember.user_id == user.id,
+    ).delete()
+    db.commit()
+    return {"ok": True}
 
 
 # ---- Static frontend (optional) ----

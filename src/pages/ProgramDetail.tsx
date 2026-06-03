@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
+import { useAuth } from '../auth'
 
 export function ProgramDetail() {
   const { programId } = useParams()
@@ -20,6 +21,7 @@ export function ProgramDetail() {
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
   const { activeProgramId, startProgram, deleteProgram } = useStore()
+  const currentUserId = useAuth((s) => s.user?.id)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   if (!program) {
@@ -34,6 +36,10 @@ export function ProgramDetail() {
   }
 
   const isActive = program.id === activeProgramId
+  // You can edit a custom program if you're its creator, or if it's marked
+  // collaborative. Non-owners of a non-collaborative program are view-only.
+  const isOwner = !program.ownerId || program.ownerId === currentUserId
+  const canEdit = isCustom && (isOwner || !!program.collaborative)
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -89,11 +95,20 @@ export function ProgramDetail() {
           )}
         </button>
 
+        {isCustom && !canEdit && (
+          <p className="mt-3 text-center text-xs text-zinc-500">
+            View only · {program.ownerName ? `created by ${program.ownerName}` : 'created by another athlete'}.
+            Only the creator can edit this program.
+          </p>
+        )}
+
         {isCustom && (
           <div className="mt-2 flex gap-2">
-            <Link to={`/programs/${program.id}/edit`} className="btn-ghost flex-1">
-              <Pencil className="h-4 w-4" /> Edit
-            </Link>
+            {canEdit && (
+              <Link to={`/programs/${program.id}/edit`} className="btn-ghost flex-1">
+                <Pencil className="h-4 w-4" /> Edit
+              </Link>
+            )}
             {confirmDelete ? (
               <button
                 onClick={() => {

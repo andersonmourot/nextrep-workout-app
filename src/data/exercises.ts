@@ -458,15 +458,31 @@ export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(
   EXERCISES.map((e) => [e.id, e]),
 )
 
-export function getExercise(id: string): Exercise | undefined {
-  return EXERCISE_MAP[id]
+// User-created exercises, mirrored here from the store so the synchronous
+// lookups below (used app-wide) can resolve them without prop-drilling.
+let CUSTOM_EXERCISES: Exercise[] = []
+
+export function setCustomExercises(list: Exercise[]): void {
+  CUSTOM_EXERCISES = Array.isArray(list) ? list : []
 }
 
-/** Find a built-in exercise by its display name (case-insensitive). */
+/** All exercises available to the current user: custom first, then built-ins. */
+export function allExercises(): Exercise[] {
+  return [...CUSTOM_EXERCISES, ...EXERCISES]
+}
+
+export function getExercise(id: string): Exercise | undefined {
+  return CUSTOM_EXERCISES.find((e) => e.id === id) ?? EXERCISE_MAP[id]
+}
+
+/** Find an exercise (custom or built-in) by its display name (case-insensitive). */
 export function findExerciseByName(name: string): Exercise | undefined {
   const q = name.trim().toLowerCase()
   if (!q) return undefined
-  return EXERCISES.find((e) => e.name.toLowerCase() === q)
+  return (
+    CUSTOM_EXERCISES.find((e) => e.name.toLowerCase() === q) ??
+    EXERCISES.find((e) => e.name.toLowerCase() === q)
+  )
 }
 
 /** Display label for a planned exercise: custom name, else the built-in name, else the id. */

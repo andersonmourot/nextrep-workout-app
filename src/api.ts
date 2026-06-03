@@ -131,3 +131,27 @@ export function apiUserPrograms<P = unknown>(
 ): Promise<ApiResult<SharedPrograms<P>>> {
   return request(`/api/users/${userId}/programs`, {}, token)
 }
+
+// ---- Shared programs (cross-account canonical store) ----
+export function apiUpsertProgram<P>(token: string, program: P): Promise<ApiResult<{ program: P }>> {
+  const id = (program as { id: string }).id
+  return request(`/api/programs/${id}`, { method: 'PUT', body: JSON.stringify({ program }) }, token)
+}
+
+export function apiAddProgram<P>(token: string, id: string): Promise<ApiResult<{ program: P }>> {
+  return request(`/api/programs/${id}/add`, { method: 'POST' }, token)
+}
+
+export function apiRemoveProgramMember(
+  token: string,
+  id: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return request(`/api/programs/${id}/member`, { method: 'DELETE' }, token)
+}
+
+export function apiProgramsBatch<P>(
+  token: string,
+  ids: string[],
+): Promise<ApiResult<{ programs: P[] }>> {
+  return request('/api/programs/batch', { method: 'POST', body: JSON.stringify({ ids }) }, token)
+}

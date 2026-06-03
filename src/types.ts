@@ -77,6 +77,14 @@ export interface Program {
   description: string
   tags: string[]
   days: ProgramDay[]
+  /** Id of the account that created this program (set once published/shared). */
+  ownerId?: string
+  /** Display name of the creator, shown on shared programs. */
+  ownerName?: string
+  /** When true, anyone who has added the program may edit it (edits propagate to all). */
+  collaborative?: boolean
+  /** Epoch-ms of the last edit; used to propagate the newest version across accounts. */
+  version?: number
 }
 
 export interface SetLog {

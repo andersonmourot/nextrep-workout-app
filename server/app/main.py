@@ -7,7 +7,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
@@ -57,7 +56,6 @@ class DataBody(BaseModel):
 class DiscoverUser(BaseModel):
     id: str
     name: str
-    email: str
     following: bool
     program_count: int
 
@@ -65,12 +63,16 @@ class DiscoverUser(BaseModel):
 class FollowUser(BaseModel):
     id: str
     name: str
-    email: str
     program_count: int
 
 
+class SharedUser(BaseModel):
+    id: str
+    name: str
+
+
 class SharedPrograms(BaseModel):
-    user: PublicUser
+    user: SharedUser
     programs: list[dict]
 
 
@@ -185,7 +187,7 @@ def search_users(
     rows = (
         db.query(User)
         .filter(User.id != user.id)
-        .filter(or_(User.name.ilike(like), User.email.ilike(like)))
+        .filter(User.name.ilike(like))
         .order_by(User.name)
         .limit(25)
         .all()
@@ -197,7 +199,6 @@ def search_users(
         DiscoverUser(
             id=u.id,
             name=u.name,
-            email=u.email,
             following=u.id in following_ids,
             program_count=len(_custom_programs(u)),
         )
@@ -260,7 +261,6 @@ def list_following(
             FollowUser(
                 id=u.id,
                 name=u.name,
-                email=u.email,
                 program_count=len(_custom_programs(u)),
             )
         )
@@ -276,7 +276,10 @@ def user_programs(
     target = db.get(User, user_id)
     if not target:
         raise HTTPException(status_code=404, detail="User not found.")
-    return SharedPrograms(user=_public(target), programs=_custom_programs(target))
+    return SharedPrograms(
+        user=SharedUser(id=target.id, name=target.name),
+        programs=_custom_programs(target),
+    )
 
 
 # ---- Static frontend (optional) ----

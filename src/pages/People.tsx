@@ -94,7 +94,7 @@ export function People() {
         <p className="label-eyebrow">Train together</p>
         <h1 className="heading text-3xl font-bold text-zinc-50">People</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Find other athletes, follow them, and add their programs to your own.
+          Find other athletes by name, follow them, and add their programs to your own.
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export function People() {
           <input
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search by name or email"
+            placeholder="Search by name"
             className="w-full rounded-xl border border-white/10 bg-ink-850 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-gold/60 focus:outline-none"
           />
         </div>
@@ -122,7 +122,6 @@ export function People() {
               <div key={u.id} className="card flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-zinc-100">{u.name}</p>
-                  <p className="truncate text-xs text-zinc-500">{u.email}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {u.program_count} program{u.program_count === 1 ? '' : 's'}
                   </p>

@@ -89,7 +89,6 @@ export function apiPutData(
 export interface DiscoverUser {
   id: string
   name: string
-  email: string
   following: boolean
   program_count: number
 }
@@ -97,12 +96,16 @@ export interface DiscoverUser {
 export interface FollowUser {
   id: string
   name: string
-  email: string
   program_count: number
 }
 
+export interface SharedUser {
+  id: string
+  name: string
+}
+
 export interface SharedPrograms<P = unknown> {
-  user: SessionUser
+  user: SharedUser
   programs: P[]
 }
 

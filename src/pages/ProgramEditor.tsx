@@ -157,10 +157,9 @@ export function ProgramEditor() {
     }
     setSaving(false)
 
-    // After creating, go to the full Programs list (replace so Back doesn't
-    // return to the editor). After editing, return to the program's page.
-    if (isEdit) navigate(`/programs/${program.id}`)
-    else navigate('/programs', { replace: true })
+    // After creating or editing, go to the full Programs list (replace so Back
+    // returns to the list, not the editor).
+    navigate('/programs', { replace: true })
   }
 
   if (isEdit && !existing) {
@@ -242,20 +241,25 @@ export function ProgramEditor() {
         <div className="grid grid-cols-3 gap-3">
           <Field label="Weeks">
             <input
-              type="number"
-              min={1}
+              type="text"
+              inputMode="numeric"
               value={durationWeeks}
-              onChange={(e) => setDurationWeeks(Number(e.target.value))}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '')
+                setDurationWeeks(raw === '' ? 0 : Number(raw))
+              }}
               className="input"
             />
           </Field>
           <Field label="Days / week">
             <input
-              type="number"
-              min={1}
-              max={7}
+              type="text"
+              inputMode="numeric"
               value={daysPerWeek}
-              onChange={(e) => setDaysPerWeek(Number(e.target.value))}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, '')
+                setDaysPerWeek(raw === '' ? 0 : Number(raw))
+              }}
               className="input"
             />
           </Field>
@@ -411,7 +415,6 @@ export function ProgramEditor() {
                     <div className="mt-2 grid grid-cols-4 gap-2">
                       <NumField
                         label="Sets"
-                        noStepper
                         value={pe.sets}
                         onChange={(v) => updateExercise(dayIdx, exIdx, { sets: v })}
                       />
@@ -478,12 +481,10 @@ function NumField({
   label,
   value,
   onChange,
-  noStepper,
 }: {
   label: string
   value: number
   onChange: (v: number) => void
-  noStepper?: boolean
 }) {
   return (
     <label className="block">
@@ -493,9 +494,8 @@ function NumField({
       <input
         // text + numeric inputmode keeps the numeric keypad but drops the
         // up/down spinner arrows that `type="number"` adds.
-        type={noStepper ? 'text' : 'number'}
+        type="text"
         inputMode="numeric"
-        min={0}
         value={value}
         onChange={(e) => {
           const raw = e.target.value.replace(/[^0-9]/g, '')

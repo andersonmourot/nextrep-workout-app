@@ -59,15 +59,17 @@ export function Exercises() {
 
   const list = useMemo(() => {
     const query = q.trim().toLowerCase()
-    return all.filter((e) => {
-      const matchMuscle = muscle === 'All' || e.primaryMuscle === muscle
-      const matchQuery =
-        !query ||
-        e.name.toLowerCase().includes(query) ||
-        e.primaryMuscle.toLowerCase().includes(query) ||
-        e.equipment.toLowerCase().includes(query)
-      return matchMuscle && matchQuery
-    })
+    return all
+      .filter((e) => {
+        const matchMuscle = muscle === 'All' || e.primaryMuscle === muscle
+        const matchQuery =
+          !query ||
+          e.name.toLowerCase().includes(query) ||
+          e.primaryMuscle.toLowerCase().includes(query) ||
+          e.equipment.toLowerCase().includes(query)
+        return matchMuscle && matchQuery
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
   }, [all, q, muscle])
 
   const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])

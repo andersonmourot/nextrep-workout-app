@@ -5,6 +5,7 @@ import {
   Check,
   ChevronRight,
   Clock,
+  Copy,
   Dumbbell,
   Pencil,
   Play,
@@ -13,16 +14,42 @@ import {
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
-import { useAuth } from '../auth'
+import { getToken, useAuth } from '../auth'
+import { apiUpsertProgram } from '../api'
+import type { Program } from '../types'
+import { uid } from '../lib/utils'
 
 export function ProgramDetail() {
   const { programId } = useParams()
   const navigate = useNavigate()
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
-  const { activeProgramId, startProgram, deleteProgram } = useStore()
+  const { activeProgramId, startProgram, deleteProgram, addProgram } = useStore()
   const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+
+  async function duplicate(p: Program) {
+    const token = getToken()
+    setDuplicating(true)
+    // Independent copy: new id + you as owner, so edits never sync back to the
+    // original. You can then edit it and share it (collaborative or not) yourself.
+    const copy: Program = {
+      ...p,
+      id: `custom-${uid()}`,
+      name: `${p.name} (copy)`,
+      ownerId: currentUserId,
+      ownerName: currentUserName ?? p.ownerName,
+      coach: currentUserName || p.coach,
+      collaborative: false,
+      version: Date.now(),
+    }
+    addProgram(copy)
+    if (token) await apiUpsertProgram<Program>(token, copy)
+    setDuplicating(false)
+    navigate(`/programs/${copy.id}`)
+  }
 
   if (!program) {
     return (
@@ -108,6 +135,16 @@ export function ProgramDetail() {
               <Link to={`/programs/${program.id}/edit`} className="btn-ghost flex-1">
                 <Pencil className="h-4 w-4" /> Edit
               </Link>
+            )}
+            {!isOwner && (
+              <button
+                onClick={() => void duplicate(program)}
+                disabled={duplicating}
+                className="btn-ghost flex-1 disabled:opacity-60"
+                title="Make an independent copy you fully own"
+              >
+                <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
+              </button>
             )}
             {confirmDelete ? (
               <button

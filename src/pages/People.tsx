@@ -1,19 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Check, ChevronDown, Plus, Search, UserMinus, UserPlus, Users } from 'lucide-react'
+import { Check, ChevronDown, Copy, Plus, Search, UserMinus, UserPlus, Users } from 'lucide-react'
 import {
   apiAddProgram,
   apiFollow,
   apiFollowing,
   apiSearchUsers,
   apiUnfollow,
+  apiUpsertProgram,
   apiUserPrograms,
   type DiscoverUser,
   type FollowUser,
 } from '../api'
-import { getToken } from '../auth'
+import { getToken, useAuth } from '../auth'
 import { useStore } from '../store'
 import type { Program } from '../types'
-import { cn } from '../lib/utils'
+import { cn, uid } from '../lib/utils'
 
 export function People() {
   const [query, setQuery] = useState('')
@@ -191,8 +192,11 @@ function FollowingCard({
   const [loading, setLoading] = useState(false)
   const [programs, setPrograms] = useState<Program[] | null>(null)
   const [added, setAdded] = useState<Set<string>>(new Set())
+  const [duplicating, setDuplicating] = useState<string | null>(null)
   const customPrograms = useStore((s) => s.customPrograms)
   const addProgram = useStore((s) => s.addProgram)
+  const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
 
   async function toggleOpen() {
     const next = !open
@@ -217,6 +221,27 @@ function FollowingCard({
     const program = res.ok && res.data ? res.data.program : { ...p, coach: p.coach || user.name }
     addProgram({ ...program, coach: program.coach || user.name })
     setAdded((prev) => new Set(prev).add(p.id))
+  }
+
+  async function duplicate(p: Program) {
+    const token = getToken()
+    if (!token) return
+    setDuplicating(p.id)
+    // Independent copy: brand-new id + you as owner, so it never syncs back to
+    // the original. You can then edit, set collaborative, and share it yourself.
+    const copy: Program = {
+      ...p,
+      id: `custom-${uid()}`,
+      name: `${p.name} (copy)`,
+      ownerId: currentUserId,
+      ownerName: currentUserName ?? p.ownerName,
+      coach: currentUserName || p.coach || user.name,
+      collaborative: false,
+      version: Date.now(),
+    }
+    addProgram(copy)
+    await apiUpsertProgram<Program>(token, copy)
+    setDuplicating(null)
   }
 
   return (
@@ -251,6 +276,7 @@ function FollowingCard({
           {!loading && programs && programs.length > 0 && (
             <div className="space-y-2">
               {programs.map((p) => {
+                const isOwner = !!currentUserId && p.ownerId === currentUserId
                 const isAdded = added.has(p.id) || customPrograms.some((c) => c.id === p.id)
                 return (
                   <div
@@ -264,26 +290,42 @@ function FollowingCard({
                         {(p.days?.length ?? 0) === 1 ? '' : 's'}
                       </p>
                     </div>
-                    <button
-                      onClick={() => void addToMine(p)}
-                      disabled={isAdded}
-                      className={cn(
-                        'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',
-                        isAdded
-                          ? 'border border-white/10 bg-ink-800 text-zinc-400'
-                          : 'btn-gold',
-                      )}
-                    >
-                      {isAdded ? (
-                        <>
-                          <Check className="h-4 w-4" /> Added
-                        </>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => void duplicate(p)}
+                        disabled={duplicating === p.id}
+                        className="rounded-lg border border-white/15 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-60"
+                        title="Make an independent copy on your profile"
+                      >
+                        <Copy className="h-4 w-4" /> {duplicating === p.id ? '…' : 'Duplicate'}
+                      </button>
+                      {isOwner ? (
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-400">
+                          <Check className="h-4 w-4" /> Yours
+                        </span>
                       ) : (
-                        <>
-                          <Plus className="h-4 w-4" /> Add
-                        </>
+                        <button
+                          onClick={() => void addToMine(p)}
+                          disabled={isAdded}
+                          className={cn(
+                            'rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',
+                            isAdded
+                              ? 'border border-white/10 bg-ink-800 text-zinc-400'
+                              : 'btn-gold',
+                          )}
+                        >
+                          {isAdded ? (
+                            <>
+                              <Check className="h-4 w-4" /> Added
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4" /> Add
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                    </div>
                   </div>
                 )
               })}

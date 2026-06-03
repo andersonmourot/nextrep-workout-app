@@ -48,7 +48,7 @@ export function ProgramDetail() {
     addProgram(copy)
     if (token) await apiUpsertProgram<Program>(token, copy)
     setDuplicating(false)
-    navigate(`/programs/${copy.id}`)
+    navigate('/programs')
   }
 
   if (!program) {

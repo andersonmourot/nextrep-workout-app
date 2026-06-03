@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Calendar, Dumbbell, Flame, Play, TrendingUp } from 'lucide-react'
 import { useProgram, useStore } from '../store'
-import { PROGRAMS } from '../data/programs'
 import { exerciseLabel } from '../data/exercises'
 import { ProgressRing } from '../components/ProgressRing'
 import {
@@ -133,36 +132,6 @@ export function Dashboard() {
             ))}
           </ul>
         )}
-      </section>
-
-      {/* Featured programs */}
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="heading text-sm font-semibold tracking-wider text-zinc-300">
-            Featured Programs
-          </h3>
-          <Link to="/programs" className="text-xs font-medium text-gold">
-            See all
-          </Link>
-        </div>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
-          {PROGRAMS.slice(0, 4).map((p) => (
-            <Link
-              key={p.id}
-              to={`/programs/${p.id}`}
-              className="card min-w-[180px] max-w-[180px] p-4"
-              style={{ background: `linear-gradient(160deg, ${p.accent}1f, #141417 55%)` }}
-            >
-              <span className="label-eyebrow" style={{ color: p.accent }}>
-                {p.category}
-              </span>
-              <p className="heading mt-1 text-base font-bold leading-tight text-zinc-50">{p.name}</p>
-              <p className="mt-1 text-[11px] text-zinc-400">
-                {p.daysPerWeek} days · {p.durationWeeks} wks
-              </p>
-            </Link>
-          ))}
-        </div>
       </section>
     </div>
   )

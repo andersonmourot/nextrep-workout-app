@@ -84,3 +84,47 @@ export function apiPutData(
 ): Promise<ApiResult<{ ok: boolean }>> {
   return request('/api/data', { method: 'PUT', body: JSON.stringify({ data }) }, token)
 }
+
+// ---- Social: search / follow / shared programs ----
+export interface DiscoverUser {
+  id: string
+  name: string
+  email: string
+  following: boolean
+  program_count: number
+}
+
+export interface FollowUser {
+  id: string
+  name: string
+  email: string
+  program_count: number
+}
+
+export interface SharedPrograms<P = unknown> {
+  user: SessionUser
+  programs: P[]
+}
+
+export function apiSearchUsers(token: string, q: string): Promise<ApiResult<DiscoverUser[]>> {
+  return request(`/api/users/search?q=${encodeURIComponent(q)}`, {}, token)
+}
+
+export function apiFollow(token: string, userId: string): Promise<ApiResult<{ ok: boolean }>> {
+  return request(`/api/users/${userId}/follow`, { method: 'POST' }, token)
+}
+
+export function apiUnfollow(token: string, userId: string): Promise<ApiResult<{ ok: boolean }>> {
+  return request(`/api/users/${userId}/follow`, { method: 'DELETE' }, token)
+}
+
+export function apiFollowing(token: string): Promise<ApiResult<FollowUser[]>> {
+  return request('/api/following', {}, token)
+}
+
+export function apiUserPrograms<P = unknown>(
+  token: string,
+  userId: string,
+): Promise<ApiResult<SharedPrograms<P>>> {
+  return request(`/api/users/${userId}/programs`, {}, token)
+}

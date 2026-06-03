@@ -9,6 +9,7 @@ import { Workout } from './pages/Workout'
 import { Exercises } from './pages/Exercises'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { Progress } from './pages/Progress'
+import { People } from './pages/People'
 import { Settings } from './pages/Settings'
 import { Auth } from './pages/Auth'
 import { useAuth } from './auth'
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/exercises/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/progress" element={<Progress />} />
+          <Route path="/people" element={<People />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/workout/:programId/:dayId" element={<Workout />} />
           <Route path="*" element={<Dashboard />} />

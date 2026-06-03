@@ -7,10 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
-from .models import User
+from .models import Follow, User
 from .security import create_token, decode_token, hash_password, verify_password
 
 Base.metadata.create_all(bind=engine)
@@ -53,9 +54,39 @@ class DataBody(BaseModel):
     data: dict
 
 
+class DiscoverUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    following: bool
+    program_count: int
+
+
+class FollowUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    program_count: int
+
+
+class SharedPrograms(BaseModel):
+    user: PublicUser
+    programs: list[dict]
+
+
 # ---- Helpers ----
 def _public(user: User) -> PublicUser:
     return PublicUser(id=user.id, name=user.name, email=user.email)
+
+
+def _custom_programs(user: User) -> list[dict]:
+    """Extract a user's custom (shareable) programs from their data blob."""
+    try:
+        blob = json.loads(user.data or "{}")
+    except json.JSONDecodeError:
+        return []
+    progs = blob.get("customPrograms")
+    return progs if isinstance(progs, list) else []
 
 
 def current_user(
@@ -138,6 +169,114 @@ def put_data(
     db.add(user)
     db.commit()
     return {"ok": True}
+
+
+# ---- Social: search / follow / shared programs ----
+@app.get("/api/users/search", response_model=list[DiscoverUser])
+def search_users(
+    q: str = "",
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    term = q.strip()
+    if not term:
+        return []
+    like = f"%{term}%"
+    rows = (
+        db.query(User)
+        .filter(User.id != user.id)
+        .filter(or_(User.name.ilike(like), User.email.ilike(like)))
+        .order_by(User.name)
+        .limit(25)
+        .all()
+    )
+    following_ids = {
+        f.following_id for f in db.query(Follow).filter(Follow.follower_id == user.id).all()
+    }
+    return [
+        DiscoverUser(
+            id=u.id,
+            name=u.name,
+            email=u.email,
+            following=u.id in following_ids,
+            program_count=len(_custom_programs(u)),
+        )
+        for u in rows
+    ]
+
+
+@app.post("/api/users/{user_id}/follow")
+def follow_user(
+    user_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    if user_id == user.id:
+        raise HTTPException(status_code=400, detail="You cannot follow yourself.")
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    exists = (
+        db.query(Follow)
+        .filter(Follow.follower_id == user.id, Follow.following_id == user_id)
+        .first()
+    )
+    if not exists:
+        db.add(Follow(follower_id=user.id, following_id=user_id))
+        db.commit()
+    return {"ok": True, "following": True}
+
+
+@app.delete("/api/users/{user_id}/follow")
+def unfollow_user(
+    user_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(Follow).filter(
+        Follow.follower_id == user.id, Follow.following_id == user_id
+    ).delete()
+    db.commit()
+    return {"ok": True, "following": False}
+
+
+@app.get("/api/following", response_model=list[FollowUser])
+def list_following(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    follows = (
+        db.query(Follow)
+        .filter(Follow.follower_id == user.id)
+        .order_by(Follow.created_at.desc())
+        .all()
+    )
+    out: list[FollowUser] = []
+    for f in follows:
+        u = db.get(User, f.following_id)
+        if not u:
+            continue
+        out.append(
+            FollowUser(
+                id=u.id,
+                name=u.name,
+                email=u.email,
+                program_count=len(_custom_programs(u)),
+            )
+        )
+    return out
+
+
+@app.get("/api/users/{user_id}/programs", response_model=SharedPrograms)
+def user_programs(
+    user_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return SharedPrograms(user=_public(target), programs=_custom_programs(target))
 
 
 # ---- Static frontend (optional) ----

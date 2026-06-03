@@ -20,3 +20,13 @@ class User(Base):
     # JSON document holding the user's app data (programs, logs, settings, etc.)
     data: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Follow(Base):
+    """A directed follow edge: follower_id follows following_id."""
+
+    __tablename__ = "follows"
+
+    follower_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    following_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

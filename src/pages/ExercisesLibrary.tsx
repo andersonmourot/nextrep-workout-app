@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Plus, RotateCcw, Search, Settings2, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Plus, RotateCcw, Search, Settings2, Trash2, X } from 'lucide-react'
 import { EXERCISES } from '../data/exercises'
 import { useStore } from '../store'
 import type { Difficulty, Equipment, Exercise, Muscle } from '../types'
@@ -90,6 +90,12 @@ export function ExercisesLibrary() {
 
   return (
     <div className="animate-fade-in space-y-5">
+      <Link
+        to="/programs"
+        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+      >
+        <ArrowLeft className="h-4 w-4" /> Back
+      </Link>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="heading text-3xl font-bold text-zinc-50">Exercises</h1>

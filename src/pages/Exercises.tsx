@@ -98,15 +98,10 @@ export function Exercises() {
         <div className="flex shrink-0 gap-2">
           <button
             onClick={toggleManaging}
+            aria-label={managing ? 'Done managing' : 'Manage exercises'}
             className={cn('btn-ghost px-3 py-2 text-sm', managing && 'text-gold')}
           >
-            {managing ? (
-              'Done'
-            ) : (
-              <>
-                <Settings2 className="h-4 w-4" /> Manage
-              </>
-            )}
+            {managing ? 'Done' : <Settings2 className="h-4 w-4" />}
           </button>
           <button
             onClick={() => setCreating(true)}

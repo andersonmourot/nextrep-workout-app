@@ -47,18 +47,17 @@ export function Programs() {
         <div className="flex shrink-0 gap-2">
           <button
             onClick={toggleManaging}
+            aria-label={managing ? 'Done managing' : 'Manage programs'}
             className={cn('btn-ghost px-3 py-2 text-sm', managing && 'text-gold')}
           >
-            {managing ? (
-              'Done'
-            ) : (
-              <>
-                <Settings2 className="h-4 w-4" /> Manage
-              </>
-            )}
+            {managing ? 'Done' : <Settings2 className="h-4 w-4" />}
           </button>
-          <Link to="/programs/new" className="btn-gold px-3 py-2 text-sm">
-            <Plus className="h-4 w-4" /> Create
+          <Link
+            to="/programs/new"
+            aria-label="Create program"
+            className="btn-gold px-3 py-2 text-sm"
+          >
+            <Plus className="h-4 w-4" />
           </Link>
         </div>
       </div>

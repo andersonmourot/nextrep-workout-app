@@ -92,7 +92,6 @@ export function Exercises() {
     <div className="animate-fade-in space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="label-eyebrow">Perfect your form</p>
           <h1 className="heading text-3xl font-bold text-zinc-50">Exercises</h1>
         </div>
         <div className="flex shrink-0 gap-2">

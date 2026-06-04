@@ -41,7 +41,6 @@ export function Programs() {
     <div className="animate-fade-in space-y-5">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="label-eyebrow">Train with intent</p>
           <h1 className="heading text-3xl font-bold text-zinc-50">Programs</h1>
         </div>
         <div className="flex shrink-0 gap-2">

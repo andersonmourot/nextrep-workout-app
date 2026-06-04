@@ -43,6 +43,11 @@ class LoginBody(BaseModel):
     password: str
 
 
+class ChangePasswordBody(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=6, max_length=200)
+
+
 class PublicUser(BaseModel):
     id: str
     name: str
@@ -211,6 +216,24 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
     return AuthResponse(token=create_token(user.id), user=_public(user))
+
+
+@app.post("/auth/password")
+def change_password(
+    body: ChangePasswordBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Current password is incorrect.")
+    if body.new_password == body.current_password:
+        raise HTTPException(
+            status_code=400, detail="New password must be different from the current one."
+        )
+    user.password_hash = hash_password(body.new_password)
+    db.add(user)
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/me", response_model=PublicUser)

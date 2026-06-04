@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, LogOut, Moon, Sun, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, KeyRound, LogOut, Moon, Sun, Trash2 } from 'lucide-react'
 import { useProgram, useStore } from '../store'
-import { useAuth } from '../auth'
+import { getToken, useAuth } from '../auth'
+import { apiChangePassword } from '../api'
 import { cn } from '../lib/utils'
 import { THEME_COLORS, type ThemeMode } from '../lib/theme'
 import type { Unit } from '../types'
@@ -149,6 +150,9 @@ export function Settings() {
             <p className="text-sm font-medium text-zinc-200">{account.name}</p>
             <p className="text-xs text-zinc-500">{account.email}</p>
           </div>
+
+          <ChangePassword />
+
           <button
             onClick={() => {
               logout()
@@ -195,5 +199,115 @@ export function Settings() {
         SMELLIS · Train with intent.
       </p>
     </div>
+  )
+}
+
+function ChangePassword() {
+  const [open, setOpen] = useState(false)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
+
+  function reset() {
+    setCurrent('')
+    setNext('')
+    setConfirm('')
+    setError(null)
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (next.length < 6) {
+      setError('New password must be at least 6 characters.')
+      return
+    }
+    if (next !== confirm) {
+      setError('New passwords do not match.')
+      return
+    }
+    const token = getToken()
+    if (!token) {
+      setError('You are not signed in.')
+      return
+    }
+    setSaving(true)
+    const res = await apiChangePassword(token, current, next)
+    setSaving(false)
+    if (!res.ok) {
+      setError(res.error ?? 'Could not change password.')
+      return
+    }
+    reset()
+    setOpen(false)
+    setDone(true)
+    setTimeout(() => setDone(false), 4000)
+  }
+
+  if (!open) {
+    return (
+      <div>
+        <button
+          onClick={() => {
+            setDone(false)
+            setOpen(true)
+          }}
+          className="btn-ghost w-full"
+        >
+          <KeyRound className="h-4 w-4" /> Change password
+        </button>
+        {done && (
+          <p className="mt-2 text-center text-xs font-medium text-gold">Password updated.</p>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2.5 rounded-xl border border-white/10 p-3">
+      <input
+        type="password"
+        autoComplete="current-password"
+        value={current}
+        onChange={(e) => setCurrent(e.target.value)}
+        placeholder="Current password"
+        className="input"
+      />
+      <input
+        type="password"
+        autoComplete="new-password"
+        value={next}
+        onChange={(e) => setNext(e.target.value)}
+        placeholder="New password"
+        className="input"
+      />
+      <input
+        type="password"
+        autoComplete="new-password"
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        placeholder="Confirm new password"
+        className="input"
+      />
+      {error && <p className="text-xs font-medium text-red-400">{error}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={saving} className="btn-gold flex-1">
+          {saving ? 'Saving…' : 'Update password'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            reset()
+            setOpen(false)
+          }}
+          className="btn-ghost flex-1"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
   )
 }

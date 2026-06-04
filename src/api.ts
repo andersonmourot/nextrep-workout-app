@@ -74,6 +74,21 @@ export function apiMe(token: string): Promise<ApiResult<SessionUser>> {
   return request('/me', {}, token)
 }
 
+export function apiChangePassword(
+  token: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return request(
+    '/auth/password',
+    {
+      method: 'POST',
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    },
+    token,
+  )
+}
+
 export function apiGetData<T = Record<string, unknown>>(token: string): Promise<ApiResult<T>> {
   return request('/api/data', {}, token)
 }

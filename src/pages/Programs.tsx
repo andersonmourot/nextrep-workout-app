@@ -44,6 +44,9 @@ export function Programs() {
           <h1 className="heading text-3xl font-bold text-zinc-50">Programs</h1>
         </div>
         <div className="flex shrink-0 gap-2">
+          <Link to="/exercises" aria-label="Exercises" className="btn-ghost px-3 py-2 text-sm">
+            <Dumbbell className="h-4 w-4" />
+          </Link>
           <button
             onClick={toggleManaging}
             aria-label={managing ? 'Done managing' : 'Manage programs'}

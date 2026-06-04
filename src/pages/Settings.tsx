@@ -6,6 +6,8 @@ import { getToken, useAuth } from '../auth'
 import { apiChangePassword } from '../api'
 import { cn } from '../lib/utils'
 import { THEME_COLORS, type ThemeMode } from '../lib/theme'
+import { PasswordField } from '../components/PasswordField'
+import { PasswordHints, PASSWORD_MIN_LENGTH } from '../components/PasswordHints'
 import type { Unit } from '../types'
 
 export function Settings() {
@@ -43,26 +45,6 @@ export function Settings() {
             placeholder="Your name"
             className="input"
           />
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-zinc-300">Weight unit</span>
-          <div className="grid grid-cols-2 gap-2">
-            {(['lb', 'kg'] as Unit[]).map((u) => (
-              <button
-                key={u}
-                onClick={() => setUnit(u)}
-                className={cn(
-                  'rounded-xl border py-2.5 text-sm font-semibold uppercase transition',
-                  unit === u
-                    ? 'border-gold bg-gold text-white'
-                    : 'border-white/10 bg-ink-900 text-zinc-300',
-                )}
-              >
-                {u}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -110,6 +92,26 @@ export function Settings() {
                 )}
               >
                 <Icon className="h-4 w-4" /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-zinc-300">Weight unit</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(['lb', 'kg'] as Unit[]).map((u) => (
+              <button
+                key={u}
+                onClick={() => setUnit(u)}
+                className={cn(
+                  'rounded-xl border py-2.5 text-sm font-semibold uppercase transition',
+                  unit === u
+                    ? 'border-gold bg-gold text-white'
+                    : 'border-white/10 bg-ink-900 text-zinc-300',
+                )}
+              >
+                {u}
               </button>
             ))}
           </div>
@@ -221,8 +223,8 @@ function ChangePassword() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (next.length < 6) {
-      setError('New password must be at least 6 characters.')
+    if (next.length < PASSWORD_MIN_LENGTH) {
+      setError(`New password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
       return
     }
     if (next !== confirm) {
@@ -268,29 +270,24 @@ function ChangePassword() {
 
   return (
     <form onSubmit={submit} className="space-y-2.5 rounded-xl border border-white/10 p-3">
-      <input
-        type="password"
+      <PasswordField
         autoComplete="current-password"
         value={current}
-        onChange={(e) => setCurrent(e.target.value)}
+        onChange={setCurrent}
         placeholder="Current password"
-        className="input"
       />
-      <input
-        type="password"
+      <PasswordField
         autoComplete="new-password"
         value={next}
-        onChange={(e) => setNext(e.target.value)}
+        onChange={setNext}
         placeholder="New password"
-        className="input"
       />
-      <input
-        type="password"
+      <PasswordHints value={next} />
+      <PasswordField
         autoComplete="new-password"
         value={confirm}
-        onChange={(e) => setConfirm(e.target.value)}
+        onChange={setConfirm}
         placeholder="Confirm new password"
-        className="input"
       />
       {error && <p className="text-xs font-medium text-red-400">{error}</p>}
       <div className="flex gap-2">

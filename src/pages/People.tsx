@@ -120,12 +120,25 @@ export function People() {
         {results.length > 0 && (
           <div className="mt-3 space-y-2">
             {results.map((u) => (
-              <div key={u.id} className="card flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-zinc-100">{u.name}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    {u.program_count} program{u.program_count === 1 ? '' : 's'}
-                  </p>
+              <div
+                key={u.id}
+                className="card flex items-center justify-between gap-3 border-l-4 p-4"
+                style={{ borderLeftColor: u.color }}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase text-white"
+                    style={{ background: u.color }}
+                    aria-hidden
+                  >
+                    {u.name.trim().charAt(0) || '?'}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-zinc-100">{u.name}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {u.program_count} program{u.program_count === 1 ? '' : 's'}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => void toggleFollow(u)}

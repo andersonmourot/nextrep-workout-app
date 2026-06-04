@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Dumbbell } from 'lucide-react'
 import { useAuth } from '../auth'
+import { PasswordField } from '../components/PasswordField'
+import { PasswordHints } from '../components/PasswordHints'
 
 export function Auth({ mode }: { mode: 'login' | 'signup' }) {
   const navigate = useNavigate()
@@ -68,16 +70,15 @@ export function Auth({ mode }: { mode: 'login' | 'signup' }) {
               className="input"
             />
           </div>
-          <div>
+          <div className="space-y-2">
             <label className="mb-1.5 block text-sm font-medium text-zinc-300">Password</label>
-            <input
-              type="password"
+            <PasswordField
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
               placeholder={isSignup ? 'At least 6 characters' : 'Your password'}
               autoComplete={isSignup ? 'new-password' : 'current-password'}
-              className="input"
             />
+            <PasswordHints value={password} />
           </div>
 
           {error && (

@@ -66,6 +66,7 @@ class DataBody(BaseModel):
 class DiscoverUser(BaseModel):
     id: str
     name: str
+    color: str
     following: bool
     program_count: int
 
@@ -107,6 +108,19 @@ def _custom_programs(user: User) -> list[dict]:
         return []
     progs = blob.get("customPrograms")
     return progs if isinstance(progs, list) else []
+
+
+DEFAULT_THEME_COLOR = "#355e3b"
+
+
+def _theme_color(user: User) -> str:
+    """Read the user's chosen profile/theme color from their data blob."""
+    try:
+        blob = json.loads(user.data or "{}")
+    except json.JSONDecodeError:
+        return DEFAULT_THEME_COLOR
+    color = blob.get("themeColor")
+    return color if isinstance(color, str) and color else DEFAULT_THEME_COLOR
 
 
 def _enrich(program: dict, sp: SharedProgram) -> dict:
@@ -287,6 +301,7 @@ def search_users(
         DiscoverUser(
             id=u.id,
             name=u.name,
+            color=_theme_color(u),
             following=u.id in following_ids,
             program_count=len(_custom_programs(u)),
         )

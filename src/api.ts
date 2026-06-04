@@ -104,6 +104,7 @@ export function apiPutData(
 export interface DiscoverUser {
   id: string
   name: string
+  color: string
   following: boolean
   program_count: number
 }

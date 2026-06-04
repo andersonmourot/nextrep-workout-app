@@ -112,6 +112,7 @@ export interface DiscoverUser {
 export interface FollowUser {
   id: string
   name: string
+  color: string
   program_count: number
 }
 

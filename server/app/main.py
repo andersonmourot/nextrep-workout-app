@@ -74,6 +74,7 @@ class DiscoverUser(BaseModel):
 class FollowUser(BaseModel):
     id: str
     name: str
+    color: str
     program_count: int
 
 
@@ -364,6 +365,7 @@ def list_following(
             FollowUser(
                 id=u.id,
                 name=u.name,
+                color=_theme_color(u),
                 program_count=len(_custom_programs(u)),
             )
         )

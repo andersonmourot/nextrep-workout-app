@@ -5,8 +5,52 @@
 @tailwind utilities;
 
 @layer base {
+  /* Dark theme (default). Surface + text palettes are RGB triplets so Tailwind
+     utilities like bg-ink-900 / text-zinc-400 can flip in light mode. */
   :root {
     color-scheme: dark;
+
+    --ink-950: 8 8 10;
+    --ink-900: 13 13 16;
+    --ink-850: 20 20 23;
+    --ink-800: 27 27 31;
+    --ink-700: 38 38 43;
+    --ink-600: 58 58 65;
+
+    --zinc-50: 250 250 250;
+    --zinc-100: 244 244 245;
+    --zinc-200: 228 228 231;
+    --zinc-300: 212 212 216;
+    --zinc-400: 161 161 170;
+    --zinc-500: 113 113 122;
+    --zinc-600: 82 82 91;
+    --zinc-700: 63 63 70;
+
+    /* Accent ("gold") — overridden at runtime from the user's saved color. */
+    --accent: 53 94 59;
+    --accent-400: 76 138 85;
+    --accent-600: 40 74 48;
+  }
+
+  /* Light theme: lighten surfaces and darken text by inverting the scales. */
+  :root.light {
+    color-scheme: light;
+
+    --ink-950: 245 246 248;
+    --ink-900: 255 255 255;
+    --ink-850: 255 255 255;
+    --ink-800: 241 242 245;
+    --ink-700: 228 229 233;
+    --ink-600: 203 204 209;
+
+    --zinc-50: 24 24 27;
+    --zinc-100: 39 39 42;
+    --zinc-200: 63 63 70;
+    --zinc-300: 82 82 91;
+    --zinc-400: 113 113 122;
+    --zinc-500: 130 130 138;
+    --zinc-600: 161 161 170;
+    --zinc-700: 180 180 186;
   }
 
   html,
@@ -19,10 +63,31 @@
     @apply bg-ink-950 text-zinc-100 font-sans antialiased;
     background-image: radial-gradient(
         80rem 40rem at 50% -10%,
-        rgba(53, 94, 59, 0.12),
+        rgb(var(--accent) / 0.12),
         transparent 60%
       ),
-      radial-gradient(60rem 30rem at 100% 0%, rgba(53, 94, 59, 0.07), transparent 55%);
+      radial-gradient(60rem 30rem at 100% 0%, rgb(var(--accent) / 0.07), transparent 55%);
+  }
+
+  /* White hairline borders/fills are nearly invisible on a light background,
+     so swap them for dark equivalents when the light theme is active. */
+  .light .border-white\/5 {
+    border-color: rgb(0 0 0 / 0.06);
+  }
+  .light .border-white\/10 {
+    border-color: rgb(0 0 0 / 0.1);
+  }
+  .light .border-white\/15 {
+    border-color: rgb(0 0 0 / 0.12);
+  }
+  .light .border-white\/20 {
+    border-color: rgb(0 0 0 / 0.16);
+  }
+  .light .border-white\/30 {
+    border-color: rgb(0 0 0 / 0.24);
+  }
+  .light .border-white {
+    border-color: rgb(0 0 0 / 0.3);
   }
 
   ::-webkit-scrollbar {

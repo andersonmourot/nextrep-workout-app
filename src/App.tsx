@@ -13,6 +13,8 @@ import { People } from './pages/People'
 import { Settings } from './pages/Settings'
 import { Auth } from './pages/Auth'
 import { useAuth } from './auth'
+import { useStore } from './store'
+import { applyTheme } from './lib/theme'
 
 function RequireAuth() {
   const token = useAuth((s) => s.token)
@@ -23,9 +25,16 @@ function RequireAuth() {
 }
 
 export default function App() {
+  const themeColor = useStore((s) => s.themeColor)
+  const themeMode = useStore((s) => s.themeMode)
+
   useEffect(() => {
     void useAuth.getState().init()
   }, [])
+
+  useEffect(() => {
+    applyTheme(themeColor, themeMode)
+  }, [themeColor, themeMode])
 
   return (
     <Routes>

@@ -5,10 +5,13 @@ import { PROGRAMS, getProgram } from './data/programs'
 import { setCustomExercises } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiGetData, apiProgramsBatch, apiPutData } from './api'
+import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
 
 const DEFAULTS = {
   name: 'Athlete',
   unit: 'lb' as Unit,
+  themeColor: DEFAULT_THEME_COLOR,
+  themeMode: DEFAULT_THEME_MODE as ThemeMode,
   activeProgramId: null as string | null,
   logs: [] as WorkoutLog[],
   bodyWeight: [] as BodyWeightEntry[],
@@ -33,6 +36,8 @@ const perUserStorage = createJSONStorage(() => ({
 interface AppState {
   name: string
   unit: Unit
+  themeColor: string
+  themeMode: ThemeMode
   activeProgramId: string | null
   logs: WorkoutLog[]
   bodyWeight: BodyWeightEntry[]
@@ -43,6 +48,8 @@ interface AppState {
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
+  setThemeColor: (color: string) => void
+  setThemeMode: (mode: ThemeMode) => void
   startProgram: (id: string) => void
   clearProgram: () => void
   addLog: (log: WorkoutLog) => void
@@ -67,6 +74,8 @@ export const useStore = create<AppState>()(
 
       setName: (name) => set({ name }),
       setUnit: (unit) => set({ unit }),
+      setThemeColor: (themeColor) => set({ themeColor }),
+      setThemeMode: (themeMode) => set({ themeMode }),
       startProgram: (id) => set({ activeProgramId: id }),
       clearProgram: () => set({ activeProgramId: null }),
       addLog: (log) => set((s) => ({ logs: [log, ...s.logs] })),
@@ -146,6 +155,8 @@ function snapshot(s: AppState): typeof DEFAULTS {
   return {
     name: s.name,
     unit: s.unit,
+    themeColor: s.themeColor,
+    themeMode: s.themeMode,
     activeProgramId: s.activeProgramId,
     logs: s.logs,
     bodyWeight: s.bodyWeight,

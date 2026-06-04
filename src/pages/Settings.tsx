@@ -1,14 +1,19 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, LogOut, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, LogOut, Moon, Sun, Trash2 } from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { useAuth } from '../auth'
 import { cn } from '../lib/utils'
+import { THEME_COLORS, type ThemeMode } from '../lib/theme'
 import type { Unit } from '../types'
 
 export function Settings() {
   const navigate = useNavigate()
   const { name, unit, activeProgramId, setName, setUnit, clearProgram, resetAll } = useStore()
+  const themeColor = useStore((s) => s.themeColor)
+  const themeMode = useStore((s) => s.themeMode)
+  const setThemeColor = useStore((s) => s.setThemeColor)
+  const setThemeMode = useStore((s) => s.setThemeMode)
   const logout = useAuth((s) => s.logout)
   const account = useAuth((s) => s.user)
   const [confirmReset, setConfirmReset] = useState(false)
@@ -54,6 +59,56 @@ export function Settings() {
                 )}
               >
                 {u}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="card space-y-4 p-5">
+        <h2 className="heading text-lg font-bold text-zinc-50">Appearance</h2>
+
+        <div>
+          <span className="mb-2 block text-sm font-medium text-zinc-300">Theme color</span>
+          <div className="flex flex-wrap gap-2">
+            {THEME_COLORS.map((c) => (
+              <button
+                key={c}
+                onClick={() => setThemeColor(c)}
+                aria-label={`Use ${c} theme color`}
+                aria-pressed={themeColor === c}
+                className={cn(
+                  'flex h-9 w-9 items-center justify-center rounded-full border-2 transition',
+                  themeColor === c ? 'border-zinc-50' : 'border-transparent',
+                )}
+                style={{ background: c }}
+              >
+                {themeColor === c && <Check className="h-4 w-4 text-white" />}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-zinc-300">Theme</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { mode: 'dark', label: 'Dark', Icon: Moon },
+                { mode: 'light', label: 'Light', Icon: Sun },
+              ] as { mode: ThemeMode; label: string; Icon: typeof Moon }[]
+            ).map(({ mode, label, Icon }) => (
+              <button
+                key={mode}
+                onClick={() => setThemeMode(mode)}
+                className={cn(
+                  'inline-flex items-center justify-center gap-2 rounded-xl border py-2.5 text-sm font-semibold transition',
+                  themeMode === mode
+                    ? 'border-gold bg-gold text-white'
+                    : 'border-white/10 bg-ink-900 text-zinc-300',
+                )}
+              >
+                <Icon className="h-4 w-4" /> {label}
               </button>
             ))}
           </div>

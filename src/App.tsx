@@ -7,6 +7,7 @@ import { ProgramDetail } from './pages/ProgramDetail'
 import { ProgramEditor } from './pages/ProgramEditor'
 import { Workout } from './pages/Workout'
 import { Exercises } from './pages/Exercises'
+import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { Progress } from './pages/Progress'
 import { People } from './pages/People'
@@ -44,6 +45,7 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/programs" element={<Programs />} />
+          <Route path="/programs/exercises" element={<ExercisesLibrary />} />
           <Route path="/programs/new" element={<ProgramEditor />} />
           <Route path="/programs/:programId" element={<ProgramDetail />} />
           <Route path="/programs/:programId/edit" element={<ProgramEditor />} />

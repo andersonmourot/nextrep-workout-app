@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { Check, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore } from '../store'
 import { cn, uid } from '../lib/utils'
@@ -306,60 +306,160 @@ function Stopwatch() {
   )
 }
 
-const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'For Time', 'TABATA'] as const
+const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'FOR TIME', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
-interface IntervalConfig {
-  work: number
-  rest: number
-  rounds: number
-  /** Whether the round counter is meaningful (AMRAP is a single time cap). */
-  showRounds: boolean
-  desc: string
+interface IntervalSettings {
+  emomInterval: number
+  emomRounds: number
+  amrapCap: number
+  tabataWork: number
+  tabataRest: number
+  tabataRounds: number
+  forTimeCap: number
 }
 
-// Standard settings drawn from common workout/fitness conventions.
-const INTERVAL_CONFIGS: Record<'EMOM' | 'AMRAP' | 'TABATA', IntervalConfig> = {
-  // Every Minute On the Minute: a fresh 60s round, repeated.
-  EMOM: { work: 60, rest: 0, rounds: 10, showRounds: true, desc: '60s × 10 rounds' },
-  // As Many Reps/Rounds As Possible: one fixed time cap (10 min).
-  AMRAP: { work: 600, rest: 0, rounds: 1, showRounds: false, desc: '10:00 time cap' },
-  // Tabata: 20s work / 10s rest × 8 rounds.
-  TABATA: { work: 20, rest: 10, rounds: 8, showRounds: true, desc: '20s work / 10s rest × 8' },
+// Defaults drawn from common workout/fitness conventions.
+const DEFAULT_SETTINGS: IntervalSettings = {
+  emomInterval: 60, // every minute on the minute
+  emomRounds: 10,
+  amrapCap: 600, // 10:00 cap
+  tabataWork: 20,
+  tabataRest: 10,
+  tabataRounds: 8,
+  forTimeCap: 1200, // 20:00 cap
 }
 
-const DEFAULT_INTERVAL: IntervalConfig = INTERVAL_CONFIGS.TABATA
+/** Short tick cue for the final 3 seconds of a phase. */
+function tickCue(secLeft: number) {
+  if (secLeft === 3 || secLeft === 2 || secLeft === 1) beep(1000)
+}
+
+function NumIn({
+  label,
+  value,
+  onChange,
+  disabled,
+  min = 0,
+  max,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+  disabled?: boolean
+  min?: number
+  max?: number
+}) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-xs font-medium text-zinc-400">{label}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        value={value}
+        min={min}
+        max={max}
+        disabled={disabled}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10)
+          let v = Number.isNaN(n) ? min : n
+          if (v < min) v = min
+          if (max !== undefined && v > max) v = max
+          onChange(v)
+        }}
+        className="input py-2 text-sm disabled:opacity-50"
+      />
+    </label>
+  )
+}
 
 function Interval() {
   const [format, setFormat] = useState<IntervalFormat | null>(null)
-  const [cfg, setCfg] = useState<IntervalConfig>(DEFAULT_INTERVAL)
+  const [settings, setSettings] = useState<IntervalSettings>(DEFAULT_SETTINGS)
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
-  const [remaining, setRemaining] = useState(DEFAULT_INTERVAL.work)
+  const [remaining, setRemaining] = useState(DEFAULT_SETTINGS.tabataWork)
+  const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
 
   // Runtime mirrors in refs so the single timer callback can run the whole
-  // state machine (decrement + phase/round transitions) without stale closures
-  // or extra effects.
-  const cfgRef = useRef(cfg)
+  // state machine without stale closures.
+  const cfgRef = useRef({ work: 20, rest: 10, rounds: 8 })
+  const capRef = useRef(DEFAULT_SETTINGS.forTimeCap)
+  const isCountUpRef = useRef(false)
   const roundRef = useRef(1)
   const phaseRef = useRef<'work' | 'rest'>('work')
-  const remainingRef = useRef(cfg.work)
+  const remainingRef = useRef(20)
+  const elapsedRef = useRef(0)
 
-  useEffect(() => {
-    cfgRef.current = cfg
-  }, [cfg])
+  const isCountUp = format === 'FOR TIME'
+  const cfg =
+    format === 'EMOM'
+      ? { work: settings.emomInterval, rest: 0, rounds: settings.emomRounds }
+      : format === 'TABATA'
+        ? { work: settings.tabataWork, rest: settings.tabataRest, rounds: settings.tabataRounds }
+        : format === 'AMRAP'
+          ? { work: Math.max(1, settings.amrapCap), rest: 0, rounds: 1 }
+          : null
+
+  // Reconfigure runtime refs + display for a given format/settings pair.
+  function applyConfig(fmt: IntervalFormat | null, sett: IntervalSettings) {
+    const up = fmt === 'FOR TIME'
+    isCountUpRef.current = up
+    capRef.current = Math.max(1, sett.forTimeCap)
+    const c =
+      fmt === 'EMOM'
+        ? { work: sett.emomInterval, rest: 0, rounds: sett.emomRounds }
+        : fmt === 'TABATA'
+          ? { work: sett.tabataWork, rest: sett.tabataRest, rounds: sett.tabataRounds }
+          : fmt === 'AMRAP'
+            ? { work: Math.max(1, sett.amrapCap), rest: 0, rounds: 1 }
+            : null
+    if (c) cfgRef.current = c
+    setRunning(false)
+    setFinished(false)
+    if (up) {
+      elapsedRef.current = 0
+      setElapsed(0)
+    } else if (c) {
+      roundRef.current = 1
+      phaseRef.current = 'work'
+      remainingRef.current = c.work
+      setRound(1)
+      setPhase('work')
+      setRemaining(c.work)
+    }
+  }
+
+  function selectFormat(f: IntervalFormat) {
+    setFormat(f)
+    applyConfig(f, settings)
+  }
 
   useEffect(() => {
     if (!running) return
     const t = window.setInterval(() => {
+      // Count-up "FOR TIME": tick toward the cap.
+      if (isCountUpRef.current) {
+        elapsedRef.current += 1
+        setElapsed(elapsedRef.current)
+        tickCue(capRef.current - elapsedRef.current)
+        if (elapsedRef.current >= capRef.current) {
+          window.clearInterval(t)
+          setRunning(false)
+          setFinished(true)
+          playSound(useStore.getState().timerSound)
+        }
+        return
+      }
+      // Countdown rounds (EMOM / AMRAP / TABATA).
       if (remainingRef.current > 1) {
         remainingRef.current -= 1
         setRemaining(remainingRef.current)
+        tickCue(remainingRef.current)
         return
       }
-      // Phase boundary.
       const { work, rest, rounds } = cfgRef.current
       if (phaseRef.current === 'work' && rest > 0) {
         phaseRef.current = 'rest'
@@ -371,6 +471,8 @@ function Interval() {
         window.clearInterval(t)
         setRunning(false)
         setFinished(true)
+        remainingRef.current = 0
+        setRemaining(0)
         playSound(useStore.getState().timerSound)
       } else {
         roundRef.current += 1
@@ -385,52 +487,80 @@ function Interval() {
     return () => window.clearInterval(t)
   }, [running])
 
-  function selectFormat(f: IntervalFormat) {
-    setFormat(f)
-    // "For Time" is intentionally a no-op for now.
-    if (f === 'For Time') return
-    const next = INTERVAL_CONFIGS[f]
-    setCfg(next)
-    cfgRef.current = next
-    roundRef.current = 1
-    phaseRef.current = 'work'
-    remainingRef.current = next.work
-    setRunning(false)
+  function resetRuntime() {
     setFinished(false)
-    setRound(1)
-    setPhase('work')
-    setRemaining(next.work)
+    if (isCountUp) {
+      elapsedRef.current = 0
+      setElapsed(0)
+    } else {
+      const c = cfgRef.current
+      roundRef.current = 1
+      phaseRef.current = 'work'
+      remainingRef.current = c.work
+      setRound(1)
+      setPhase('work')
+      setRemaining(c.work)
+    }
   }
 
   function start() {
-    roundRef.current = 1
-    phaseRef.current = 'work'
-    remainingRef.current = cfg.work
-    setRound(1)
-    setPhase('work')
-    setRemaining(cfg.work)
+    if (!format) return
+    const atEnd = isCountUp ? elapsedRef.current >= capRef.current : finished
+    if (finished || atEnd) resetRuntime()
     setFinished(false)
+    beep(660)
     setRunning(true)
   }
 
   function reset() {
-    roundRef.current = 1
-    phaseRef.current = 'work'
-    remainingRef.current = cfg.work
     setRunning(false)
-    setFinished(false)
-    setRound(1)
-    setPhase('work')
-    setRemaining(cfg.work)
+    resetRuntime()
   }
 
-  const phaseTotal = phase === 'work' ? cfg.work : cfg.rest
-  const ready = format !== null && format !== 'For Time'
+  function finish() {
+    setRunning(false)
+    setFinished(true)
+    playSound(useStore.getState().timerSound)
+  }
+
+  const phaseTotal = phase === 'work' ? cfg?.work ?? 1 : cfg?.rest ?? 1
+  const capSeconds = Math.max(1, settings.forTimeCap)
+  const ringValue = isCountUp
+    ? elapsed / capSeconds
+    : phaseTotal
+      ? remaining / phaseTotal
+      : 0
+  const display = isCountUp ? elapsed : remaining
+
+  const desc =
+    format === 'EMOM'
+      ? `${settings.emomInterval}s × ${settings.emomRounds} rounds`
+      : format === 'AMRAP'
+        ? `${fmt(settings.amrapCap)} time cap`
+        : format === 'TABATA'
+          ? `${settings.tabataWork}s work / ${settings.tabataRest}s rest × ${settings.tabataRounds}`
+          : format === 'FOR TIME'
+            ? `${fmt(settings.forTimeCap)} cap · count up`
+            : ''
+
+  const subtitle = !format
+    ? 'Select a format'
+    : isCountUp
+      ? `Cap ${fmt(settings.forTimeCap)}`
+      : format === 'AMRAP'
+        ? 'Time cap'
+        : `Round ${round}/${cfg?.rounds ?? 1}`
+
+  const upd = (patch: Partial<IntervalSettings>) => {
+    const next = { ...settings, ...patch }
+    setSettings(next)
+    if (!running) applyConfig(format, next)
+  }
 
   return (
     <div className="space-y-4">
       <div className="card flex flex-col items-center gap-4 p-6">
-        <ProgressRing value={phaseTotal ? remaining / phaseTotal : 0} size={200} stroke={12}>
+        <ProgressRing value={ringValue} size={200} stroke={12}>
           <div className="flex flex-col items-center">
             <span
               className={cn(
@@ -438,28 +568,22 @@ function Interval() {
                 phase === 'work' ? 'text-gold' : 'text-zinc-400',
               )}
             >
-              {finished ? 'Done' : ready ? phase : 'Interval'}
+              {finished ? 'Done' : !format ? 'Interval' : isCountUp ? 'Elapsed' : phase}
             </span>
             <span className="heading text-5xl font-bold tabular-nums text-zinc-50">
-              {fmt(remaining)}
+              {fmt(display)}
             </span>
-            {ready && cfg.showRounds ? (
-              <span className="text-xs text-zinc-500">
-                Round {round}/{cfg.rounds}
-              </span>
-            ) : (
-              <span className="text-xs text-zinc-500">{format ?? 'Select a format'}</span>
-            )}
+            <span className="text-xs text-zinc-500">{subtitle}</span>
           </div>
         </ProgressRing>
 
-        {ready && <p className="text-xs text-zinc-400">{cfg.desc}</p>}
+        {format && <p className="text-xs text-zinc-400">{desc}</p>}
         {finished && <p className="text-sm font-semibold text-gold">Workout complete!</p>}
 
         <div className="flex w-full gap-2">
           <button
             onClick={running ? () => setRunning(false) : start}
-            disabled={!ready}
+            disabled={!format}
             className="btn-gold flex-1 py-3 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {running ? (
@@ -472,11 +596,105 @@ function Interval() {
               </span>
             )}
           </button>
+          {running && isCountUp && (
+            <button onClick={finish} className="btn-ghost px-4 py-3" aria-label="Finish">
+              <Check className="h-4 w-4" />
+            </button>
+          )}
           <button onClick={reset} className="btn-ghost px-4 py-3" aria-label="Reset">
             <RotateCcw className="h-4 w-4" />
           </button>
         </div>
       </div>
+
+      {format && (
+        <div className="card space-y-3 p-4">
+          <h2 className="heading text-sm font-bold uppercase tracking-wider text-zinc-400">
+            {format} settings
+          </h2>
+          {format === 'EMOM' && (
+            <div className="grid grid-cols-2 gap-3">
+              <NumIn
+                label="Interval (sec)"
+                value={settings.emomInterval}
+                min={5}
+                disabled={running}
+                onChange={(v) => upd({ emomInterval: v })}
+              />
+              <NumIn
+                label="Rounds"
+                value={settings.emomRounds}
+                min={1}
+                disabled={running}
+                onChange={(v) => upd({ emomRounds: v })}
+              />
+            </div>
+          )}
+          {format === 'TABATA' && (
+            <div className="grid grid-cols-3 gap-3">
+              <NumIn
+                label="Work (sec)"
+                value={settings.tabataWork}
+                min={1}
+                disabled={running}
+                onChange={(v) => upd({ tabataWork: v })}
+              />
+              <NumIn
+                label="Rest (sec)"
+                value={settings.tabataRest}
+                min={0}
+                disabled={running}
+                onChange={(v) => upd({ tabataRest: v })}
+              />
+              <NumIn
+                label="Rounds"
+                value={settings.tabataRounds}
+                min={1}
+                disabled={running}
+                onChange={(v) => upd({ tabataRounds: v })}
+              />
+            </div>
+          )}
+          {format === 'AMRAP' && (
+            <div className="grid grid-cols-2 gap-3">
+              <NumIn
+                label="Cap (min)"
+                value={Math.floor(settings.amrapCap / 60)}
+                min={0}
+                disabled={running}
+                onChange={(m) => upd({ amrapCap: m * 60 + (settings.amrapCap % 60) })}
+              />
+              <NumIn
+                label="Cap (sec)"
+                value={settings.amrapCap % 60}
+                min={0}
+                max={59}
+                disabled={running}
+                onChange={(s) => upd({ amrapCap: Math.floor(settings.amrapCap / 60) * 60 + s })}
+              />
+            </div>
+          )}
+          {format === 'FOR TIME' && (
+            <div className="grid grid-cols-2 gap-3">
+              <NumIn
+                label="Cap (min)"
+                value={Math.floor(settings.forTimeCap / 60)}
+                min={0}
+                disabled={running}
+                onChange={(m) => upd({ forTimeCap: m * 60 + (settings.forTimeCap % 60) })}
+              />
+              <NumIn
+                label="Cap (sec)"
+                value={settings.forTimeCap % 60}
+                min={0}
+                max={59}
+                disabled={running}
+                onChange={(s) => upd({ forTimeCap: Math.floor(settings.forTimeCap / 60) * 60 + s })}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card space-y-2 p-4">
         {INTERVAL_FORMATS.map((f) => (

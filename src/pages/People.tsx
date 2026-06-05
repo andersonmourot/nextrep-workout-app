@@ -95,7 +95,7 @@ export function People() {
         <p className="label-eyebrow">Train together</p>
         <h1 className="heading text-3xl font-bold text-zinc-50">People</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Find other athletes by name, follow them, and add their programs to your own.
+          Find other athletes by name, follow them, and add their programs.
         </p>
       </div>
 

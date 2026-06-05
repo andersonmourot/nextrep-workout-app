@@ -5,7 +5,6 @@ import { Dashboard } from './pages/Dashboard'
 import { Programs } from './pages/Programs'
 import { ProgramDetail } from './pages/ProgramDetail'
 import { ProgramEditor } from './pages/ProgramEditor'
-import { Workout } from './pages/Workout'
 import { Exercises } from './pages/Exercises'
 import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
@@ -64,7 +63,6 @@ export default function App() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/workout/:programId/:dayId" element={<Workout />} />
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Route>

@@ -25,7 +25,7 @@ export function ProgramDetail() {
   const navigate = useNavigate()
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
-  const { activeProgramId, startProgram, deleteProgram, addProgram } = useStore()
+  const { activeProgramId, startProgram, deleteProgram, addProgram, startWorkout } = useStore()
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -193,12 +193,15 @@ export function ProgramDetail() {
                 <h3 className="heading text-lg font-bold text-zinc-50">{day.name}</h3>
                 <p className="text-xs text-zinc-400">{day.focus}</p>
               </div>
-              <Link
-                to={`/workout/${program.id}/${day.id}`}
+              <button
+                onClick={() => {
+                  startWorkout(program.id, day.id)
+                  navigate('/programs')
+                }}
                 className="btn-outline px-3 py-2 text-xs"
               >
                 <Play className="h-3.5 w-3.5" /> Start
-              </Link>
+              </button>
             </div>
             <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
               {day.exercises.map((pe, j) => {

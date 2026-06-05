@@ -9,10 +9,11 @@ import {
   RotateCcw,
   Search,
   Settings2,
+  Star,
   Trash2,
   X,
 } from 'lucide-react'
-import { useAllPrograms, useStore } from '../store'
+import { useAllPrograms, useStore, MAX_FAVORITES } from '../store'
 import type { ProgramCategory } from '../types'
 import { cn } from '../lib/utils'
 
@@ -32,6 +33,8 @@ export function Programs() {
   const [managing, setManaging] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const activeProgramId = useStore((s) => s.activeProgramId)
+  const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
+  const toggleFavoriteProgram = useStore((s) => s.toggleFavoriteProgram)
   const customPrograms = useStore((s) => s.customPrograms)
   const hiddenCount = useStore((s) => s.hiddenProgramIds.length)
   const deleteProgram = useStore((s) => s.deleteProgram)
@@ -50,6 +53,17 @@ export function Programs() {
         .some((s) => s.toLowerCase().includes(q)),
     )
   }, [filter, allPrograms, query])
+
+  // Pin the active program first, then favorites (in the order they were
+  // favorited), then everything else (original order preserved by stable sort).
+  const orderedList = useMemo(() => {
+    const rank = (id: string) => {
+      if (id === activeProgramId) return 0
+      const fi = favoriteProgramIds.indexOf(id)
+      return fi === -1 ? 100 : 1 + fi
+    }
+    return [...list].sort((a, b) => rank(a.id) - rank(b.id))
+  }, [list, activeProgramId, favoriteProgramIds])
 
   function toggleManaging() {
     setManaging((m) => !m)
@@ -121,9 +135,11 @@ export function Programs() {
       )}
 
       <div className="space-y-3">
-        {list.map((p) => {
+        {orderedList.map((p) => {
           const isActive = p.id === activeProgramId
           const isCustom = customIds.has(p.id)
+          const isFavorite = favoriteProgramIds.includes(p.id)
+          const favoriteFull = favoriteProgramIds.length >= MAX_FAVORITES
           return (
             <div key={p.id} className="relative">
               <Link to={`/programs/${p.id}`} className="card block overflow-hidden p-0">
@@ -145,6 +161,11 @@ export function Programs() {
                         <CheckCircle2 className="h-3 w-3" /> Active
                       </span>
                     )}
+                    {isFavorite && !isActive && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                        <Star className="h-3 w-3 fill-current" /> Favorite
+                      </span>
+                    )}
                   </div>
                   <h2 className="heading mt-1 text-xl font-bold text-zinc-50">{p.name}</h2>
                   <p className="mt-2 text-sm text-zinc-400">{p.summary}</p>
@@ -159,6 +180,31 @@ export function Programs() {
                   </div>
                 </div>
               </Link>
+
+              {!managing && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    toggleFavoriteProgram(p.id)
+                  }}
+                  disabled={!isFavorite && favoriteFull}
+                  aria-label={isFavorite ? `Unfavorite ${p.name}` : `Favorite ${p.name}`}
+                  title={
+                    !isFavorite && favoriteFull
+                      ? `You can favorite up to ${MAX_FAVORITES} programs`
+                      : undefined
+                  }
+                  className={cn(
+                    'absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 backdrop-blur transition',
+                    isFavorite
+                      ? 'text-gold hover:text-gold-400'
+                      : 'text-zinc-400 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-zinc-400',
+                  )}
+                >
+                  <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
+                </button>
+              )}
 
               {managing &&
                 (confirmId === p.id ? (

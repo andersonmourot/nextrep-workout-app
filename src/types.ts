@@ -105,6 +105,20 @@ export interface SetLog {
   completed: boolean
 }
 
+/**
+ * An in-progress workout session kept in the store so it stays live while the
+ * user switches bottom-nav tabs (and survives a reload). Time-based fields use
+ * epoch milliseconds so elapsed/rest resume correctly after remounting.
+ */
+export interface ActiveWorkout {
+  programId: string
+  dayId: string
+  startedAt: number // epoch ms; elapsed is derived from this
+  sets: SetLog[][]
+  restEndsAt: number | null // epoch ms when the current rest ends, or null
+  restTotal: number // seconds, for the rest progress bar
+}
+
 export interface LoggedExercise {
   exerciseId: string
   sets: SetLog[]

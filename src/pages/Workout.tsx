@@ -1,60 +1,53 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Check, Info, Minus, Plus, SkipForward, Timer, X } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
 import { cn, formatClock, uid } from '../lib/utils'
 
-function parseReps(reps: string): number {
-  const m = reps.match(/\d+/)
-  return m ? parseInt(m[0], 10) : 10
-}
-
 export function Workout() {
-  const { programId, dayId } = useParams()
   const navigate = useNavigate()
-  const program = useProgram(programId)
-  const day = program?.days.find((d) => d.id === dayId)
-  const { unit, addLog, startProgram, activeProgramId } = useStore()
+  const activeWorkout = useStore((s) => s.activeWorkout)
+  const program = useProgram(activeWorkout?.programId)
+  const day = program?.days.find((d) => d.id === activeWorkout?.dayId)
+  const unit = useStore((s) => s.unit)
+  const activeProgramId = useStore((s) => s.activeProgramId)
+  const addLog = useStore((s) => s.addLog)
+  const startProgram = useStore((s) => s.startProgram)
+  const setActiveWorkoutSets = useStore((s) => s.setActiveWorkoutSets)
+  const setActiveWorkoutRest = useStore((s) => s.setActiveWorkoutRest)
+  const endWorkout = useStore((s) => s.endWorkout)
 
-  const [elapsed, setElapsed] = useState(0)
-  const [rest, setRest] = useState<{ remaining: number; total: number } | null>(null)
   const [finished, setFinished] = useState<WorkoutLog | null>(null)
+  // A clock tick stored in state (set from effects) so the render stays pure;
+  // it advances every second to update the derived elapsed/rest clocks.
+  const [now, setNow] = useState(() => Date.now())
 
-  // Per-exercise set logs.
-  const [sets, setSets] = useState<SetLog[][]>(
-    () =>
-      day?.exercises.map((pe) =>
-        Array.from({ length: pe.sets }, () => ({
-          weight: 0,
-          reps: parseReps(pe.reps),
-          completed: false,
-        })),
-      ) ?? [],
-  )
+  // Derive the session values from the store so they survive tab switches.
+  const sets = useMemo(() => activeWorkout?.sets ?? [], [activeWorkout])
+  const startedAt = activeWorkout?.startedAt ?? 0
+  const elapsed = activeWorkout && now ? Math.max(0, Math.floor((now - startedAt) / 1000)) : 0
+  const restRemaining =
+    activeWorkout?.restEndsAt && now
+      ? Math.max(0, Math.ceil((activeWorkout.restEndsAt - now) / 1000))
+      : 0
+  const restActive = restRemaining > 0
 
-  // Elapsed timer.
+  // Single ticking interval: advances the clock for the displays and auto-clears
+  // rest once it has elapsed. Uses getState() to avoid stale closures.
   useEffect(() => {
-    if (finished) return
-    const t = setInterval(() => setElapsed((e) => e + 1), 1000)
-    return () => clearInterval(t)
-  }, [finished])
-
-  // Rest countdown. Runs a single interval while a rest period is active;
-  // the functional updater always reads the latest remaining value.
-  const restActive = rest !== null
-  useEffect(() => {
-    if (!restActive) return
+    if (finished || !activeWorkout) return
     const t = window.setInterval(() => {
-      setRest((r) => {
-        if (!r) return r
-        if (r.remaining <= 1) return null
-        return { ...r, remaining: r.remaining - 1 }
-      })
+      const t2 = Date.now()
+      setNow(t2)
+      const aw = useStore.getState().activeWorkout
+      if (aw?.restEndsAt && t2 >= aw.restEndsAt) {
+        useStore.getState().setActiveWorkoutRest(null, 0)
+      }
     }, 1000)
     return () => window.clearInterval(t)
-  }, [restActive])
+  }, [finished, activeWorkout])
 
   const completedCount = useMemo(
     () => sets.flat().filter((s) => s.completed).length,
@@ -62,40 +55,53 @@ export function Workout() {
   )
   const totalSets = useMemo(() => sets.flat().length, [sets])
 
-  if (!program || !day) {
+  if (finished) {
+    return (
+      <Summary
+        log={finished}
+        unit={unit}
+        onClose={() => {
+          endWorkout()
+          navigate('/')
+        }}
+      />
+    )
+  }
+
+  if (!activeWorkout || !program || !day) {
     return (
       <div className="container-app py-10 text-center">
-        <p className="text-zinc-400">Workout not found.</p>
-        <Link to="/" className="btn-outline mt-4">
-          Go Home
-        </Link>
+        <p className="text-zinc-400">No active workout.</p>
+        <button onClick={() => navigate('/programs')} className="btn-outline mt-4">
+          Back to Programs
+        </button>
       </div>
     )
   }
 
   function updateSet(exIdx: number, setIdx: number, patch: Partial<SetLog>) {
-    setSets((prev) =>
-      prev.map((arr, i) =>
-        i === exIdx ? arr.map((s, j) => (j === setIdx ? { ...s, ...patch } : s)) : arr,
-      ),
+    const next = sets.map((arr, i) =>
+      i === exIdx ? arr.map((s, j) => (j === setIdx ? { ...s, ...patch } : s)) : arr,
     )
+    setActiveWorkoutSets(next)
   }
 
   function toggleComplete(exIdx: number, setIdx: number) {
     const current = sets[exIdx]?.[setIdx]
-    if (!current) return
+    if (!current || !day) return
     const willComplete = !current.completed
-    const restSec = day!.exercises[exIdx].restSec
+    const restSec = day.exercises[exIdx].restSec
     updateSet(exIdx, setIdx, { completed: willComplete })
     if (willComplete && restSec > 0) {
-      setRest({ remaining: restSec, total: restSec })
+      setActiveWorkoutRest(Date.now() + restSec * 1000, restSec)
     }
   }
 
   function finish() {
-    const loggedExercises = day!.exercises.map((p, i) => ({
+    if (!program || !day) return
+    const loggedExercises = day.exercises.map((p, i) => ({
       exerciseId: p.exerciseId,
-      sets: sets[i].filter((s) => s.completed),
+      sets: (sets[i] ?? []).filter((s) => s.completed),
     }))
     const totalVolume = loggedExercises.reduce(
       (sum, le) => sum + le.sets.reduce((a, s) => a + s.weight * s.reps, 0),
@@ -104,21 +110,17 @@ export function Workout() {
     const log: WorkoutLog = {
       id: uid(),
       date: new Date().toISOString(),
-      programId: program!.id,
-      programName: program!.name,
-      dayId: day!.id,
-      dayName: day!.name,
+      programId: program.id,
+      programName: program.name,
+      dayId: day.id,
+      dayName: day.name,
       durationSec: elapsed,
       exercises: loggedExercises,
       totalVolume,
     }
-    if (activeProgramId !== program!.id) startProgram(program!.id)
+    if (activeProgramId !== program.id) startProgram(program.id)
     addLog(log)
     setFinished(log)
-  }
-
-  if (finished) {
-    return <Summary log={finished} unit={unit} onClose={() => navigate('/')} />
   }
 
   return (
@@ -127,7 +129,10 @@ export function Workout() {
       <header className="sticky top-0 z-20 border-b border-white/5 bg-ink-950/85 backdrop-blur">
         <div className="container-app flex h-14 items-center justify-between">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              endWorkout()
+              navigate('/programs')
+            }}
             className="grid h-9 w-9 place-items-center rounded-lg bg-ink-850 text-zinc-400 hover:text-zinc-100"
             aria-label="Exit workout"
           >
@@ -240,25 +245,30 @@ export function Workout() {
         </button>
       </main>
 
-      {/* Rest timer */}
-      {rest && (
-        <div className="fixed inset-x-0 bottom-0 z-30 animate-fade-in border-t border-gold/20 bg-ink-900/95 backdrop-blur">
+      {/* Rest timer — sits just above the bottom nav so both stay visible. */}
+      {restActive && (
+        <div className="fixed inset-x-0 bottom-[4.25rem] z-30 animate-fade-in border-y border-gold/20 bg-ink-900/95 backdrop-blur">
           <div className="container-app py-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="label-eyebrow">Rest</p>
                 <p className="heading text-3xl font-bold tabular-nums text-gold">
-                  {formatClock(rest.remaining)}
+                  {formatClock(restRemaining)}
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setRest((r) => (r ? { ...r, remaining: r.remaining + 15, total: r.total + 15 } : r))}
+                  onClick={() =>
+                    setActiveWorkoutRest(
+                      (activeWorkout.restEndsAt ?? Date.now()) + 15000,
+                      activeWorkout.restTotal + 15,
+                    )
+                  }
                   className="btn-ghost"
                 >
                   +15s
                 </button>
-                <button onClick={() => setRest(null)} className="btn-gold">
+                <button onClick={() => setActiveWorkoutRest(null, 0)} className="btn-gold">
                   <SkipForward className="h-4 w-4" /> Skip
                 </button>
               </div>
@@ -266,7 +276,9 @@ export function Workout() {
             <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-800">
               <div
                 className="h-full bg-gold transition-all duration-1000 ease-linear"
-                style={{ width: `${(rest.remaining / rest.total) * 100}%` }}
+                style={{
+                  width: `${activeWorkout.restTotal ? (restRemaining / activeWorkout.restTotal) * 100 : 0}%`,
+                }}
               />
             </div>
           </div>

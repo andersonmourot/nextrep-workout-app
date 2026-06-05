@@ -2,6 +2,7 @@ import json
 import os
 import secrets
 import time
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,25 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 Base.metadata.create_all(bind=engine)
+
+
+def _ensure_columns() -> None:
+    """Lightweight migration: add columns introduced after the table was first
+    created. create_all() never alters existing tables, so we add them by hand.
+    Safe to run on every startup (no-op once the column exists)."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    try:
+        cols = {c["name"] for c in inspector.get_columns("users")}
+    except Exception:
+        return
+    if "last_login" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_login DATETIME"))
+
+
+_ensure_columns()
 
 # Accounts whose email is in this set get admin privileges (e.g. the Users
 # directory in Settings). Configurable via the ADMIN_EMAILS env var (comma
@@ -127,6 +147,7 @@ class AdminUser(BaseModel):
     name: str
     email: str
     created_at: str
+    last_login: str
 
 
 class SharedPrograms(BaseModel):
@@ -361,6 +382,9 @@ def login(body: LoginBody, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
+    user.last_login = datetime.now(timezone.utc)
+    db.add(user)
+    db.commit()
     return AuthResponse(token=create_token(user.id), user=_public(user))
 
 
@@ -401,6 +425,7 @@ def admin_users(
             name=u.name,
             email=u.email,
             created_at=(u.created_at.isoformat() if u.created_at else ""),
+            last_login=(u.last_login.isoformat() if u.last_login else ""),
         )
         for u in rows
         if not _is_seed_account(u.email)

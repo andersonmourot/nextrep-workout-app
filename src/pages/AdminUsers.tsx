@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import { getToken, useAuth } from '../auth'
 import { apiAdminUsers, type AdminUser } from '../api'
-import { formatDateLong } from '../lib/utils'
+import { formatDateLong, formatDateTime } from '../lib/utils'
 
 export function AdminUsers() {
   const navigate = useNavigate()
@@ -59,10 +59,13 @@ export function AdminUsers() {
               <div className="flex items-center justify-between gap-3">
                 <p className="truncate font-semibold text-zinc-100">{u.name}</p>
                 <span className="shrink-0 text-xs text-zinc-500">
-                  {u.created_at ? formatDateLong(u.created_at) : '—'}
+                  Joined {u.created_at ? formatDateLong(u.created_at) : '—'}
                 </span>
               </div>
               <p className="truncate text-sm text-zinc-400">{u.email}</p>
+              <p className="mt-1 text-xs text-zinc-500">
+                Last login: {u.last_login ? formatDateTime(u.last_login) : 'Never'}
+              </p>
             </div>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Calendar, Dumbbell, Flame, Play, TrendingUp } from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { exerciseLabel } from '../data/exercises'
@@ -12,8 +12,9 @@ import {
 } from '../lib/utils'
 
 export function Dashboard() {
-  const { name, activeProgramId, logs, unit } = useStore()
+  const { name, activeProgramId, logs, unit, activeWorkout, startWorkout } = useStore()
   const program = useProgram(activeProgramId ?? undefined)
+  const navigate = useNavigate()
 
   const streak = computeStreak(logs)
   const weekCount = workoutsThisWeek(logs)
@@ -57,10 +58,23 @@ export function Dashboard() {
             </div>
 
             <div className="mt-4 flex gap-2">
-              <Link to={`/workout/${program.id}/${nextDay.id}`} className="btn-gold flex-1">
-                <Play className="h-4 w-4" />
-                Start Workout
-              </Link>
+              {activeWorkout ? (
+                <button onClick={() => navigate('/programs')} className="btn-gold flex-1">
+                  <Play className="h-4 w-4" />
+                  Resume Workout
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    startWorkout(program.id, nextDay.id)
+                    navigate('/programs')
+                  }}
+                  className="btn-gold flex-1"
+                >
+                  <Play className="h-4 w-4" />
+                  Start Workout
+                </button>
+              )}
               <Link to={`/programs/${program.id}`} className="btn-ghost">
                 Details
               </Link>

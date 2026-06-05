@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type {
+  ActiveWorkout,
   BodyWeightEntry,
   Exercise,
   MaxRecord,
@@ -8,6 +9,7 @@ import type {
   NutritionEntry,
   NutritionGoals,
   Program,
+  SetLog,
   Unit,
   WorkoutLog,
 } from './types'
@@ -69,9 +71,17 @@ const DEFAULTS = {
   timerSound: 'beep' as string,
   intervalSettings: DEFAULT_INTERVAL_SETTINGS as IntervalSettings,
   favoriteUserIds: [] as string[],
+  favoriteProgramIds: [] as string[],
   nutritionLog: [] as NutritionEntry[],
   nutritionGoals: DEFAULT_NUTRITION_GOALS as NutritionGoals,
   maxTrackers: [] as MaxTracker[],
+  activeWorkout: null as ActiveWorkout | null,
+}
+
+/** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
+function parseReps(reps: string): number {
+  const m = reps.match(/\d+/)
+  return m ? parseInt(m[0], 10) : 10
 }
 
 /** Max number of users that can be pinned to the top of the following list. */
@@ -106,9 +116,11 @@ interface AppState {
   timerSound: string
   intervalSettings: IntervalSettings
   favoriteUserIds: string[]
+  favoriteProgramIds: string[]
   nutritionLog: NutritionEntry[]
   nutritionGoals: NutritionGoals
   maxTrackers: MaxTracker[]
+  activeWorkout: ActiveWorkout | null
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -135,6 +147,11 @@ interface AppState {
   setTimerSound: (sound: string) => void
   setIntervalSettings: (settings: IntervalSettings) => void
   toggleFavoriteUser: (id: string) => void
+  toggleFavoriteProgram: (id: string) => void
+  startWorkout: (programId: string, dayId: string) => void
+  setActiveWorkoutSets: (sets: SetLog[][]) => void
+  setActiveWorkoutRest: (restEndsAt: number | null, restTotal: number) => void
+  endWorkout: () => void
   setNutritionEntry: (entry: NutritionEntry) => void
   setNutritionGoals: (goals: NutritionGoals) => void
   addMaxRecord: (name: string, record: MaxRecord) => void
@@ -215,6 +232,9 @@ export const useStore = create<AppState>()(
               ? s.hiddenProgramIds
               : Array.from(new Set([...s.hiddenProgramIds, id])),
             activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
+            favoriteProgramIds: s.favoriteProgramIds.filter((x) => x !== id),
+            activeWorkout:
+              s.activeWorkout?.programId === id ? null : s.activeWorkout,
           }
         }),
       restorePrograms: () => set({ hiddenProgramIds: [] }),
@@ -239,6 +259,47 @@ export const useStore = create<AppState>()(
           if (s.favoriteUserIds.length >= MAX_FAVORITES) return {}
           return { favoriteUserIds: [...s.favoriteUserIds, id] }
         }),
+      toggleFavoriteProgram: (id) =>
+        set((s) => {
+          if (s.favoriteProgramIds.includes(id))
+            return { favoriteProgramIds: s.favoriteProgramIds.filter((x) => x !== id) }
+          // Cap the number of pinned favorite programs.
+          if (s.favoriteProgramIds.length >= MAX_FAVORITES) return {}
+          return { favoriteProgramIds: [...s.favoriteProgramIds, id] }
+        }),
+      startWorkout: (programId, dayId) =>
+        set((s) => {
+          const program =
+            s.customPrograms.find((p) => p.id === programId) ?? getProgram(programId)
+          const day = program?.days.find((d) => d.id === dayId)
+          if (!program || !day) return {}
+          const sets: SetLog[][] = day.exercises.map((pe) =>
+            Array.from({ length: pe.sets }, () => ({
+              weight: 0,
+              reps: parseReps(pe.reps),
+              completed: false,
+            })),
+          )
+          return {
+            activeWorkout: {
+              programId,
+              dayId,
+              startedAt: Date.now(),
+              sets,
+              restEndsAt: null,
+              restTotal: 0,
+            },
+          }
+        }),
+      setActiveWorkoutSets: (sets) =>
+        set((s) => (s.activeWorkout ? { activeWorkout: { ...s.activeWorkout, sets } } : {})),
+      setActiveWorkoutRest: (restEndsAt, restTotal) =>
+        set((s) =>
+          s.activeWorkout
+            ? { activeWorkout: { ...s.activeWorkout, restEndsAt, restTotal } }
+            : {},
+        ),
+      endWorkout: () => set({ activeWorkout: null }),
       setNutritionEntry: (entry) =>
         set((s) => ({
           nutritionLog: [
@@ -295,9 +356,11 @@ export const useStore = create<AppState>()(
           timerSound: 'beep',
           intervalSettings: DEFAULT_INTERVAL_SETTINGS,
           favoriteUserIds: [],
+          favoriteProgramIds: [],
           nutritionLog: [],
           nutritionGoals: DEFAULT_NUTRITION_GOALS,
           maxTrackers: [],
+          activeWorkout: null,
         })
       },
     }),
@@ -324,9 +387,11 @@ function snapshot(s: AppState): typeof DEFAULTS {
     timerSound: s.timerSound,
     intervalSettings: s.intervalSettings,
     favoriteUserIds: s.favoriteUserIds,
+    favoriteProgramIds: s.favoriteProgramIds,
     nutritionLog: s.nutritionLog,
     nutritionGoals: s.nutritionGoals,
     maxTrackers: s.maxTrackers,
+    activeWorkout: s.activeWorkout,
   }
 }
 

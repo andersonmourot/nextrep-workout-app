@@ -26,6 +26,17 @@ export function formatDateLong(iso: string): string {
   })
 }
 
+export function formatDateTime(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 export function formatDuration(totalSec: number): string {
   const m = Math.floor(totalSec / 60)
   const s = totalSec % 60

@@ -20,6 +20,8 @@ class User(Base):
     # JSON document holding the user's app data (programs, logs, settings, etc.)
     data: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    # Updated on every successful login; null until the user logs in again.
+    last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class Follow(Base):

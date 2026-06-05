@@ -14,6 +14,7 @@ export interface AdminUser {
   name: string
   email: string
   created_at: string
+  last_login: string
 }
 
 export interface AuthResponse {

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, Droplet, Minus, Plus, Target } from 'lucide-react'
+import { ArrowLeft, Check, Droplet, History, Plus, Target } from 'lucide-react'
 import { useStore } from '../store'
 import type { NutritionEntry, NutritionGoals } from '../types'
-import { todayISO } from '../lib/utils'
+import { formatDateLong, todayISO } from '../lib/utils'
 import { cn } from '../lib/utils'
 
 const EMPTY: Omit<NutritionEntry, 'date'> = {
@@ -21,13 +21,22 @@ export function Nutrition() {
   const setNutritionEntry = useStore((s) => s.setNutritionEntry)
 
   const [date, setDate] = useState(todayISO())
+  const [showHistory, setShowHistory] = useState(false)
   const entry = useMemo(
     () => nutritionLog.find((e) => e.date === date) ?? { date, ...EMPTY },
     [nutritionLog, date],
   )
 
-  function update(patch: Partial<NutritionEntry>) {
-    setNutritionEntry({ ...entry, ...patch, date })
+  // Past days that have something logged, newest first.
+  const history = useMemo(
+    () => [...nutritionLog].sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [nutritionLog],
+  )
+
+  /** Add a delta to one field of the selected day's entry (clamped at 0). */
+  function add(field: keyof typeof EMPTY, delta: number) {
+    if (!delta) return
+    setNutritionEntry({ ...entry, [field]: Math.max(0, entry[field] + delta), date })
   }
 
   return (
@@ -43,7 +52,7 @@ export function Nutrition() {
         <p className="label-eyebrow">Daily fuel</p>
         <h1 className="heading text-3xl font-bold text-zinc-50">Nutrition</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Log your daily calories, macros, and water against your targets.
+          Log your daily calories, macros, and hydration.
         </p>
       </div>
 
@@ -55,16 +64,54 @@ export function Nutrition() {
           onChange={(e) => setDate(e.target.value || todayISO())}
           className="input"
         />
+        <button
+          onClick={() => setShowHistory((v) => !v)}
+          className={cn('btn-ghost shrink-0', showHistory && 'text-gold')}
+        >
+          <History className="h-4 w-4" /> History
+        </button>
       </div>
+
+      {showHistory && (
+        <section className="card space-y-2 p-5">
+          <h2 className="heading text-lg font-bold text-zinc-50">History</h2>
+          {history.length === 0 ? (
+            <p className="text-sm text-zinc-500">
+              No saved days yet. Log something to start your history.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {history.map((h) => (
+                <li key={h.date}>
+                  <button
+                    onClick={() => {
+                      setDate(h.date)
+                      setShowHistory(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg bg-ink-900 px-3 py-2 text-left text-sm transition hover:bg-ink-800',
+                      h.date === date && 'ring-1 ring-gold/40',
+                    )}
+                  >
+                    <span className="text-zinc-300">{formatDateLong(h.date)}</span>
+                    <span className="text-xs text-zinc-500">
+                      {h.calories} kcal · {h.protein}/{h.carbs}/{h.fat}g · {h.water} 💧
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {/* Calories */}
       <section className="card space-y-3 p-5">
         <Ring current={entry.calories} goal={goals.calories} />
-        <NumberField
-          label="Calories"
+        <AddField
+          label="Add calories"
           unit="kcal"
-          value={entry.calories}
-          onChange={(v) => update({ calories: v })}
+          onAdd={(v) => add('calories', v)}
         />
       </section>
 
@@ -76,21 +123,21 @@ export function Nutrition() {
           value={entry.protein}
           goal={goals.protein}
           color="#3b82f6"
-          onChange={(v) => update({ protein: v })}
+          onAdd={(v) => add('protein', v)}
         />
         <MacroRow
           label="Carbs"
           value={entry.carbs}
           goal={goals.carbs}
           color="#f97316"
-          onChange={(v) => update({ carbs: v })}
+          onAdd={(v) => add('carbs', v)}
         />
         <MacroRow
           label="Fat"
           value={entry.fat}
           goal={goals.fat}
           color="#a855f7"
-          onChange={(v) => update({ fat: v })}
+          onAdd={(v) => add('fat', v)}
         />
       </section>
 
@@ -106,32 +153,21 @@ export function Nutrition() {
         </div>
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: Math.max(goals.water, entry.water) }).map((_, i) => (
-            <button
+            <span
               key={i}
-              onClick={() => update({ water: i + 1 === entry.water ? i : i + 1 })}
-              aria-label={`Set water to ${i + 1}`}
+              aria-hidden
               className={cn(
-                'h-8 w-8 rounded-lg border transition',
+                'grid h-8 w-8 place-items-center rounded-lg border',
                 i < entry.water
                   ? 'border-sky-400/50 bg-sky-500/20 text-sky-300'
                   : 'border-white/10 bg-ink-900 text-zinc-600',
               )}
             >
-              <Droplet className="mx-auto h-4 w-4" />
-            </button>
+              <Droplet className="h-4 w-4" />
+            </span>
           ))}
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => update({ water: Math.max(0, entry.water - 1) })}
-            className="btn-ghost flex-1"
-          >
-            <Minus className="h-4 w-4" /> Glass
-          </button>
-          <button onClick={() => update({ water: entry.water + 1 })} className="btn-gold flex-1">
-            <Plus className="h-4 w-4" /> Glass
-          </button>
-        </div>
+        <AddField label="Add glasses" unit="glasses" onAdd={(v) => add('water', v)} />
       </section>
 
       <Goals />
@@ -139,35 +175,41 @@ export function Nutrition() {
   )
 }
 
-function NumberField({
+/** A number input that adds its value to a running total when submitted. */
+function AddField({
   label,
   unit,
-  value,
-  onChange,
+  onAdd,
 }: {
   label: string
   unit: string
-  value: number
-  onChange: (v: number) => void
+  onAdd: (v: number) => void
 }) {
-  const [text, setText] = useState<string | null>(null)
+  const [text, setText] = useState('')
+  function submit() {
+    const v = Math.round(parseFloat(text) || 0)
+    if (v) onAdd(v)
+    setText('')
+  }
   return (
     <div>
       <label className="mb-1.5 block text-sm font-medium text-zinc-300">
         {label} <span className="text-zinc-500">({unit})</span>
       </label>
-      <input
-        type="number"
-        inputMode="numeric"
-        value={text ?? (value ? String(value) : '')}
-        placeholder="0"
-        onChange={(e) => setText(e.target.value)}
-        onBlur={() => {
-          onChange(Math.max(0, Math.round(parseFloat(text ?? '') || 0)))
-          setText(null)
-        }}
-        className="input"
-      />
+      <div className="flex gap-2">
+        <input
+          type="number"
+          inputMode="numeric"
+          value={text}
+          placeholder="0"
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          className="input"
+        />
+        <button onClick={submit} className="btn-gold shrink-0">
+          <Plus className="h-4 w-4" /> Add
+        </button>
+      </div>
     </div>
   )
 }
@@ -177,16 +219,21 @@ function MacroRow({
   value,
   goal,
   color,
-  onChange,
+  onAdd,
 }: {
   label: string
   value: number
   goal: number
   color: string
-  onChange: (v: number) => void
+  onAdd: (v: number) => void
 }) {
-  const [text, setText] = useState<string | null>(null)
+  const [text, setText] = useState('')
   const pct = goal > 0 ? Math.min(100, (value / goal) * 100) : 0
+  function submit() {
+    const v = Math.round(parseFloat(text) || 0)
+    if (v) onAdd(v)
+    setText('')
+  }
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-sm">
@@ -195,23 +242,23 @@ function MacroRow({
           {value} / {goal} g
         </span>
       </div>
-      <div className="flex items-center gap-3">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-ink-900">
-          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-        </div>
+      <div className="mb-2 h-2 overflow-hidden rounded-full bg-ink-900">
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <div className="flex gap-2">
         <input
           type="number"
           inputMode="numeric"
-          aria-label={`${label} grams`}
-          value={text ?? (value ? String(value) : '')}
+          aria-label={`Add ${label} grams`}
+          value={text}
           placeholder="0"
           onChange={(e) => setText(e.target.value)}
-          onBlur={() => {
-            onChange(Math.max(0, Math.round(parseFloat(text ?? '') || 0)))
-            setText(null)
-          }}
-          className="input w-20 shrink-0 text-center"
+          onKeyDown={(e) => e.key === 'Enter' && submit()}
+          className="input"
         />
+        <button onClick={submit} className="btn-ghost shrink-0">
+          <Plus className="h-4 w-4" /> Add
+        </button>
       </div>
     </div>
   )

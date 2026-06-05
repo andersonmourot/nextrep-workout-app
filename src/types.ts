@@ -48,6 +48,12 @@ export interface Exercise {
   shared?: boolean
   /** Display name of the creator, shown on shared exercises. */
   ownerName?: string
+  /** Account id of the creator (set on shared exercises and copies others added). */
+  ownerId?: string
+  /** When true, anyone who added it can edit; otherwise only the creator can. */
+  collaborative?: boolean
+  /** Epoch-ms of the last edit; used to propagate edits to all who added it. */
+  version?: number
 }
 
 export interface PlannedExercise {

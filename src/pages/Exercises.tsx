@@ -16,6 +16,8 @@ import {
 } from 'lucide-react'
 import { EXERCISES } from '../data/exercises'
 import { useStore } from '../store'
+import { getToken, useAuth } from '../auth'
+import { apiUpsertExercise } from '../api'
 import type { Difficulty, Equipment, Exercise, Muscle } from '../types'
 import { cn, uid } from '../lib/utils'
 
@@ -354,8 +356,12 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
 export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose: () => void }) {
   const addCustomExercise = useStore((s) => s.addCustomExercise)
   const setExerciseOverride = useStore((s) => s.setExerciseOverride)
+  const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
   const isEdit = !!editing
   const isDefault = !!editing && DEFAULT_IDS.has(editing.id)
+  // Whether the current user owns this shared exercise (or it's brand new).
+  const isOwner = !editing?.ownerId || editing.ownerId === currentUserId
 
   const [name, setName] = useState(editing?.name ?? '')
   const [primaryMuscle, setPrimaryMuscle] = useState<Muscle>(editing?.primaryMuscle ?? 'Chest')
@@ -367,6 +373,8 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
   const [tips, setTips] = useState((editing?.tips ?? []).join('\n'))
   const [photos, setPhotos] = useState<string[]>(editing?.photos ?? [])
   const [shared, setShared] = useState(editing?.shared ?? false)
+  const [collaborative, setCollaborative] = useState(editing?.collaborative ?? false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   function toggleSecondary(m: Muscle) {
@@ -385,8 +393,9 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
     }
   }
 
-  function save() {
+  async function save() {
     if (!name.trim()) return setError('Give the exercise a name.')
+    const isShared = !isDefault && shared
     const exercise: Exercise = {
       id: editing?.id ?? `custom-ex-${uid()}`,
       name: name.trim(),
@@ -404,10 +413,34 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
         .map((s) => s.trim())
         .filter(Boolean),
       photos: photos.length ? photos : undefined,
-      shared: !isDefault && shared ? true : undefined,
+      shared: isShared ? true : undefined,
+      ownerId: editing?.ownerId ?? (isShared ? currentUserId : undefined),
+      ownerName: editing?.ownerName ?? (isShared ? currentUserName ?? 'You' : undefined),
+      // Only the owner controls the edit policy; collaborators keep the setting.
+      collaborative: isOwner ? collaborative : editing?.collaborative,
+      version: Date.now(),
     }
+
     if (isDefault) setExerciseOverride(exercise)
     else addCustomExercise(exercise)
+
+    // Propagate to the canonical shared store so edits reach everyone who added
+    // it. Push when the exercise is shared (owner) or when editing a
+    // collaborative exercise you're a member of; the backend enforces policy.
+    const shouldPublish =
+      !!exercise.ownerId && (isShared || (!!editing?.collaborative && !isOwner))
+    if (shouldPublish) {
+      const token = getToken()
+      if (token) {
+        setSaving(true)
+        const res = await apiUpsertExercise<Exercise>(token, exercise)
+        setSaving(false)
+        if (res.ok && res.data) {
+          // Preserve this account's own visibility; content/policy are canonical.
+          addCustomExercise({ ...res.data.exercise, shared: exercise.shared })
+        }
+      }
+    }
     onClose()
   }
 
@@ -556,14 +589,50 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
             </button>
           )}
 
+          {/* Edit policy — only the creator chooses who may edit a shared exercise. */}
+          {!isDefault && shared && isOwner && (
+            <div className="rounded-xl border border-white/10 bg-ink-850 p-3">
+              <span className="block text-sm font-medium text-zinc-200">Who can edit it?</span>
+              <span className="mt-0.5 block text-xs text-zinc-500">
+                Your edits always show for everyone who added it.
+              </span>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCollaborative(false)}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-sm font-semibold transition',
+                    !collaborative
+                      ? 'border-gold bg-gold/15 text-gold'
+                      : 'border-white/10 bg-ink-900 text-zinc-300 hover:border-white/20',
+                  )}
+                >
+                  Only me
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCollaborative(true)}
+                  className={cn(
+                    'rounded-lg border px-3 py-2 text-sm font-semibold transition',
+                    collaborative
+                      ? 'border-gold bg-gold/15 text-gold'
+                      : 'border-white/10 bg-ink-900 text-zinc-300 hover:border-white/20',
+                  )}
+                >
+                  Anyone who added it
+                </button>
+              </div>
+            </div>
+          )}
+
           {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 
           <div className="flex gap-2 pt-1">
             <button onClick={onClose} className="btn-ghost flex-1">
               Cancel
             </button>
-            <button onClick={save} className="btn-gold flex-1">
-              {isEdit ? 'Save Changes' : 'Create Exercise'}
+            <button onClick={() => void save()} disabled={saving} className="btn-gold flex-1">
+              {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Exercise'}
             </button>
           </div>
         </div>

@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Dumbbell, Plus } from 'lucide-react'
+import { ArrowLeft, Dumbbell, Plus, Search } from 'lucide-react'
 import { useStore } from '../store'
 import type { MaxRecord } from '../types'
-import { cn, formatDateLong, todayISO, uid } from '../lib/utils'
+import { cn, todayISO, uid } from '../lib/utils'
 
 export function MaxTracker() {
   const navigate = useNavigate()
@@ -16,6 +16,13 @@ export function MaxTracker() {
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [errors, setErrors] = useState<{ name?: boolean; weight?: boolean; reps?: boolean }>({})
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return maxTrackers
+    return maxTrackers.filter((t) => t.name.toLowerCase().includes(q))
+  }, [maxTrackers, query])
 
   function reset() {
     setName('')
@@ -129,28 +136,44 @@ export function MaxTracker() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {maxTrackers.map((t) => {
-            const latest = [...t.records].sort((a, b) => (a.date < b.date ? 1 : -1))[0]
-            return (
-              <Link
-                key={t.id}
-                to={`/max/${t.id}`}
-                className="card flex items-center justify-between p-4 transition hover:border-white/20"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-zinc-100">{t.name}</p>
-                  {latest && (
-                    <p className="truncate text-xs text-zinc-500">
-                      {latest.weight} {unit} × {latest.reps} · {formatDateLong(latest.date)}
-                    </p>
-                  )}
-                </div>
-                <ChevronRight className="h-5 w-5 shrink-0 text-zinc-500" />
-              </Link>
-            )
-          })}
-        </div>
+        <>
+          {maxTrackers.length > 0 && (
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search your max cards"
+                className="w-full rounded-xl border border-white/10 bg-ink-850 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-gold/60 focus:outline-none"
+              />
+            </div>
+          )}
+          {filtered.length === 0 ? (
+            <div className="card p-6 text-center text-sm text-zinc-500">
+              No max cards match “{query}”.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((t) => {
+                const latest = [...t.records].sort((a, b) => (a.date < b.date ? 1 : -1))[0]
+                return (
+                  <Link
+                    key={t.id}
+                    to={`/max/${t.id}`}
+                    className="card flex items-center justify-between gap-3 p-4 transition hover:border-white/20"
+                  >
+                    <span className="truncate font-semibold text-zinc-100">{t.name}</span>
+                    {latest && (
+                      <span className="shrink-0 font-semibold text-zinc-100">
+                        {latest.weight} {unit} × {latest.reps}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

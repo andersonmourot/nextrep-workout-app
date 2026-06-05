@@ -63,3 +63,36 @@ class ProgramMember(Base):
     program_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     user_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class SharedExercise(Base):
+    """Canonical, cross-account store for a user-created (shared) exercise.
+
+    All accounts that add the exercise reference it by this same id, so an edit
+    by the owner (or any collaborator, when collaborative) propagates to
+    everyone who has it.
+    """
+
+    __tablename__ = "shared_exercises"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String, index=True, nullable=False)
+    owner_name: Mapped[str] = mapped_column(String, nullable=False, default="")
+    collaborative: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Full exercise JSON (source of truth for content).
+    data: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    # Epoch-ms of the last edit; clients pull when this exceeds their copy.
+    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    updated_by: Mapped[str] = mapped_column(String, nullable=False, default="")
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class ExerciseMember(Base):
+    """Records that a user has added a shared exercise (and may edit it when the
+    exercise is collaborative). The owner is always a member."""
+
+    __tablename__ = "exercise_members"
+
+    exercise_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    user_id: Mapped[str] = mapped_column(String, primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)

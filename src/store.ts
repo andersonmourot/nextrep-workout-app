@@ -14,7 +14,7 @@ import type {
 import { PROGRAMS, getProgram } from './data/programs'
 import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
-import { apiGetData, apiProgramsBatch, apiPutData } from './api'
+import { apiExercisesBatch, apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
 import { uid } from './lib/utils'
 
@@ -383,6 +383,7 @@ export async function syncFromServer(): Promise<void> {
     applyState({ ...DEFAULTS, ...res.data })
   }
   await refreshSharedPrograms()
+  await refreshSharedExercises()
 }
 
 /**
@@ -411,6 +412,37 @@ export async function refreshSharedPrograms(): Promise<void> {
     return p
   })
   if (changed) useStore.setState({ customPrograms: updated })
+}
+
+/**
+ * Pull the newest version of every shared exercise the user has added and
+ * replace local copies whose content is stale. This propagates an owner's (or
+ * collaborator's) edits across all accounts that added the exercise. Each
+ * account's own sharing visibility (`shared`) is preserved, so pulling an
+ * update never re-publishes someone else's exercise onto your profile.
+ */
+export async function refreshSharedExercises(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const mine = useStore.getState().customExercises
+  const ids = mine.filter((e) => e.ownerId && e.id).map((e) => e.id)
+  if (ids.length === 0) return
+  const res = await apiExercisesBatch<Exercise>(token, ids)
+  if (!res.ok || !res.data) return
+  const canon = new Map(res.data.exercises.map((e) => [e.id, e]))
+  let changed = false
+  const updated = mine.map((e) => {
+    const c = canon.get(e.id)
+    if (c && (c.version ?? 0) > (e.version ?? 0)) {
+      changed = true
+      return { ...c, shared: e.shared }
+    }
+    return e
+  })
+  if (changed) {
+    setCustomExercises(updated)
+    useStore.setState({ customExercises: updated })
+  }
 }
 
 /** Reset the in-memory store to defaults (used on logout). */

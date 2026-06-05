@@ -11,7 +11,14 @@ from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
 from .db import Base, engine, get_db
-from .models import Follow, ProgramMember, SharedProgram, User
+from .models import (
+    ExerciseMember,
+    Follow,
+    ProgramMember,
+    SharedExercise,
+    SharedProgram,
+    User,
+)
 from .security import create_token, decode_token, hash_password, verify_password
 
 
@@ -29,9 +36,24 @@ ADMIN_EMAILS = {
     if e.strip()
 }
 
+# Test/seed accounts created during development are hidden from the admin Users
+# directory. Anything on the reserved example.com domain (RFC 2606, never a real
+# user) is hidden automatically; HIDDEN_EMAILS may add specific extra addresses.
+HIDDEN_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("HIDDEN_EMAILS", "").split(",")
+    if e.strip()
+}
+
 
 def _is_admin(user: "User") -> bool:
     return user.email.lower() in ADMIN_EMAILS
+
+
+def _is_seed_account(email: str) -> bool:
+    """Whether an account is a Devin-made test/seed account (hidden from admin)."""
+    e = email.lower().strip()
+    return e.endswith("@example.com") or e in HIDDEN_EMAILS
 
 
 app = FastAPI(title="SMELLIS Backend")
@@ -119,6 +141,10 @@ class SharedExercises(BaseModel):
 
 class ProgramBody(BaseModel):
     program: dict
+
+
+class ExerciseBody(BaseModel):
+    exercise: dict
 
 
 class BatchBody(BaseModel):
@@ -226,6 +252,61 @@ def _publish_owned_programs(db: Session, owner: User) -> list[dict]:
     return [json.loads(sp.data) for sp in owned]
 
 
+def _enrich_exercise(exercise: dict, se: SharedExercise) -> dict:
+    """Stamp the authoritative sharing metadata onto an exercise dict."""
+    out = dict(exercise)
+    out["id"] = se.id
+    out["ownerId"] = se.owner_id
+    out["ownerName"] = se.owner_name
+    out["collaborative"] = se.collaborative
+    out["version"] = se.version
+    out["shared"] = True
+    return out
+
+
+def _ensure_exercise_member(db: Session, exercise_id: str, user_id: str) -> None:
+    exists = (
+        db.query(ExerciseMember)
+        .filter(
+            ExerciseMember.exercise_id == exercise_id,
+            ExerciseMember.user_id == user_id,
+        )
+        .first()
+    )
+    if not exists:
+        db.add(ExerciseMember(exercise_id=exercise_id, user_id=user_id))
+
+
+def _publish_owned_exercises(db: Session, owner: User) -> list[dict]:
+    """Ensure each shared exercise in the owner's blob exists in the canonical
+    store, then return the canonical list of exercises this user owns."""
+    changed = False
+    for e in _shared_exercises(owner):
+        eid = e.get("id")
+        if not eid:
+            continue
+        se = db.get(SharedExercise, eid)
+        if se is None:
+            version = int(e.get("version") or _now_ms())
+            se = SharedExercise(
+                id=eid,
+                owner_id=owner.id,
+                owner_name=owner.name,
+                collaborative=bool(e.get("collaborative")),
+                data="{}",
+                version=version,
+                updated_by=owner.id,
+            )
+            se.data = json.dumps(_enrich_exercise(e, se))
+            db.add(se)
+            _ensure_exercise_member(db, eid, owner.id)
+            changed = True
+    if changed:
+        db.commit()
+    owned = db.query(SharedExercise).filter(SharedExercise.owner_id == owner.id).all()
+    return [json.loads(se.data) for se in owned]
+
+
 def current_user(
     x_auth_token: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
@@ -322,6 +403,7 @@ def admin_users(
             created_at=(u.created_at.isoformat() if u.created_at else ""),
         )
         for u in rows
+        if not _is_seed_account(u.email)
     ]
 
 
@@ -469,7 +551,7 @@ def user_exercises(
         raise HTTPException(status_code=404, detail="User not found.")
     return SharedExercises(
         user=SharedUser(id=target.id, name=target.name),
-        exercises=_shared_exercises(target),
+        exercises=_publish_owned_exercises(db, target),
     )
 
 
@@ -570,6 +652,110 @@ def remove_program_member(
     db.query(ProgramMember).filter(
         ProgramMember.program_id == program_id,
         ProgramMember.user_id == user.id,
+    ).delete()
+    db.commit()
+    return {"ok": True}
+
+
+@app.put("/api/exercises/{exercise_id}")
+def upsert_exercise(
+    exercise_id: str,
+    body: ExerciseBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    exercise = dict(body.exercise)
+    exercise["id"] = exercise_id
+    se = db.get(SharedExercise, exercise_id)
+    version = _now_ms()
+    if se is None:
+        se = SharedExercise(
+            id=exercise_id,
+            owner_id=user.id,
+            owner_name=user.name,
+            collaborative=bool(exercise.get("collaborative")),
+            data="{}",
+            version=version,
+            updated_by=user.id,
+        )
+        se.data = json.dumps(_enrich_exercise(exercise, se))
+        db.add(se)
+        _ensure_exercise_member(db, exercise_id, user.id)
+    else:
+        is_owner = se.owner_id == user.id
+        is_member = (
+            db.query(ExerciseMember)
+            .filter(
+                ExerciseMember.exercise_id == exercise_id,
+                ExerciseMember.user_id == user.id,
+            )
+            .first()
+            is not None
+        )
+        if is_owner:
+            # Only the owner controls the edit policy (collaborative flag).
+            se.collaborative = bool(exercise.get("collaborative"))
+        elif se.collaborative and is_member:
+            pass  # a collaborator may edit content; ownership/policy unchanged
+        else:
+            raise HTTPException(status_code=403, detail="You can't edit this exercise.")
+        se.version = version
+        se.updated_by = user.id
+        se.data = json.dumps(_enrich_exercise(exercise, se))
+    db.commit()
+    db.refresh(se)
+    return {"exercise": json.loads(se.data)}
+
+
+@app.get("/api/exercises/{exercise_id}")
+def get_exercise(
+    exercise_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    se = db.get(SharedExercise, exercise_id)
+    if se is None:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    return {"exercise": json.loads(se.data)}
+
+
+@app.post("/api/exercises/batch")
+def exercises_batch(
+    body: BatchBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    out: list[dict] = []
+    for eid in body.ids[:200]:
+        se = db.get(SharedExercise, eid)
+        if se is not None:
+            out.append(json.loads(se.data))
+    return {"exercises": out}
+
+
+@app.post("/api/exercises/{exercise_id}/add")
+def add_exercise_member(
+    exercise_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    se = db.get(SharedExercise, exercise_id)
+    if se is None:
+        raise HTTPException(status_code=404, detail="Exercise not found.")
+    _ensure_exercise_member(db, exercise_id, user.id)
+    db.commit()
+    return {"exercise": json.loads(se.data)}
+
+
+@app.delete("/api/exercises/{exercise_id}/member")
+def remove_exercise_member(
+    exercise_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    db.query(ExerciseMember).filter(
+        ExerciseMember.exercise_id == exercise_id,
+        ExerciseMember.user_id == user.id,
     ).delete()
     db.commit()
     return {"ok": True}

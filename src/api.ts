@@ -198,3 +198,34 @@ export function apiProgramsBatch<P>(
 ): Promise<ApiResult<{ programs: P[] }>> {
   return request('/api/programs/batch', { method: 'POST', body: JSON.stringify({ ids }) }, token)
 }
+
+// ---- Shared exercises (cross-account canonical store) ----
+export function apiUpsertExercise<E>(
+  token: string,
+  exercise: E,
+): Promise<ApiResult<{ exercise: E }>> {
+  const id = (exercise as { id: string }).id
+  return request(
+    `/api/exercises/${id}`,
+    { method: 'PUT', body: JSON.stringify({ exercise }) },
+    token,
+  )
+}
+
+export function apiAddExercise<E>(token: string, id: string): Promise<ApiResult<{ exercise: E }>> {
+  return request(`/api/exercises/${id}/add`, { method: 'POST' }, token)
+}
+
+export function apiRemoveExerciseMember(
+  token: string,
+  id: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return request(`/api/exercises/${id}/member`, { method: 'DELETE' }, token)
+}
+
+export function apiExercisesBatch<E>(
+  token: string,
+  ids: string[],
+): Promise<ApiResult<{ exercises: E[] }>> {
+  return request('/api/exercises/batch', { method: 'POST', body: JSON.stringify({ ids }) }, token)
+}

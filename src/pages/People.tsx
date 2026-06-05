@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react'
 import {
+  apiAddExercise,
   apiAddProgram,
   apiFollow,
   apiFollowing,
@@ -247,9 +248,14 @@ function SharedContent({
     setAddedPrograms((prev) => new Set(prev).add(p.id))
   }
 
-  function addExerciseToMine(e: Exercise) {
-    // Copy into the current user's library; don't auto-reshare from their profile.
-    addCustomExercise({ ...e, shared: false, ownerName: e.ownerName || ownerName })
+  async function addExerciseToMine(e: Exercise) {
+    const token = getToken()
+    // Register membership so the creator's edits propagate to this account.
+    const res = token ? await apiAddExercise<Exercise>(token, e.id) : null
+    const canon = res && res.ok && res.data ? res.data.exercise : e
+    // Copy into the current user's library; don't auto-reshare from their
+    // profile (shared:false), but keep ownerId/version so updates propagate.
+    addCustomExercise({ ...canon, shared: false, ownerName: canon.ownerName || ownerName })
     setAddedExercises((prev) => new Set(prev).add(e.id))
   }
 
@@ -329,7 +335,7 @@ function SharedContent({
                     </p>
                   </div>
                   <button
-                    onClick={() => addExerciseToMine(e)}
+                    onClick={() => void addExerciseToMine(e)}
                     disabled={isAdded}
                     className={cn(
                       'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',

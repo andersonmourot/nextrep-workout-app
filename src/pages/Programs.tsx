@@ -7,6 +7,7 @@ import {
   Dumbbell,
   Plus,
   RotateCcw,
+  Search,
   Settings2,
   Trash2,
   X,
@@ -27,6 +28,7 @@ const CATEGORIES: Array<ProgramCategory | 'All'> = [
 
 export function Programs() {
   const [filter, setFilter] = useState<ProgramCategory | 'All'>('All')
+  const [query, setQuery] = useState('')
   const [managing, setManaging] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const activeProgramId = useStore((s) => s.activeProgramId)
@@ -37,10 +39,17 @@ export function Programs() {
   const customIds = useMemo(() => new Set(customPrograms.map((p) => p.id)), [customPrograms])
   const allPrograms = useAllPrograms()
 
-  const list = useMemo(
-    () => (filter === 'All' ? allPrograms : allPrograms.filter((p) => p.category === filter)),
-    [filter, allPrograms],
-  )
+  const list = useMemo(() => {
+    const byCat =
+      filter === 'All' ? allPrograms : allPrograms.filter((p) => p.category === filter)
+    const q = query.trim().toLowerCase()
+    if (!q) return byCat
+    return byCat.filter((p) =>
+      [p.name, p.summary, p.goal, p.coach, p.category, p.level, ...(p.tags ?? [])]
+        .filter(Boolean)
+        .some((s) => s.toLowerCase().includes(q)),
+    )
+  }, [filter, allPrograms, query])
 
   function toggleManaging() {
     setManaging((m) => !m)
@@ -72,6 +81,16 @@ export function Programs() {
             <Plus className="h-4 w-4" />
           </Link>
         </div>
+      </div>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search programs"
+          className="w-full rounded-xl border border-white/10 bg-ink-850 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-gold/60 focus:outline-none"
+        />
       </div>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
@@ -178,9 +197,11 @@ export function Programs() {
         {list.length === 0 && (
           <div className="card p-8 text-center">
             <p className="text-sm text-zinc-400">
-              {filter === 'All'
-                ? 'No programs yet.'
-                : `No ${filter} programs.`}
+              {query.trim()
+                ? `No programs match “${query.trim()}”.`
+                : filter === 'All'
+                  ? 'No programs yet.'
+                  : `No ${filter} programs.`}
             </p>
             <div className="mt-4 flex justify-center gap-2">
               {hiddenCount > 0 && (

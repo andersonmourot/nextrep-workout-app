@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Apple, ChevronRight, Dumbbell, Plus, Trash2, TrendingUp } from 'lucide-react'
+import { Apple, Dumbbell, Plus, Trash2, TrendingUp } from 'lucide-react'
 import { useStore } from '../store'
 import {
   computeStreak,
@@ -167,7 +167,6 @@ function NavButton({
         </span>
         <span className="font-semibold text-zinc-100">{label}</span>
       </span>
-      <ChevronRight className="h-5 w-5 text-zinc-500" />
     </Link>
   )
 }

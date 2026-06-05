@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, RotateCcw } from 'lucide-react'
+import { Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore } from '../store'
 import { cn, uid } from '../lib/utils'
@@ -94,6 +94,7 @@ function Countdown() {
 
   const savedTimers = useStore((s) => s.savedTimers)
   const addSavedTimer = useStore((s) => s.addSavedTimer)
+  const removeSavedTimer = useStore((s) => s.removeSavedTimer)
 
   useEffect(() => {
     if (!running) return
@@ -181,14 +182,25 @@ function Countdown() {
           </h2>
           <div className="space-y-2">
             {savedTimers.map((t) => (
-              <button
+              <div
                 key={t.id}
-                onClick={() => loadRecent(t.seconds)}
-                className="card flex w-full items-center gap-2 p-3 text-left hover:border-white/10"
+                className="card flex w-full items-center gap-2 p-3 hover:border-white/10"
               >
-                <Play className="h-4 w-4 text-gold" />
-                <span className="font-semibold tabular-nums text-zinc-100">{t.label}</span>
-              </button>
+                <button
+                  onClick={() => loadRecent(t.seconds)}
+                  className="flex flex-1 items-center gap-2 text-left"
+                >
+                  <Play className="h-4 w-4 text-gold" />
+                  <span className="font-semibold tabular-nums text-zinc-100">{t.label}</span>
+                </button>
+                <button
+                  onClick={() => removeSavedTimer(t.id)}
+                  aria-label="Delete timer"
+                  className="shrink-0 rounded-md p-1.5 text-zinc-500 hover:bg-white/5 hover:text-red-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -217,7 +229,7 @@ function Stopwatch() {
     <div className="card flex flex-col items-center gap-6 p-6">
       <span className="heading text-6xl font-bold tabular-nums text-zinc-50">
         {m}:{s.toString().padStart(2, '0')}
-        <span className="text-zinc-400">.{hundredths.toString().padStart(2, '0')}</span>
+        <span>.{hundredths.toString().padStart(2, '0')}</span>
       </span>
       <div className="flex w-full gap-2">
         <button onClick={() => setRunning((r) => !r)} className="btn-gold flex-1 py-3">

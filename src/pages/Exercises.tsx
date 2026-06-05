@@ -155,7 +155,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
           onClick={() => setShowDeleted(false)}
           className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to exercises
+          <ArrowLeft className="h-4 w-4" /> Back
         </button>
         <h1 className="heading text-3xl font-bold text-zinc-50">Deleted exercises</h1>
         <p className="text-xs text-zinc-500">
@@ -204,12 +204,12 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
           <h1 className="heading text-3xl font-bold text-zinc-50">Exercises</h1>
         </div>
         <div className="flex shrink-0 gap-2">
-          {managing && (
+          {managing && hiddenExerciseIds.length > 0 && (
             <button
               onClick={() => setShowDeleted(true)}
               className="btn-ghost px-3 py-2 text-sm"
             >
-              Deleted{hiddenExerciseIds.length > 0 ? ` (${hiddenExerciseIds.length})` : ''}
+              Deleted ({hiddenExerciseIds.length})
             </button>
           )}
           <button

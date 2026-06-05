@@ -13,6 +13,26 @@ export interface SavedTimer {
   seconds: number
 }
 
+export interface IntervalSettings {
+  emomInterval: number
+  emomRounds: number
+  amrapCap: number
+  tabataWork: number
+  tabataRest: number
+  tabataRounds: number
+  forTimeCap: number
+}
+
+export const DEFAULT_INTERVAL_SETTINGS: IntervalSettings = {
+  emomInterval: 60,
+  emomRounds: 10,
+  amrapCap: 600,
+  tabataWork: 20,
+  tabataRest: 10,
+  tabataRounds: 8,
+  forTimeCap: 1200,
+}
+
 const DEFAULTS = {
   name: 'Athlete',
   unit: 'lb' as Unit,
@@ -28,6 +48,7 @@ const DEFAULTS = {
   exerciseOverrides: {} as Record<string, Exercise>,
   savedTimers: [] as SavedTimer[],
   timerSound: 'beep' as string,
+  intervalSettings: DEFAULT_INTERVAL_SETTINGS as IntervalSettings,
 }
 
 /** Resolve the per-user storage key so each account keeps isolated data. */
@@ -57,6 +78,7 @@ interface AppState {
   exerciseOverrides: Record<string, Exercise>
   savedTimers: SavedTimer[]
   timerSound: string
+  intervalSettings: IntervalSettings
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -81,6 +103,7 @@ interface AppState {
   addSavedTimer: (timer: SavedTimer) => void
   removeSavedTimer: (id: string) => void
   setTimerSound: (sound: string) => void
+  setIntervalSettings: (settings: IntervalSettings) => void
   resetAll: () => void
 }
 
@@ -170,6 +193,7 @@ export const useStore = create<AppState>()(
       removeSavedTimer: (id) =>
         set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
       setTimerSound: (timerSound) => set({ timerSound }),
+      setIntervalSettings: (intervalSettings) => set({ intervalSettings }),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -184,6 +208,7 @@ export const useStore = create<AppState>()(
           exerciseOverrides: {},
           savedTimers: [],
           timerSound: 'beep',
+          intervalSettings: DEFAULT_INTERVAL_SETTINGS,
         })
       },
     }),
@@ -208,6 +233,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     exerciseOverrides: s.exerciseOverrides,
     savedTimers: s.savedTimers,
     timerSound: s.timerSound,
+    intervalSettings: s.intervalSettings,
   }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
-import { useStore } from '../store'
+import { useStore, DEFAULT_INTERVAL_SETTINGS, type IntervalSettings } from '../store'
 import { cn, uid } from '../lib/utils'
 
 type Mode = 'timer' | 'stopwatch' | 'interval'
@@ -309,27 +309,6 @@ function Stopwatch() {
 const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'FOR TIME', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
-interface IntervalSettings {
-  emomInterval: number
-  emomRounds: number
-  amrapCap: number
-  tabataWork: number
-  tabataRest: number
-  tabataRounds: number
-  forTimeCap: number
-}
-
-// Defaults drawn from common workout/fitness conventions.
-const DEFAULT_SETTINGS: IntervalSettings = {
-  emomInterval: 60, // every minute on the minute
-  emomRounds: 10,
-  amrapCap: 600, // 10:00 cap
-  tabataWork: 20,
-  tabataRest: 10,
-  tabataRounds: 8,
-  forTimeCap: 1200, // 20:00 cap
-}
-
 /** Short tick cue for the final 3 seconds of a phase. */
 function tickCue(secLeft: number) {
   if (secLeft === 3 || secLeft === 2 || secLeft === 1) beep(1000)
@@ -374,19 +353,21 @@ function NumIn({
 }
 
 function Interval() {
+  const settings = useStore((s) => s.intervalSettings)
+  const setIntervalSettings = useStore((s) => s.setIntervalSettings)
+
   const [format, setFormat] = useState<IntervalFormat | null>(null)
-  const [settings, setSettings] = useState<IntervalSettings>(DEFAULT_SETTINGS)
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
-  const [remaining, setRemaining] = useState(DEFAULT_SETTINGS.tabataWork)
+  const [remaining, setRemaining] = useState(DEFAULT_INTERVAL_SETTINGS.tabataWork)
   const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine without stale closures.
   const cfgRef = useRef({ work: 20, rest: 10, rounds: 8 })
-  const capRef = useRef(DEFAULT_SETTINGS.forTimeCap)
+  const capRef = useRef(DEFAULT_INTERVAL_SETTINGS.forTimeCap)
   const isCountUpRef = useRef(false)
   const roundRef = useRef(1)
   const phaseRef = useRef<'work' | 'rest'>('work')
@@ -553,7 +534,7 @@ function Interval() {
 
   const upd = (patch: Partial<IntervalSettings>) => {
     const next = { ...settings, ...patch }
-    setSettings(next)
+    setIntervalSettings(next)
     if (!running) applyConfig(format, next)
   }
 

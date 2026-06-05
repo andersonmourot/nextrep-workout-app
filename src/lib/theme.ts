@@ -8,7 +8,7 @@ export const DEFAULT_THEME_MODE: ThemeMode = 'dark'
 export const THEME_COLORS = [
   '#355e3b',
   '#e9b949',
-  '#b91c1c',
+  '#7f1d1d',
   '#3b82f6',
   '#22c55e',
   '#a855f7',

@@ -319,34 +319,60 @@ function NumIn({
   value,
   onChange,
   disabled,
+  invalid,
   min = 0,
   max,
 }: {
   label: string
   value: number
-  onChange: (v: number) => void
+  onChange: (v: number | null) => void
   disabled?: boolean
+  invalid?: boolean
   min?: number
   max?: number
 }) {
+  const [str, setStr] = useState(String(value))
+  const lastValue = useRef(value)
+  // Resync the field when the committed value changes externally (format
+  // switch / reset), but leave the user's in-progress text alone otherwise.
+  useEffect(() => {
+    if (lastValue.current !== value) {
+      lastValue.current = value
+      setStr(String(value))
+    }
+  }, [value])
+
   return (
     <label className="flex flex-col gap-1">
       <span className="text-xs font-medium text-zinc-400">{label}</span>
       <input
         type="number"
         inputMode="numeric"
-        value={value}
+        value={str}
         min={min}
         max={max}
         disabled={disabled}
         onChange={(e) => {
-          const n = parseInt(e.target.value, 10)
-          let v = Number.isNaN(n) ? min : n
+          const raw = e.target.value
+          setStr(raw)
+          if (raw === '') {
+            onChange(null)
+            return
+          }
+          const n = parseInt(raw, 10)
+          if (Number.isNaN(n)) {
+            onChange(null)
+            return
+          }
+          let v = n
           if (v < min) v = min
           if (max !== undefined && v > max) v = max
           onChange(v)
         }}
-        className="input no-spin py-2 text-sm disabled:opacity-50"
+        className={cn(
+          'input no-spin py-2 text-sm disabled:opacity-50',
+          invalid && 'border-red-500 focus:border-red-500',
+        )}
       />
     </label>
   )
@@ -364,6 +390,13 @@ function Interval() {
   const [finished, setFinished] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [amrapInput, setAmrapInput] = useState('')
+  // Which required fields are currently blank/invalid, and whether to surface
+  // those as red outlines (only after the user tries to start).
+  const [blanks, setBlanks] = useState<Record<string, boolean>>({})
+  const [showErrors, setShowErrors] = useState(false)
+
+  const setBlank = (key: string, isBlank: boolean) =>
+    setBlanks((b) => (b[key] === isBlank ? b : { ...b, [key]: isBlank }))
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine without stale closures.
@@ -407,8 +440,20 @@ function Interval() {
 
   function selectFormat(f: IntervalFormat) {
     setFormat(f)
+    setShowErrors(false)
+    setBlanks({})
+    setAmrapInput(f === 'AMRAP' ? fmt(settings.amrapCap) : '')
     applyConfig(f, settings)
   }
+
+  const requiredKeys: string[] =
+    format === 'EMOM'
+      ? ['emomInterval', 'emomRounds']
+      : format === 'TABATA'
+        ? ['tabataWork', 'tabataRest', 'tabataRounds']
+        : format === 'AMRAP'
+          ? ['amrap']
+          : []
 
   // 5-4-3-2-1 intro countdown effect
   useEffect(() => {
@@ -478,6 +523,10 @@ function Interval() {
 
   function start() {
     if (!format) return
+    if (requiredKeys.some((k) => blanks[k])) {
+      setShowErrors(true)
+      return
+    }
     if (finished) resetRuntime()
     setFinished(false)
     beep(660)
@@ -491,7 +540,6 @@ function Interval() {
 
   const phaseTotal = phase === 'work' ? cfg?.work ?? 1 : cfg?.rest ?? 1
   const ringValue = phaseTotal ? remaining / phaseTotal : 0
-  const display = countdown !== null ? countdown : remaining
 
   const desc =
     format === 'EMOM'
@@ -530,7 +578,7 @@ function Interval() {
               {finished ? 'Done' : !format ? 'Interval' : countdown !== null ? 'Ready' : phase}
             </span>
             <span className="heading text-5xl font-bold tabular-nums text-zinc-50">
-              {fmt(display)}
+              {countdown !== null ? countdown : fmt(remaining)}
             </span>
             <span className="text-xs text-zinc-500">{subtitle}</span>
           </div>
@@ -575,14 +623,22 @@ function Interval() {
                 value={settings.emomInterval}
                 min={5}
                 disabled={running || countdown !== null}
-                onChange={(v) => upd({ emomInterval: v })}
+                invalid={showErrors && blanks.emomInterval}
+                onChange={(v) => {
+                  setBlank('emomInterval', v === null)
+                  if (v !== null) upd({ emomInterval: v })
+                }}
               />
               <NumIn
                 label="Rounds"
                 value={settings.emomRounds}
                 min={1}
                 disabled={running || countdown !== null}
-                onChange={(v) => upd({ emomRounds: v })}
+                invalid={showErrors && blanks.emomRounds}
+                onChange={(v) => {
+                  setBlank('emomRounds', v === null)
+                  if (v !== null) upd({ emomRounds: v })
+                }}
               />
             </div>
           )}
@@ -593,21 +649,33 @@ function Interval() {
                 value={settings.tabataWork}
                 min={1}
                 disabled={running || countdown !== null}
-                onChange={(v) => upd({ tabataWork: v })}
+                invalid={showErrors && blanks.tabataWork}
+                onChange={(v) => {
+                  setBlank('tabataWork', v === null)
+                  if (v !== null) upd({ tabataWork: v })
+                }}
               />
               <NumIn
                 label="Rest (sec)"
                 value={settings.tabataRest}
                 min={0}
                 disabled={running || countdown !== null}
-                onChange={(v) => upd({ tabataRest: v })}
+                invalid={showErrors && blanks.tabataRest}
+                onChange={(v) => {
+                  setBlank('tabataRest', v === null)
+                  if (v !== null) upd({ tabataRest: v })
+                }}
               />
               <NumIn
                 label="Rounds"
                 value={settings.tabataRounds}
                 min={1}
                 disabled={running || countdown !== null}
-                onChange={(v) => upd({ tabataRounds: v })}
+                invalid={showErrors && blanks.tabataRounds}
+                onChange={(v) => {
+                  setBlank('tabataRounds', v === null)
+                  if (v !== null) upd({ tabataRounds: v })
+                }}
               />
             </div>
           )}
@@ -618,23 +686,24 @@ function Interval() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder={fmt(settings.amrapCap)}
+                  placeholder="mm:ss"
                   value={amrapInput}
                   disabled={running || countdown !== null}
-                  onChange={(e) => setAmrapInput(e.target.value)}
-                  onBlur={() => {
-                    const parsed = parseTime(amrapInput)
-                    if (parsed !== null && parsed > 0) upd({ amrapCap: parsed })
-                    setAmrapInput('')
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const parsed = parseTime(amrapInput)
-                      if (parsed !== null && parsed > 0) upd({ amrapCap: parsed })
-                      setAmrapInput('')
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    setAmrapInput(raw)
+                    const parsed = parseTime(raw)
+                    if (raw.trim() === '' || parsed === null || parsed <= 0) {
+                      setBlank('amrap', true)
+                    } else {
+                      setBlank('amrap', false)
+                      upd({ amrapCap: parsed })
                     }
                   }}
-                  className="input no-spin py-2 text-sm disabled:opacity-50"
+                  className={cn(
+                    'input no-spin py-2 text-sm disabled:opacity-50',
+                    showErrors && blanks.amrap && 'border-red-500 focus:border-red-500',
+                  )}
                 />
               </label>
             </div>

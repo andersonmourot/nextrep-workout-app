@@ -180,8 +180,7 @@ function Disclaimer() {
       </P>
       <H>Assumption of risk</H>
       <P>
-        Physical exercise carries inherent risks, including the risk of serious injury. By using
-        {' '}
+        Physical exercise carries inherent risks, including the risk of serious injury. By using{' '}
         {APP_NAME} and performing any exercises or programs referenced in it, you do so voluntarily
         and at your own risk. Stop immediately and seek medical attention if you experience pain,
         dizziness, shortness of breath, or any other symptom.

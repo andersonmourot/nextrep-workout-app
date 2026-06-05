@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router-dom'
-import { Home, LineChart, LayoutGrid, Timer, Users } from 'lucide-react'
+import { Home, LayoutGrid, Timer, Search, User } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const TABS = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/programs', label: 'Programs', icon: LayoutGrid, end: false },
   { to: '/timer', label: 'Timer', icon: Timer, end: false },
-  { to: '/people', label: 'People', icon: Users, end: false },
-  { to: '/progress', label: 'Progress', icon: LineChart, end: false },
+  { to: '/people', label: 'Search', icon: Search, end: false },
+  { to: '/progress', label: 'Profile', icon: User, end: false },
 ]
 
 export function BottomNav() {

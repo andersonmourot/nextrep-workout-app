@@ -30,7 +30,6 @@ export function Progress() {
   return (
     <div className="animate-fade-in space-y-6">
       <div>
-        <p className="label-eyebrow">Track your transformation</p>
         <h1 className="heading text-3xl font-bold text-zinc-50">Progress</h1>
       </div>
 

@@ -27,6 +27,7 @@ const DEFAULTS = {
   hiddenExerciseIds: [] as string[],
   exerciseOverrides: {} as Record<string, Exercise>,
   savedTimers: [] as SavedTimer[],
+  timerSound: 'beep' as string,
 }
 
 /** Resolve the per-user storage key so each account keeps isolated data. */
@@ -55,6 +56,7 @@ interface AppState {
   hiddenExerciseIds: string[]
   exerciseOverrides: Record<string, Exercise>
   savedTimers: SavedTimer[]
+  timerSound: string
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -78,6 +80,7 @@ interface AppState {
   restorePrograms: () => void
   addSavedTimer: (timer: SavedTimer) => void
   removeSavedTimer: (id: string) => void
+  setTimerSound: (sound: string) => void
   resetAll: () => void
 }
 
@@ -166,6 +169,7 @@ export const useStore = create<AppState>()(
         })),
       removeSavedTimer: (id) =>
         set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
+      setTimerSound: (timerSound) => set({ timerSound }),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -179,6 +183,7 @@ export const useStore = create<AppState>()(
           hiddenExerciseIds: [],
           exerciseOverrides: {},
           savedTimers: [],
+          timerSound: 'beep',
         })
       },
     }),
@@ -202,6 +207,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     hiddenExerciseIds: s.hiddenExerciseIds,
     exerciseOverrides: s.exerciseOverrides,
     savedTimers: s.savedTimers,
+    timerSound: s.timerSound,
   }
 }
 

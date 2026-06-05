@@ -52,6 +52,24 @@ function beep(freq = 880) {
   }
 }
 
+/** End-of-timer sound choices (free assets bundled under /public/sounds). */
+const SOUND_OPTIONS = [
+  { id: 'beep', label: 'Beep' },
+  { id: 'bell', label: 'Bell' },
+  { id: 'chime', label: 'Chime' },
+  { id: 'alarm', label: 'Alarm' },
+] as const
+
+/** Play one of the bundled end sounds; falls back to a synth beep on error. */
+function playSound(id: string) {
+  try {
+    const audio = new Audio(`${import.meta.env.BASE_URL}sounds/${id}.mp3`)
+    void audio.play().catch(() => beep())
+  } catch {
+    beep()
+  }
+}
+
 export function Timer() {
   const [mode, setMode] = useState<Mode>('timer')
 
@@ -95,6 +113,8 @@ function Countdown() {
   const savedTimers = useStore((s) => s.savedTimers)
   const addSavedTimer = useStore((s) => s.addSavedTimer)
   const removeSavedTimer = useStore((s) => s.removeSavedTimer)
+  const timerSound = useStore((s) => s.timerSound)
+  const setTimerSound = useStore((s) => s.setTimerSound)
 
   useEffect(() => {
     if (!running) return
@@ -104,7 +124,7 @@ function Countdown() {
           window.clearInterval(t)
           setRunning(false)
           setDone(true)
-          beep()
+          playSound(useStore.getState().timerSound)
           return 0
         }
         return r - 1
@@ -171,6 +191,34 @@ function Countdown() {
             className="btn-gold shrink-0 px-6 py-2.5 text-sm font-semibold"
           >
             {running ? 'Reset' : 'Start'}
+          </button>
+        </div>
+
+        <div className="flex w-full items-center gap-2">
+          <label htmlFor="timer-sound" className="text-xs font-medium text-zinc-400">
+            End sound
+          </label>
+          <select
+            id="timer-sound"
+            value={timerSound}
+            onChange={(e) => {
+              setTimerSound(e.target.value)
+              playSound(e.target.value)
+            }}
+            className="input flex-1 py-2 text-sm"
+          >
+            {SOUND_OPTIONS.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => playSound(timerSound)}
+            aria-label="Preview sound"
+            className="btn-ghost shrink-0 px-3 py-2 text-sm"
+          >
+            <Play className="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -261,29 +309,47 @@ function Stopwatch() {
 const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'For Time', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
-function Interval() {
-  const work = 30
-  const rest = 15
-  const rounds = 8
+interface IntervalConfig {
+  work: number
+  rest: number
+  rounds: number
+  /** Whether the round counter is meaningful (AMRAP is a single time cap). */
+  showRounds: boolean
+  desc: string
+}
 
+// Standard settings drawn from common workout/fitness conventions.
+const INTERVAL_CONFIGS: Record<'EMOM' | 'AMRAP' | 'TABATA', IntervalConfig> = {
+  // Every Minute On the Minute: a fresh 60s round, repeated.
+  EMOM: { work: 60, rest: 0, rounds: 10, showRounds: true, desc: '60s × 10 rounds' },
+  // As Many Reps/Rounds As Possible: one fixed time cap (10 min).
+  AMRAP: { work: 600, rest: 0, rounds: 1, showRounds: false, desc: '10:00 time cap' },
+  // Tabata: 20s work / 10s rest × 8 rounds.
+  TABATA: { work: 20, rest: 10, rounds: 8, showRounds: true, desc: '20s work / 10s rest × 8' },
+}
+
+const DEFAULT_INTERVAL: IntervalConfig = INTERVAL_CONFIGS.TABATA
+
+function Interval() {
   const [format, setFormat] = useState<IntervalFormat | null>(null)
+  const [cfg, setCfg] = useState<IntervalConfig>(DEFAULT_INTERVAL)
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
-  const [remaining, setRemaining] = useState(30)
+  const [remaining, setRemaining] = useState(DEFAULT_INTERVAL.work)
   const [finished, setFinished] = useState(false)
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine (decrement + phase/round transitions) without stale closures
   // or extra effects.
-  const cfgRef = useRef({ work, rest, rounds })
+  const cfgRef = useRef(cfg)
   const roundRef = useRef(1)
   const phaseRef = useRef<'work' | 'rest'>('work')
-  const remainingRef = useRef(work)
+  const remainingRef = useRef(cfg.work)
 
   useEffect(() => {
-    cfgRef.current = { work, rest, rounds }
-  }, [work, rest, rounds])
+    cfgRef.current = cfg
+  }, [cfg])
 
   useEffect(() => {
     if (!running) return
@@ -294,37 +360,55 @@ function Interval() {
         return
       }
       // Phase boundary.
-      if (phaseRef.current === 'work') {
+      const { work, rest, rounds } = cfgRef.current
+      if (phaseRef.current === 'work' && rest > 0) {
         phaseRef.current = 'rest'
-        remainingRef.current = cfgRef.current.rest
+        remainingRef.current = rest
         setPhase('rest')
-        setRemaining(remainingRef.current)
+        setRemaining(rest)
         beep(880)
-      } else if (roundRef.current >= cfgRef.current.rounds) {
+      } else if (roundRef.current >= rounds) {
         window.clearInterval(t)
         setRunning(false)
         setFinished(true)
-        beep(660)
+        playSound(useStore.getState().timerSound)
       } else {
         roundRef.current += 1
         phaseRef.current = 'work'
-        remainingRef.current = cfgRef.current.work
+        remainingRef.current = work
         setRound(roundRef.current)
         setPhase('work')
-        setRemaining(remainingRef.current)
+        setRemaining(work)
         beep(660)
       }
     }, 1000)
     return () => window.clearInterval(t)
   }, [running])
 
+  function selectFormat(f: IntervalFormat) {
+    setFormat(f)
+    // "For Time" is intentionally a no-op for now.
+    if (f === 'For Time') return
+    const next = INTERVAL_CONFIGS[f]
+    setCfg(next)
+    cfgRef.current = next
+    roundRef.current = 1
+    phaseRef.current = 'work'
+    remainingRef.current = next.work
+    setRunning(false)
+    setFinished(false)
+    setRound(1)
+    setPhase('work')
+    setRemaining(next.work)
+  }
+
   function start() {
     roundRef.current = 1
     phaseRef.current = 'work'
-    remainingRef.current = work
+    remainingRef.current = cfg.work
     setRound(1)
     setPhase('work')
-    setRemaining(work)
+    setRemaining(cfg.work)
     setFinished(false)
     setRunning(true)
   }
@@ -332,15 +416,16 @@ function Interval() {
   function reset() {
     roundRef.current = 1
     phaseRef.current = 'work'
-    remainingRef.current = work
+    remainingRef.current = cfg.work
     setRunning(false)
     setFinished(false)
     setRound(1)
     setPhase('work')
-    setRemaining(work)
+    setRemaining(cfg.work)
   }
 
-  const phaseTotal = phase === 'work' ? work : rest
+  const phaseTotal = phase === 'work' ? cfg.work : cfg.rest
+  const ready = format !== null && format !== 'For Time'
 
   return (
     <div className="space-y-4">
@@ -353,21 +438,30 @@ function Interval() {
                 phase === 'work' ? 'text-gold' : 'text-zinc-400',
               )}
             >
-              {finished ? 'Done' : phase}
+              {finished ? 'Done' : ready ? phase : 'Interval'}
             </span>
             <span className="heading text-5xl font-bold tabular-nums text-zinc-50">
               {fmt(remaining)}
             </span>
-            <span className="text-xs text-zinc-500">
-              Round {round}/{rounds}
-            </span>
+            {ready && cfg.showRounds ? (
+              <span className="text-xs text-zinc-500">
+                Round {round}/{cfg.rounds}
+              </span>
+            ) : (
+              <span className="text-xs text-zinc-500">{format ?? 'Select a format'}</span>
+            )}
           </div>
         </ProgressRing>
 
+        {ready && <p className="text-xs text-zinc-400">{cfg.desc}</p>}
         {finished && <p className="text-sm font-semibold text-gold">Workout complete!</p>}
 
         <div className="flex w-full gap-2">
-          <button onClick={running ? () => setRunning(false) : start} className="btn-gold flex-1 py-3">
+          <button
+            onClick={running ? () => setRunning(false) : start}
+            disabled={!ready}
+            className="btn-gold flex-1 py-3 disabled:cursor-not-allowed disabled:opacity-40"
+          >
             {running ? (
               <span className="inline-flex items-center gap-2">
                 <Pause className="h-4 w-4" /> Pause
@@ -388,7 +482,7 @@ function Interval() {
         {INTERVAL_FORMATS.map((f) => (
           <button
             key={f}
-            onClick={() => setFormat(f)}
+            onClick={() => selectFormat(f)}
             className={cn(
               'w-full rounded-xl border py-3 text-sm font-semibold transition',
               format === f

@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { Dumbbell, Home, LineChart, LayoutGrid, Users } from 'lucide-react'
+import { Home, LineChart, LayoutGrid, Timer, Users } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const TABS = [
   { to: '/', label: 'Home', icon: Home, end: true },
   { to: '/programs', label: 'Programs', icon: LayoutGrid, end: false },
-  { to: '/exercises', label: 'Exercises', icon: Dumbbell, end: false },
+  { to: '/timer', label: 'Timer', icon: Timer, end: false },
   { to: '/people', label: 'People', icon: Users, end: false },
   { to: '/progress', label: 'Progress', icon: LineChart, end: false },
 ]

@@ -11,6 +11,7 @@ import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { Progress } from './pages/Progress'
 import { People } from './pages/People'
+import { Timer } from './pages/Timer'
 import { Settings } from './pages/Settings'
 import { Auth } from './pages/Auth'
 import { useAuth } from './auth'
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/exercises/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/people" element={<People />} />
+          <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/workout/:programId/:dayId" element={<Workout />} />
           <Route path="*" element={<Dashboard />} />

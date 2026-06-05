@@ -35,6 +35,16 @@ def verify_password(password: str, stored: str) -> bool:
     return hmac.compare_digest(dk.hex(), digest)
 
 
+def generate_reset_token() -> str:
+    """A high-entropy, URL-safe token emailed to the user for password reset."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_reset_token(token: str) -> str:
+    """SHA-256 of a reset token. We store only the hash, never the raw token."""
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def create_token(user_id: str) -> str:
     payload = {
         "sub": user_id,

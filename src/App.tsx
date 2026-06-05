@@ -17,6 +17,8 @@ import { Timer } from './pages/Timer'
 import { Settings } from './pages/Settings'
 import { AdminUsers } from './pages/AdminUsers'
 import { Auth } from './pages/Auth'
+import { ForgotPassword } from './pages/ForgotPassword'
+import { ResetPassword } from './pages/ResetPassword'
 import { useAuth } from './auth'
 import { useStore } from './store'
 import { applyTheme } from './lib/theme'
@@ -45,6 +47,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Auth mode="login" />} />
       <Route path="/signup" element={<Auth mode="signup" />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />

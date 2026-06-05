@@ -2,7 +2,9 @@ import json
 import os
 import secrets
 import time
-from datetime import datetime, timezone
+import urllib.error
+import urllib.request
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,7 +22,14 @@ from .models import (
     SharedProgram,
     User,
 )
-from .security import create_token, decode_token, hash_password, verify_password
+from .security import (
+    create_token,
+    decode_token,
+    generate_reset_token,
+    hash_password,
+    hash_reset_token,
+    verify_password,
+)
 
 
 def _now_ms() -> int:
@@ -43,6 +52,12 @@ def _ensure_columns() -> None:
     if "last_login" not in cols:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN last_login DATETIME"))
+    if "reset_token_hash" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_hash VARCHAR"))
+    if "reset_token_expires" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_expires DATETIME"))
 
 
 _ensure_columns()
@@ -64,6 +79,67 @@ HIDDEN_EMAILS = {
     for e in os.environ.get("HIDDEN_EMAILS", "").split(",")
     if e.strip()
 }
+
+
+# ---- Password-reset email (Resend) config ----
+# RESEND_API_KEY enables sending; without it, reset emails are skipped (the
+# admin reset still works). RESEND_FROM must be a verified Resend sender to
+# reach arbitrary recipients; the onboarding sender only reaches your own
+# verified address (test mode). FRONTEND_URL is where the reset link points.
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+RESEND_FROM = os.environ.get("RESEND_FROM", "SMELLIS <onboarding@resend.dev>").strip()
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://dist-bonpfmfm.devinapps.com").rstrip("/")
+RESET_TOKEN_TTL_MINUTES = 60
+
+
+def _send_reset_email(to_email: str, reset_url: str) -> bool:
+    """Send a password-reset email via the Resend HTTP API (stdlib only).
+    Returns True on success. Never raises — failures are logged and swallowed so
+    the endpoint can stay generic (no account-existence leak)."""
+    if not RESEND_API_KEY:
+        print("[reset] RESEND_API_KEY not set; skipping email send")
+        return False
+    payload = json.dumps(
+        {
+            "from": RESEND_FROM,
+            "to": [to_email],
+            "subject": "Reset your SMELLIS password",
+            "html": (
+                "<div style=\"font-family:Arial,sans-serif;color:#111\">"
+                "<h2>Reset your SMELLIS password</h2>"
+                "<p>We received a request to reset your password. "
+                "Tap the button below to choose a new one. "
+                f"This link expires in {RESET_TOKEN_TTL_MINUTES} minutes.</p>"
+                f"<p><a href=\"{reset_url}\" style=\"display:inline-block;"
+                "background:#355e3b;color:#fff;text-decoration:none;"
+                "padding:12px 20px;border-radius:8px;font-weight:bold\">"
+                "Reset password</a></p>"
+                "<p>If the button doesn't work, copy and paste this link:<br>"
+                f"<a href=\"{reset_url}\">{reset_url}</a></p>"
+                "<p style=\"color:#666;font-size:13px\">If you didn't request "
+                "this, you can safely ignore this email.</p></div>"
+            ),
+        }
+    ).encode()
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return 200 <= resp.status < 300
+    except urllib.error.HTTPError as e:
+        body = e.read().decode(errors="replace") if hasattr(e, "read") else ""
+        print(f"[reset] Resend HTTP {e.code}: {body}")
+        return False
+    except Exception as e:  # noqa: BLE001 — network/timeout etc.
+        print(f"[reset] Resend send failed: {e}")
+        return False
 
 
 def _is_admin(user: "User") -> bool:
@@ -101,6 +177,19 @@ class LoginBody(BaseModel):
 
 class ChangePasswordBody(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=6, max_length=200)
+
+
+class ForgotPasswordBody(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordBody(BaseModel):
+    token: str = Field(min_length=1, max_length=500)
+    new_password: str = Field(min_length=6, max_length=200)
+
+
+class AdminResetPasswordBody(BaseModel):
     new_password: str = Field(min_length=6, max_length=200)
 
 
@@ -406,6 +495,45 @@ def change_password(
     return {"ok": True}
 
 
+@app.post("/auth/forgot-password")
+def forgot_password(body: ForgotPasswordBody, db: Session = Depends(get_db)):
+    """Begin a password reset. Always returns ok (never reveals whether the
+    email exists). If the account exists, store a hashed token and email a link."""
+    email = body.email.lower().strip()
+    user = db.query(User).filter(User.email == email).first()
+    if user and not _is_seed_account(user.email):
+        raw_token = generate_reset_token()
+        user.reset_token_hash = hash_reset_token(raw_token)
+        user.reset_token_expires = datetime.now(timezone.utc) + timedelta(
+            minutes=RESET_TOKEN_TTL_MINUTES
+        )
+        db.add(user)
+        db.commit()
+        reset_url = f"{FRONTEND_URL}/reset-password?token={raw_token}"
+        _send_reset_email(user.email, reset_url)
+    return {"ok": True}
+
+
+@app.post("/auth/reset-password")
+def reset_password(body: ResetPasswordBody, db: Session = Depends(get_db)):
+    """Complete a password reset using the emailed token."""
+    token_hash = hash_reset_token(body.token.strip())
+    user = db.query(User).filter(User.reset_token_hash == token_hash).first()
+    expires = user.reset_token_expires if user else None
+    if expires is not None and expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    if not user or expires is None or expires < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=400, detail="This reset link is invalid or has expired."
+        )
+    user.password_hash = hash_password(body.new_password)
+    user.reset_token_hash = None
+    user.reset_token_expires = None
+    db.add(user)
+    db.commit()
+    return {"ok": True}
+
+
 @app.get("/me", response_model=PublicUser)
 def me(user: User = Depends(current_user)):
     return _public(user)
@@ -430,6 +558,27 @@ def admin_users(
         for u in rows
         if not _is_seed_account(u.email)
     ]
+
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+def admin_reset_password(
+    user_id: str,
+    body: AdminResetPasswordBody,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Admin backup: set any user's password directly (no email needed)."""
+    if not _is_admin(user):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    target.password_hash = hash_password(body.new_password)
+    target.reset_token_hash = None
+    target.reset_token_expires = None
+    db.add(target)
+    db.commit()
+    return {"ok": True}
 
 
 @app.get("/api/data")

@@ -79,6 +79,16 @@ export function Auth({ mode }: { mode: 'login' | 'signup' }) {
               autoComplete={isSignup ? 'new-password' : 'current-password'}
             />
             <PasswordHints value={password} />
+            {!isSignup && (
+              <div className="text-right">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-gold hover:text-gold-400"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
           </div>
 
           {error && (

@@ -102,6 +102,35 @@ export function apiChangePassword(
   )
 }
 
+export function apiForgotPassword(email: string): Promise<ApiResult<{ ok: boolean }>> {
+  return request('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export function apiResetPassword(
+  token: string,
+  newPassword: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return request('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, new_password: newPassword }),
+  })
+}
+
+export function apiAdminResetPassword(
+  token: string,
+  userId: string,
+  newPassword: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return request(
+    `/api/admin/users/${userId}/reset-password`,
+    { method: 'POST', body: JSON.stringify({ new_password: newPassword }) },
+    token,
+  )
+}
+
 export function apiGetData<T = Record<string, unknown>>(token: string): Promise<ApiResult<T>> {
   return request('/api/data', {}, token)
 }

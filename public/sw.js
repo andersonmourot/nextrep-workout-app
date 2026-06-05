@@ -1,4 +1,4 @@
-// SMELLIS service worker — offline shell + fast asset loading.
+// NextRep service worker — offline shell + fast asset loading.
 // Strategy:
 //  - Navigations (HTML): network-first so the latest app is always served
 //    when online, falling back to the cached shell when offline.

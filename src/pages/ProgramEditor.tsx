@@ -453,7 +453,7 @@ export function ProgramEditor() {
         <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>
       )}
 
-      <div className="sticky bottom-20 flex gap-2">
+      <div className="sticky bottom-2 flex gap-2">
         <button onClick={() => navigate(-1)} className="btn-ghost flex-1">
           Cancel
         </button>

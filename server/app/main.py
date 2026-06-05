@@ -87,7 +87,7 @@ HIDDEN_EMAILS = {
 # reach arbitrary recipients; the onboarding sender only reaches your own
 # verified address (test mode). FRONTEND_URL is where the reset link points.
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
-RESEND_FROM = os.environ.get("RESEND_FROM", "SMELLIS <onboarding@resend.dev>").strip()
+RESEND_FROM = os.environ.get("RESEND_FROM", "NextRep <onboarding@resend.dev>").strip()
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "https://dist-bonpfmfm.devinapps.com").rstrip("/")
 RESET_TOKEN_TTL_MINUTES = 60
 
@@ -103,10 +103,10 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
         {
             "from": RESEND_FROM,
             "to": [to_email],
-            "subject": "Reset your SMELLIS password",
+            "subject": "Reset your NextRep password",
             "html": (
                 "<div style=\"font-family:Arial,sans-serif;color:#111\">"
-                "<h2>Reset your SMELLIS password</h2>"
+                "<h2>Reset your NextRep password</h2>"
                 "<p>We received a request to reset your password. "
                 "Tap the button below to choose a new one. "
                 f"This link expires in {RESET_TOKEN_TTL_MINUTES} minutes.</p>"
@@ -129,7 +129,7 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
             "Content-Type": "application/json",
             # Resend sits behind Cloudflare, which blocks urllib's default
             # User-Agent (error 1010); send an explicit one.
-            "User-Agent": "SMELLIS/1.0",
+            "User-Agent": "NextRep/1.0",
         },
         method="POST",
     )
@@ -155,7 +155,7 @@ def _is_seed_account(email: str) -> bool:
     return e.endswith("@example.com") or e in HIDDEN_EMAILS
 
 
-app = FastAPI(title="SMELLIS Backend")
+app = FastAPI(title="NextRep Backend")
 
 app.add_middleware(
     CORSMiddleware,

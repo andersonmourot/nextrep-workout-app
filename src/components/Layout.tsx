@@ -12,15 +12,19 @@ export function Layout() {
   // stays visible so the user can hop to other tabs and come back to it.
   const showWorkout = !!activeWorkout && pathname === '/programs'
 
+  // App-shell layout: a full-height flex column where only <main> scrolls and the
+  // bottom nav is an in-flow element pinned to the bottom. This avoids iOS quirks
+  // with `position: fixed` bars (floating high on short pages, jumping above the
+  // keyboard) and lets the keyboard naturally cover the nav while typing.
   return (
-    <div className="min-h-full pb-[calc(5rem+env(safe-area-inset-bottom))]">
+    <div className="flex h-full flex-col overflow-hidden">
       {showWorkout ? (
-        <div className="pt-[env(safe-area-inset-top)]">
+        <main id="app-scroll" className="flex-1 overflow-y-auto pt-[env(safe-area-inset-top)]">
           <Workout />
-        </div>
+        </main>
       ) : (
         <>
-          <header className="sticky top-0 z-30 border-b border-white/5 bg-ink-950/80 pt-[env(safe-area-inset-top)] backdrop-blur">
+          <header className="z-30 border-b border-white/5 bg-ink-950/80 pt-[env(safe-area-inset-top)] backdrop-blur">
             <div className="container-app flex h-14 items-center justify-between">
               <Link to="/" aria-label="Home">
                 <Logo />
@@ -34,8 +38,10 @@ export function Layout() {
               </Link>
             </div>
           </header>
-          <main className="container-app py-5">
-            <Outlet />
+          <main id="app-scroll" className="flex-1 overflow-y-auto">
+            <div className="container-app py-5">
+              <Outlet />
+            </div>
           </main>
         </>
       )}

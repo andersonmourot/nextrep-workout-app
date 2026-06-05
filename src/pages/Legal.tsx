@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 // Contact address shown in the legal documents. Change this to your support
 // address if you'd rather not use a personal inbox.
 const CONTACT_EMAIL = 'andersonmourot@aol.com'
-const APP_NAME = 'SMELLIS'
+const APP_NAME = 'NextRep'
 const LAST_UPDATED = 'June 2026'
 
 type LegalDoc = 'privacy' | 'terms' | 'disclaimer'

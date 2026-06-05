@@ -258,7 +258,7 @@ export function Settings() {
       </section>
 
       <p className="pb-2 text-center text-xs text-zinc-600">
-        SMELLIS · Train with intent.
+        NextRep · Train with intent.
       </p>
     </div>
   )
@@ -285,7 +285,7 @@ function InstallApp() {
       <div>
         <h2 className="heading text-lg font-bold text-zinc-50">Install app</h2>
         <p className="mt-1 text-sm text-zinc-400">
-          Add SMELLIS to your home screen to launch it fullscreen, like a native app.
+          Add NextRep to your home screen to launch it fullscreen, like a native app.
         </p>
       </div>
 
@@ -341,7 +341,7 @@ function InstallApp() {
                 </span>
                 <span>
                   Make sure <span className="font-semibold">Open as Web App</span> is on, then tap{' '}
-                  <span className="font-semibold">Add</span> — SMELLIS will appear on your home
+                  <span className="font-semibold">Add</span> — NextRep will appear on your home
                   screen and launch fullscreen.
                 </span>
               </li>

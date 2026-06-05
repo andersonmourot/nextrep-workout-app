@@ -1,4 +1,4 @@
-/** Thin client for the SMELLIS backend (secure auth + per-user data sync). */
+/** Thin client for the NextRep backend (secure auth + per-user data sync). */
 
 const BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '')
 

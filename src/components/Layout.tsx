@@ -13,12 +13,14 @@ export function Layout() {
   const showWorkout = !!activeWorkout && pathname === '/programs'
 
   return (
-    <div className="min-h-full pb-20">
+    <div className="min-h-full pb-[calc(5rem+env(safe-area-inset-bottom))]">
       {showWorkout ? (
-        <Workout />
+        <div className="pt-[env(safe-area-inset-top)]">
+          <Workout />
+        </div>
       ) : (
         <>
-          <header className="sticky top-0 z-30 border-b border-white/5 bg-ink-950/80 backdrop-blur">
+          <header className="sticky top-0 z-30 border-b border-white/5 bg-ink-950/80 pt-[env(safe-area-inset-top)] backdrop-blur">
             <div className="container-app flex h-14 items-center justify-between">
               <Link to="/" aria-label="Home">
                 <Logo />

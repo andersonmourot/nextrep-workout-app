@@ -316,8 +316,9 @@ function InstallApp() {
                   <Check className="h-5 w-5" />
                 </span>
                 <span>
-                  Tap <span className="font-semibold">Add</span> — SMELLIS will appear on your home
-                  screen.
+                  Make sure <span className="font-semibold">Open as Web App</span> is on, then tap{' '}
+                  <span className="font-semibold">Add</span> — SMELLIS will appear on your home
+                  screen and launch fullscreen.
                 </span>
               </li>
             </ol>

@@ -137,7 +137,9 @@
   }
 
   .input {
-    @apply w-full rounded-xl border border-white/10 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-gold/60;
+    /* text-base (16px): keeps iOS from zooming/nudging the layout when typing in
+       a field (anything smaller triggers it). Standard mobile-PWA practice. */
+    @apply w-full rounded-xl border border-white/10 bg-ink-900 px-3 py-2.5 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-gold/60;
   }
 
   .no-spin::-webkit-outer-spin-button,

@@ -4,7 +4,7 @@ export function Logo({ className, withText = true }: { className?: string; withT
   return (
     <div className={cn('flex items-center gap-2', className)}>
       {withText && (
-        <span className="heading text-lg font-bold tracking-tight text-zinc-100">
+        <span className="heading text-2xl font-bold tracking-tight text-zinc-100">
           Next<span className="text-gold">Rep</span>
         </span>
       )}

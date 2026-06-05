@@ -498,7 +498,9 @@ function NumField({
           const raw = e.target.value.replace(/[^0-9]/g, '')
           onChange(raw === '' ? 0 : Math.max(0, Number(raw)))
         }}
-        className="input px-2 py-2 text-center text-sm"
+        // 16px (text-base): below this, iOS nudges the layout when a character
+        // is typed (the box "jumping down" on input). 16px disables that.
+        className="input px-2 py-2 text-center text-base"
       />
     </label>
   )
@@ -521,7 +523,7 @@ function TextField({
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="input px-2 py-2 text-center text-sm"
+        className="input px-2 py-2 text-center text-base"
       />
     </label>
   )

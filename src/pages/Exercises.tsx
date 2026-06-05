@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
+  EyeOff,
   ImagePlus,
   Pencil,
   Plus,
@@ -101,7 +102,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [managing, setManaging] = useState(false)
-  const [showDeleted, setShowDeleted] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
@@ -137,13 +138,13 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   function toggleManaging() {
     setManaging((m) => !m)
     setConfirmId(null)
-    setShowDeleted(false)
+    setShowHidden(false)
   }
 
   const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
 
-  // Default exercises the user has deleted (moved to the hidden "Deleted" list).
-  const deletedList = useMemo(
+  // Default exercises the user has hidden (moved to the "Hidden" list).
+  const hiddenList = useMemo(
     () =>
       EXERCISES.filter((e) => hiddenExerciseIds.includes(e.id))
         .map((e) => overrides[e.id] ?? e)
@@ -151,23 +152,23 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
     [hiddenExerciseIds, overrides],
   )
 
-  if (showDeleted) {
+  if (showHidden) {
     return (
       <div className="animate-fade-in space-y-5">
         <button
-          onClick={() => setShowDeleted(false)}
+          onClick={() => setShowHidden(false)}
           className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
-        <h1 className="heading text-3xl font-bold text-zinc-50">Deleted exercises</h1>
+        <h1 className="heading text-3xl font-bold text-zinc-50">Hidden exercises</h1>
         <p className="text-xs text-zinc-500">
-          {deletedList.length === 0
-            ? 'No deleted exercises.'
+          {hiddenList.length === 0
+            ? 'No hidden exercises.'
             : 'Restore an exercise to return it to the main list.'}
         </p>
         <ul className="space-y-2">
-          {deletedList.map((e) => (
+          {hiddenList.map((e) => (
             <li key={e.id} className="card flex items-center justify-between gap-3 p-4">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-zinc-100">{e.name}</p>
@@ -209,10 +210,10 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
         <div className="flex shrink-0 gap-2">
           {managing && hiddenExerciseIds.length > 0 && (
             <button
-              onClick={() => setShowDeleted(true)}
+              onClick={() => setShowHidden(true)}
               className="btn-ghost px-3 py-2 text-sm"
             >
-              Deleted ({hiddenExerciseIds.length})
+              Hidden ({hiddenExerciseIds.length})
             </button>
           )}
           <button
@@ -308,8 +309,11 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                         deleteExercise(e.id)
                         setConfirmId(null)
                       }}
-                      aria-label="Confirm delete"
-                      className="grid h-7 w-7 place-items-center rounded-lg text-red-400 hover:text-red-300"
+                      aria-label={isCustom ? 'Confirm delete' : 'Confirm hide'}
+                      className={cn(
+                        'grid h-7 w-7 place-items-center rounded-lg',
+                        isCustom ? 'text-red-400 hover:text-red-300' : 'text-gold hover:text-gold-400',
+                      )}
                     >
                       <Check className="h-4 w-4" />
                     </button>
@@ -325,10 +329,13 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                     </button>
                     <button
                       onClick={() => setConfirmId(e.id)}
-                      aria-label={`Delete ${e.name}`}
-                      className="grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-red-400"
+                      aria-label={isCustom ? `Delete ${e.name}` : `Hide ${e.name}`}
+                      className={cn(
+                        'grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur',
+                        isCustom ? 'hover:text-red-400' : 'hover:text-gold',
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {isCustom ? <Trash2 className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                     </button>
                   </div>
                 ))}

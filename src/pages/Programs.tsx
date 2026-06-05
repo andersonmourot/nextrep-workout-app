@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  ArrowLeft,
   Check,
   CheckCircle2,
   Clock,
   Dumbbell,
+  EyeOff,
   Plus,
   RotateCcw,
   Search,
@@ -14,6 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAllPrograms, useStore, MAX_FAVORITES } from '../store'
+import { PROGRAMS } from '../data/programs'
 import type { ProgramCategory } from '../types'
 import { cn } from '../lib/utils'
 
@@ -31,16 +34,25 @@ export function Programs() {
   const [filter, setFilter] = useState<ProgramCategory | 'All'>('All')
   const [query, setQuery] = useState('')
   const [managing, setManaging] = useState(false)
+  const [showHidden, setShowHidden] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const activeProgramId = useStore((s) => s.activeProgramId)
   const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
   const toggleFavoriteProgram = useStore((s) => s.toggleFavoriteProgram)
   const customPrograms = useStore((s) => s.customPrograms)
-  const hiddenCount = useStore((s) => s.hiddenProgramIds.length)
+  const hiddenProgramIds = useStore((s) => s.hiddenProgramIds)
+  const hiddenCount = hiddenProgramIds.length
   const deleteProgram = useStore((s) => s.deleteProgram)
+  const restoreProgram = useStore((s) => s.restoreProgram)
   const restorePrograms = useStore((s) => s.restorePrograms)
   const customIds = useMemo(() => new Set(customPrograms.map((p) => p.id)), [customPrograms])
   const allPrograms = useAllPrograms()
+
+  // Default programs the user has hidden (moved to the "Hidden" list).
+  const hiddenList = useMemo(
+    () => PROGRAMS.filter((p) => hiddenProgramIds.includes(p.id)),
+    [hiddenProgramIds],
+  )
 
   const list = useMemo(() => {
     const byCat =
@@ -68,6 +80,48 @@ export function Programs() {
   function toggleManaging() {
     setManaging((m) => !m)
     setConfirmId(null)
+    setShowHidden(false)
+  }
+
+  if (showHidden) {
+    return (
+      <div className="animate-fade-in space-y-5">
+        <button
+          onClick={() => setShowHidden(false)}
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <h1 className="heading text-3xl font-bold text-zinc-50">Hidden programs</h1>
+        <p className="text-xs text-zinc-500">
+          {hiddenList.length === 0
+            ? 'No hidden programs.'
+            : 'Restore a program to return it to the main list.'}
+        </p>
+        <ul className="space-y-2">
+          {hiddenList.map((p) => (
+            <li key={p.id} className="card flex items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-100">{p.name}</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <span className="chip" style={{ color: p.accent }}>
+                    {p.category}
+                  </span>
+                  <span className="chip">{p.level}</span>
+                  <span className="chip">{p.durationWeeks} weeks</span>
+                </div>
+              </div>
+              <button
+                onClick={() => restoreProgram(p.id)}
+                className="btn-ghost inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gold"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Restore
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
   }
 
   return (
@@ -77,6 +131,11 @@ export function Programs() {
           <h1 className="heading text-3xl font-bold text-zinc-50">Programs</h1>
         </div>
         <div className="flex shrink-0 gap-2">
+          {managing && hiddenCount > 0 && (
+            <button onClick={() => setShowHidden(true)} className="btn-ghost px-3 py-2 text-sm">
+              Hidden ({hiddenCount})
+            </button>
+          )}
           <Link to="/programs/exercises" aria-label="Exercises" className="btn-ghost px-3 py-2 text-sm">
             <Dumbbell className="h-4 w-4" />
           </Link>
@@ -123,16 +182,6 @@ export function Programs() {
           </button>
         ))}
       </div>
-
-      {managing && hiddenCount > 0 && (
-        <button
-          onClick={restorePrograms}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:text-gold-400"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> Restore {hiddenCount} default program
-          {hiddenCount > 1 ? 's' : ''}
-        </button>
-      )}
 
       <div className="space-y-3">
         {orderedList.map((p) => {
@@ -221,8 +270,11 @@ export function Programs() {
                         deleteProgram(p.id)
                         setConfirmId(null)
                       }}
-                      aria-label="Confirm delete"
-                      className="grid h-7 w-7 place-items-center rounded-lg text-red-400 hover:text-red-300"
+                      aria-label={isCustom ? 'Confirm delete' : 'Confirm hide'}
+                      className={cn(
+                        'grid h-7 w-7 place-items-center rounded-lg',
+                        isCustom ? 'text-red-400 hover:text-red-300' : 'text-gold hover:text-gold-400',
+                      )}
                     >
                       <Check className="h-4 w-4" />
                     </button>
@@ -230,10 +282,13 @@ export function Programs() {
                 ) : (
                   <button
                     onClick={() => setConfirmId(p.id)}
-                    aria-label={`Delete ${p.name}`}
-                    className="absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-red-400"
+                    aria-label={isCustom ? `Delete ${p.name}` : `Hide ${p.name}`}
+                    className={cn(
+                      'absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur',
+                      isCustom ? 'hover:text-red-400' : 'hover:text-gold',
+                    )}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {isCustom ? <Trash2 className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                   </button>
                 ))}
             </div>

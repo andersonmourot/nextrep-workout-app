@@ -366,6 +366,7 @@ function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose
   const [instructions, setInstructions] = useState((editing?.instructions ?? []).join('\n'))
   const [tips, setTips] = useState((editing?.tips ?? []).join('\n'))
   const [photos, setPhotos] = useState<string[]>(editing?.photos ?? [])
+  const [shared, setShared] = useState(editing?.shared ?? false)
   const [error, setError] = useState('')
 
   function toggleSecondary(m: Muscle) {
@@ -403,6 +404,7 @@ function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose
         .map((s) => s.trim())
         .filter(Boolean),
       photos: photos.length ? photos : undefined,
+      shared: !isDefault && shared ? true : undefined,
     }
     if (isDefault) setExerciseOverride(exercise)
     else addCustomExercise(exercise)
@@ -525,6 +527,34 @@ function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose
               )}
             </div>
           </Field>
+
+          {!isDefault && (
+            <button
+              type="button"
+              onClick={() => setShared((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-ink-850 px-4 py-3 text-left"
+            >
+              <span>
+                <span className="block text-sm font-medium text-zinc-200">Shareable</span>
+                <span className="mt-0.5 block text-xs text-zinc-500">
+                  Show this exercise on your profile so others can find and add it.
+                </span>
+              </span>
+              <span
+                className={cn(
+                  'relative h-6 w-11 shrink-0 rounded-full transition',
+                  shared ? 'bg-gold' : 'bg-ink-700',
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 h-5 w-5 rounded-full bg-white transition',
+                    shared ? 'left-[1.375rem]' : 'left-0.5',
+                  )}
+                />
+              </span>
+            </button>
+          )}
 
           {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 

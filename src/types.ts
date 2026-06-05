@@ -44,6 +44,10 @@ export interface Exercise {
   tips: string[]
   /** Up to two reference photos (data URLs) shown on the exercise page. */
   photos?: string[]
+  /** When true, this custom exercise is shared on the creator's public profile. */
+  shared?: boolean
+  /** Display name of the creator, shown on shared exercises. */
+  ownerName?: string
 }
 
 export interface PlannedExercise {

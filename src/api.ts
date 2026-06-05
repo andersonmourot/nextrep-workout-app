@@ -107,6 +107,7 @@ export interface DiscoverUser {
   color: string
   following: boolean
   program_count: number
+  exercise_count: number
 }
 
 export interface FollowUser {
@@ -114,6 +115,7 @@ export interface FollowUser {
   name: string
   color: string
   program_count: number
+  exercise_count: number
 }
 
 export interface SharedUser {
@@ -124,6 +126,11 @@ export interface SharedUser {
 export interface SharedPrograms<P = unknown> {
   user: SharedUser
   programs: P[]
+}
+
+export interface SharedExercises<E = unknown> {
+  user: SharedUser
+  exercises: E[]
 }
 
 export function apiSearchUsers(token: string, q: string): Promise<ApiResult<DiscoverUser[]>> {
@@ -147,6 +154,13 @@ export function apiUserPrograms<P = unknown>(
   userId: string,
 ): Promise<ApiResult<SharedPrograms<P>>> {
   return request(`/api/users/${userId}/programs`, {}, token)
+}
+
+export function apiUserExercises<E = unknown>(
+  token: string,
+  userId: string,
+): Promise<ApiResult<SharedExercises<E>>> {
+  return request(`/api/users/${userId}/exercises`, {}, token)
 }
 
 // ---- Shared programs (cross-account canonical store) ----

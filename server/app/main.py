@@ -69,6 +69,7 @@ class DiscoverUser(BaseModel):
     color: str
     following: bool
     program_count: int
+    exercise_count: int = 0
 
 
 class FollowUser(BaseModel):
@@ -76,6 +77,7 @@ class FollowUser(BaseModel):
     name: str
     color: str
     program_count: int
+    exercise_count: int = 0
 
 
 class SharedUser(BaseModel):
@@ -86,6 +88,11 @@ class SharedUser(BaseModel):
 class SharedPrograms(BaseModel):
     user: SharedUser
     programs: list[dict]
+
+
+class SharedExercises(BaseModel):
+    user: SharedUser
+    exercises: list[dict]
 
 
 class ProgramBody(BaseModel):
@@ -109,6 +116,25 @@ def _custom_programs(user: User) -> list[dict]:
         return []
     progs = blob.get("customPrograms")
     return progs if isinstance(progs, list) else []
+
+
+def _shared_exercises(user: User) -> list[dict]:
+    """Extract a user's custom exercises that are flagged as shareable."""
+    try:
+        blob = json.loads(user.data or "{}")
+    except json.JSONDecodeError:
+        return []
+    exs = blob.get("customExercises")
+    if not isinstance(exs, list):
+        return []
+    shared: list[dict] = []
+    for e in exs:
+        if isinstance(e, dict) and e.get("shared"):
+            out = dict(e)
+            out["ownerId"] = user.id
+            out["ownerName"] = user.name
+            shared.append(out)
+    return shared
 
 
 DEFAULT_THEME_COLOR = "#355e3b"
@@ -305,6 +331,7 @@ def search_users(
             color=_theme_color(u),
             following=u.id in following_ids,
             program_count=len(_custom_programs(u)),
+            exercise_count=len(_shared_exercises(u)),
         )
         for u in rows
     ]
@@ -367,6 +394,7 @@ def list_following(
                 name=u.name,
                 color=_theme_color(u),
                 program_count=len(_custom_programs(u)),
+                exercise_count=len(_shared_exercises(u)),
             )
         )
     return out
@@ -384,6 +412,21 @@ def user_programs(
     return SharedPrograms(
         user=SharedUser(id=target.id, name=target.name),
         programs=_publish_owned_programs(db, target),
+    )
+
+
+@app.get("/api/users/{user_id}/exercises", response_model=SharedExercises)
+def user_exercises(
+    user_id: str,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    target = db.get(User, user_id)
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found.")
+    return SharedExercises(
+        user=SharedUser(id=target.id, name=target.name),
+        exercises=_shared_exercises(target),
     )
 
 

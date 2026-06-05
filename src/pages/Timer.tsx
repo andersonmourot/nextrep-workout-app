@@ -497,13 +497,15 @@ function Interval() {
         setRemaining(0)
         playSound(useStore.getState().timerSound)
       } else {
+        const wasRest = phaseRef.current === 'rest'
         roundRef.current += 1
         phaseRef.current = 'work'
         remainingRef.current = work
         setRound(roundRef.current)
         setPhase('work')
         setRemaining(work)
-        beep(660)
+        if (wasRest) playSound('bell')
+        else beep(660)
       }
     }, 1000)
     return () => window.clearInterval(t)

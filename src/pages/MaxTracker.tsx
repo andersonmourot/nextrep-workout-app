@@ -149,9 +149,11 @@ export function MaxTracker() {
             </div>
           )}
           {filtered.length === 0 ? (
-            <div className="card p-6 text-center text-sm text-zinc-500">
-              No max cards match “{query}”.
-            </div>
+            query.trim() ? (
+              <div className="card p-6 text-center text-sm text-zinc-500">
+                No max cards match “{query.trim()}”.
+              </div>
+            ) : null
           ) : (
             <div className="space-y-2">
               {filtered.map((t) => {

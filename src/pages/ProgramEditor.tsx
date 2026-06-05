@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, GripVertical, Plus, Trash2 } from 'lucide-react'
-import { EXERCISES, findExerciseByName, getExercise } from '../data/exercises'
+import { findExerciseByName, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
@@ -26,8 +26,8 @@ const LEVELS: Difficulty[] = ['Beginner', 'Intermediate', 'Advanced']
 const ACCENTS = ['#e9b949', '#b91c1c', '#3b82f6', '#22c55e', '#a855f7', '#f97316', '#14b8a6', '#ec4899']
 
 function blankExercise(): PlannedExercise {
-  const ex = EXERCISES[0]
-  return { exerciseId: ex.id, sets: 3, reps: '8-12', tempo: ex.tempo, restSec: 90 }
+  // Start blank so the name box is empty until the user types an exercise.
+  return { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '8-12', restSec: 90 }
 }
 
 function blankDay(n: number): ProgramDay {
@@ -70,7 +70,7 @@ export function ProgramEditor() {
   function setExerciseName(dayIdx: number, exIdx: number, typed: string, prev: PlannedExercise) {
     const match = findExerciseByName(typed)
     if (match) {
-      updateExercise(dayIdx, exIdx, { exerciseId: match.id, name: undefined, tempo: match.tempo })
+      updateExercise(dayIdx, exIdx, { exerciseId: match.id, name: undefined })
       return
     }
     const id = prev.exerciseId.startsWith('custom-') ? prev.exerciseId : `custom-${uid()}`
@@ -114,6 +114,8 @@ export function ProgramEditor() {
     if (days.length === 0) return setError('Add at least one training day.')
     for (const d of days) {
       if (d.exercises.length === 0) return setError(`"${d.name}" needs at least one exercise.`)
+      const blank = d.exercises.find((e) => !e.name?.trim() && !getExercise(e.exerciseId))
+      if (blank) return setError(`Name every exercise in "${d.name}".`)
     }
 
     const program: Program = {
@@ -412,7 +414,7 @@ export function ProgramEditor() {
                     <p className="mt-1 px-1 text-[11px] text-zinc-500">
                       {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
                     </p>
-                    <div className="mt-2 grid grid-cols-4 gap-2">
+                    <div className="mt-2 grid grid-cols-3 gap-2">
                       <NumField
                         label="Sets"
                         value={pe.sets}
@@ -422,11 +424,6 @@ export function ProgramEditor() {
                         label="Reps"
                         value={pe.reps}
                         onChange={(v) => updateExercise(dayIdx, exIdx, { reps: v })}
-                      />
-                      <TextField
-                        label="Tempo"
-                        value={pe.tempo}
-                        onChange={(v) => updateExercise(dayIdx, exIdx, { tempo: v })}
                       />
                       <NumField
                         label="Rest s"

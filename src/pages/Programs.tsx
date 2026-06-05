@@ -15,7 +15,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useAllPrograms, useStore, MAX_FAVORITES, TRASH_TTL_MS } from '../store'
+import { useAllPrograms, useStore, TRASH_TTL_MS } from '../store'
 import { PROGRAMS } from '../data/programs'
 import type { ProgramCategory } from '../types'
 import { cn, trashTimeLeft } from '../lib/utils'
@@ -39,7 +39,6 @@ export function Programs() {
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const activeProgramId = useStore((s) => s.activeProgramId)
   const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
-  const toggleFavoriteProgram = useStore((s) => s.toggleFavoriteProgram)
   const customPrograms = useStore((s) => s.customPrograms)
   const hiddenProgramIds = useStore((s) => s.hiddenProgramIds)
   const hiddenCount = hiddenProgramIds.length
@@ -254,7 +253,6 @@ export function Programs() {
           const isActive = p.id === activeProgramId
           const isCustom = customIds.has(p.id)
           const isFavorite = favoriteProgramIds.includes(p.id)
-          const favoriteFull = favoriteProgramIds.length >= MAX_FAVORITES
           return (
             <div key={p.id} className="relative">
               <Link to={`/programs/${p.id}`} className="card block overflow-hidden p-0">
@@ -295,31 +293,6 @@ export function Programs() {
                   </div>
                 </div>
               </Link>
-
-              {!managing && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    toggleFavoriteProgram(p.id)
-                  }}
-                  disabled={!isFavorite && favoriteFull}
-                  aria-label={isFavorite ? `Unfavorite ${p.name}` : `Favorite ${p.name}`}
-                  title={
-                    !isFavorite && favoriteFull
-                      ? `You can favorite up to ${MAX_FAVORITES} programs`
-                      : undefined
-                  }
-                  className={cn(
-                    'absolute right-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 backdrop-blur transition',
-                    isFavorite
-                      ? 'text-gold hover:text-gold-400'
-                      : 'text-zinc-400 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-zinc-400',
-                  )}
-                >
-                  <Star className={cn('h-4 w-4', isFavorite && 'fill-current')} />
-                </button>
-              )}
 
               {managing &&
                 (confirmId === p.id ? (

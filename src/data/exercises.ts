@@ -8,7 +8,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Triceps', 'Shoulders'],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '3-1-1-0',
     instructions: [
       'Lie flat with eyes under the bar, feet planted, shoulder blades pinched.',
       'Unrack and lower the bar under control to mid-chest.',
@@ -24,7 +23,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Shoulders', 'Triceps'],
     equipment: 'Dumbbell',
     difficulty: 'Beginner',
-    tempo: '3-1-1-0',
     instructions: [
       'Set bench to 30–45°. Press dumbbells to lockout over the upper chest.',
       'Lower slowly until you feel a stretch across the chest.',
@@ -39,7 +37,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Shoulders'],
     equipment: 'Cable',
     difficulty: 'Beginner',
-    tempo: '2-1-1-1',
     instructions: [
       'Set pulleys to chest height and grab both handles.',
       'With a soft elbow bend, bring hands together in front of you.',
@@ -54,7 +51,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Biceps', 'Forearms'],
     equipment: 'Bodyweight',
     difficulty: 'Intermediate',
-    tempo: '2-0-1-0',
     instructions: [
       'Hang from the bar with an overhand, shoulder-width grip.',
       'Pull your chest toward the bar by driving elbows down.',
@@ -69,7 +65,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Biceps', 'Core'],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '2-1-1-0',
     instructions: [
       'Hinge to ~45°, keep a flat back and braced core.',
       'Row the bar to your lower ribs/upper abdomen.',
@@ -84,7 +79,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Biceps'],
     equipment: 'Cable',
     difficulty: 'Beginner',
-    tempo: '2-1-2-0',
     instructions: [
       'Grip the bar slightly wider than shoulders.',
       'Pull to your upper chest, driving elbows down and back.',
@@ -99,7 +93,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Biceps', 'Forearms'],
     equipment: 'Cable',
     difficulty: 'Beginner',
-    tempo: '2-1-2-0',
     instructions: [
       'Sit tall with a slight knee bend and grab the handle.',
       'Row to your stomach, squeezing the shoulder blades.',
@@ -114,7 +107,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Triceps', 'Core'],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '2-0-1-0',
     instructions: [
       'Start with the bar at shoulder height, elbows under the bar.',
       'Brace and press overhead, moving the head slightly back then forward.',
@@ -129,7 +121,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'Dumbbell',
     difficulty: 'Beginner',
-    tempo: '2-0-1-1',
     instructions: [
       'Hold dumbbells at your sides with a slight elbow bend.',
       'Raise the arms out to shoulder height, leading with the elbows.',
@@ -144,7 +135,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Back'],
     equipment: 'Cable',
     difficulty: 'Beginner',
-    tempo: '2-1-2-0',
     instructions: [
       'Set a rope at face height.',
       'Pull toward your forehead, separating the rope and flaring the elbows.',
@@ -159,7 +149,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Forearms'],
     equipment: 'Barbell',
     difficulty: 'Beginner',
-    tempo: '2-0-1-1',
     instructions: [
       'Stand tall holding the bar at shoulder width.',
       'Curl the bar up while keeping elbows pinned at your sides.',
@@ -174,7 +163,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Forearms'],
     equipment: 'Dumbbell',
     difficulty: 'Beginner',
-    tempo: '3-0-1-1',
     instructions: [
       'Sit back on an incline bench, arms hanging straight down.',
       'Curl the dumbbells, keeping upper arms still.',
@@ -189,7 +177,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'Cable',
     difficulty: 'Beginner',
-    tempo: '2-0-1-1',
     instructions: [
       'Grab the rope with elbows tucked at your sides.',
       'Extend down and spread the rope at the bottom.',
@@ -204,7 +191,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '3-1-1-0',
     instructions: [
       'Lie down holding the bar over your forehead.',
       'Lower the bar behind your head by bending the elbows.',
@@ -219,7 +205,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Hamstrings', 'Core'],
     equipment: 'Barbell',
     difficulty: 'Advanced',
-    tempo: '3-1-1-0',
     instructions: [
       'Set the bar on your upper traps, brace, and unrack.',
       'Sit down and back until hips are below knees.',
@@ -234,7 +219,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Hamstrings'],
     equipment: 'Machine',
     difficulty: 'Beginner',
-    tempo: '3-1-1-0',
     instructions: [
       'Place feet shoulder-width on the platform.',
       'Lower until knees reach ~90°.',
@@ -249,7 +233,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Back'],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '3-1-1-0',
     instructions: [
       'Hold the bar at your hips with a flat back.',
       'Push hips back, lowering the bar along your legs.',
@@ -264,7 +247,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Calves'],
     equipment: 'Machine',
     difficulty: 'Beginner',
-    tempo: '2-1-2-0',
     instructions: [
       'Adjust the pad above your heels.',
       'Curl your legs down and back as far as possible.',
@@ -279,7 +261,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Hamstrings'],
     equipment: 'Barbell',
     difficulty: 'Intermediate',
-    tempo: '2-1-1-1',
     instructions: [
       'Sit with your upper back on a bench, bar over your hips.',
       'Drive through your heels to full hip extension.',
@@ -294,7 +275,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Hamstrings'],
     equipment: 'Dumbbell',
     difficulty: 'Beginner',
-    tempo: '2-0-1-0',
     instructions: [
       'Hold dumbbells at your sides.',
       'Step forward and lower until both knees are ~90°.',
@@ -309,7 +289,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: [],
     equipment: 'Machine',
     difficulty: 'Beginner',
-    tempo: '2-1-1-1',
     instructions: [
       'Stand with the balls of your feet on the platform.',
       'Rise onto your toes as high as possible.',
@@ -324,7 +303,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Shoulders'],
     equipment: 'Bodyweight',
     difficulty: 'Beginner',
-    tempo: 'Hold',
     instructions: [
       'Set forearms under shoulders, body in a straight line.',
       'Brace the core and squeeze the glutes.',
@@ -339,7 +317,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Forearms'],
     equipment: 'Bodyweight',
     difficulty: 'Intermediate',
-    tempo: '2-1-2-0',
     instructions: [
       'Hang from a bar with a firm grip.',
       'Raise your legs to hip height (or higher) without swinging.',
@@ -354,7 +331,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Hamstrings', 'Forearms'],
     equipment: 'Barbell',
     difficulty: 'Advanced',
-    tempo: '2-0-1-1',
     instructions: [
       'Set up with the bar over mid-foot, shins close.',
       'Brace, take the slack out, and drive the floor away.',
@@ -369,7 +345,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Core'],
     equipment: 'Dumbbell',
     difficulty: 'Beginner',
-    tempo: '3-1-1-0',
     instructions: [
       'Hold a dumbbell at chest height.',
       'Squat down between your knees, keeping the chest up.',
@@ -384,7 +359,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Triceps', 'Shoulders', 'Core'],
     equipment: 'Bodyweight',
     difficulty: 'Beginner',
-    tempo: '2-1-1-0',
     instructions: [
       'Set hands slightly wider than shoulders.',
       'Lower until your chest nears the floor, elbows ~45°.',
@@ -399,7 +373,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Chest', 'Quads', 'Core'],
     equipment: 'Bodyweight',
     difficulty: 'Intermediate',
-    tempo: 'Explosive',
     instructions: [
       'Drop to a squat and kick your feet back to a plank.',
       'Perform a push-up, then jump the feet back in.',
@@ -414,7 +387,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Shoulders', 'Quads'],
     equipment: 'Bodyweight',
     difficulty: 'Beginner',
-    tempo: 'Fast',
     instructions: [
       'Start in a high plank.',
       'Drive one knee toward your chest, then switch rapidly.',
@@ -429,7 +401,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Hamstrings', 'Core', 'Back'],
     equipment: 'Kettlebell',
     difficulty: 'Intermediate',
-    tempo: 'Explosive',
     instructions: [
       'Hinge and hike the bell back between your legs.',
       'Snap the hips forward to swing the bell to chest height.',
@@ -444,7 +415,6 @@ export const EXERCISES: Exercise[] = [
     secondaryMuscles: ['Glutes', 'Calves'],
     equipment: 'Bodyweight',
     difficulty: 'Intermediate',
-    tempo: 'Explosive',
     instructions: [
       'Squat down to a quarter/half depth.',
       'Explode upward into a jump.',

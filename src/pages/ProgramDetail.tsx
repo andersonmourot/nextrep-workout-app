@@ -9,16 +9,17 @@ import {
   Dumbbell,
   Pencil,
   Play,
+  Star,
   Target,
   Trash2,
   X,
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
-import { useIsCustomProgram, useProgram, useStore } from '../store'
+import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
+import { cn, uid } from '../lib/utils'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
 import type { Program } from '../types'
-import { uid } from '../lib/utils'
 
 export function ProgramDetail() {
   const { programId } = useParams()
@@ -26,6 +27,8 @@ export function ProgramDetail() {
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
   const { activeProgramId, startProgram, deleteProgram, addProgram, startWorkout } = useStore()
+  const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
+  const toggleFavoriteProgram = useStore((s) => s.toggleFavoriteProgram)
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -79,10 +82,34 @@ export function ProgramDetail() {
       </button>
 
       <div
-        className="card p-5"
+        className="card relative p-5"
         style={{ background: `linear-gradient(160deg, ${program.accent}24, #141417 60%)` }}
       >
-        <div className="flex items-center gap-2">
+        {(() => {
+          const isFavorite = favoriteProgramIds.includes(program.id)
+          const favoriteFull = favoriteProgramIds.length >= MAX_FAVORITES
+          return (
+            <button
+              onClick={() => toggleFavoriteProgram(program.id)}
+              disabled={!isFavorite && favoriteFull}
+              aria-label={isFavorite ? 'Unfavorite program' : 'Favorite program'}
+              title={
+                !isFavorite && favoriteFull
+                  ? `You can favorite up to ${MAX_FAVORITES} programs`
+                  : undefined
+              }
+              className={cn(
+                'absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-lg bg-ink-900/70 backdrop-blur transition',
+                isFavorite
+                  ? 'text-gold hover:text-gold-400'
+                  : 'text-zinc-400 hover:text-gold disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-zinc-400',
+              )}
+            >
+              <Star className={cn('h-5 w-5', isFavorite && 'fill-current')} />
+            </button>
+          )
+        })()}
+        <div className="flex items-center gap-2 pr-10">
           <span className="label-eyebrow" style={{ color: program.accent }}>
             {program.category} · {program.level}
           </span>
@@ -137,16 +164,14 @@ export function ProgramDetail() {
                 <Pencil className="h-4 w-4" /> Edit
               </Link>
             )}
-            {!isOwner && (
-              <button
-                onClick={() => void duplicate(program)}
-                disabled={duplicating}
-                className="btn-ghost flex-1 disabled:opacity-60"
-                title="Make an independent copy you fully own"
-              >
-                <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
-              </button>
-            )}
+            <button
+              onClick={() => void duplicate(program)}
+              disabled={duplicating}
+              className="btn-ghost flex-1 disabled:opacity-60"
+              title="Make an independent copy you fully own"
+            >
+              <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
+            </button>
             {confirmDelete ? (
               <div className="flex flex-1 items-center justify-center gap-2">
                 <button
@@ -212,7 +237,7 @@ export function ProgramDetail() {
                       {exerciseLabel(pe)}
                     </p>
                     <p className="text-xs text-zinc-500">
-                      {pe.sets} × {pe.reps} · tempo {pe.tempo} · {pe.restSec}s rest
+                      {pe.sets} × {pe.reps} · {pe.restSec}s rest
                     </p>
                   </div>
                 )

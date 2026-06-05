@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lightbulb, Pencil, Timer } from 'lucide-react'
+import { ArrowLeft, Lightbulb, Pencil } from 'lucide-react'
 import { EXERCISE_MAP } from '../data/exercises'
 import { useStore } from '../store'
 import { ExerciseModal } from './Exercises'
@@ -73,15 +73,6 @@ export function ExerciseDetail() {
           </span>
         </div>
       </div>
-
-      {ex.tempo.trim() && (
-        <div className="card flex items-center justify-between p-4">
-          <div className="flex items-center gap-2 text-sm text-zinc-300">
-            <Timer className="h-4 w-4 text-gold" /> Recommended tempo
-          </div>
-          <span className="heading text-lg font-bold text-zinc-50">{ex.tempo}</span>
-        </div>
-      )}
 
       {ex.instructions.length > 0 && (
         <section>

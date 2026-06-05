@@ -38,8 +38,6 @@ export interface Exercise {
   secondaryMuscles: Muscle[]
   equipment: Equipment
   difficulty: Difficulty
-  /** Recommended tempo in eccentric-pause-concentric-pause notation, e.g. "3-1-1-0". */
-  tempo: string
   instructions: string[]
   tips: string[]
   /** Up to two reference photos (data URLs) shown on the exercise page. */
@@ -63,7 +61,6 @@ export interface PlannedExercise {
   sets: number
   /** Target rep range as a display string, e.g. "8-12". */
   reps: string
-  tempo: string
   restSec: number
   notes?: string
 }

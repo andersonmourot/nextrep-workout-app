@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Check,
-  ChevronRight,
   EyeOff,
   ImagePlus,
   Pencil,
@@ -357,7 +356,6 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                     <span className="chip">{e.difficulty}</span>
                   </div>
                 </div>
-                {!managing && <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />}
               </Link>
 
               {managing &&
@@ -441,7 +439,6 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
   const [secondary, setSecondary] = useState<Muscle[]>(editing?.secondaryMuscles ?? [])
   const [equipment, setEquipment] = useState<Equipment>(editing?.equipment ?? 'Barbell')
   const [difficulty, setDifficulty] = useState<Difficulty>(editing?.difficulty ?? 'Beginner')
-  const [tempo, setTempo] = useState(editing?.tempo ?? '2-0-1-0')
   const [instructions, setInstructions] = useState((editing?.instructions ?? []).join('\n'))
   const [tips, setTips] = useState((editing?.tips ?? []).join('\n'))
   const [photos, setPhotos] = useState<string[]>(editing?.photos ?? [])
@@ -476,7 +473,6 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
       secondaryMuscles: secondary.filter((m) => m !== primaryMuscle),
       equipment,
       difficulty,
-      tempo: tempo.trim() || '2-0-1-0',
       instructions: instructions
         .split('\n')
         .map((s) => s.trim())
@@ -555,20 +551,15 @@ export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; 
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Difficulty">
-              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className="input">
-                {DIFFICULTIES.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Tempo">
-              <input value={tempo} onChange={(e) => setTempo(e.target.value)} placeholder="2-0-1-0" className="input" />
-            </Field>
-          </div>
+          <Field label="Difficulty">
+            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)} className="input">
+              {DIFFICULTIES.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <Field label="Secondary muscles">
             <div className="flex flex-wrap gap-2">

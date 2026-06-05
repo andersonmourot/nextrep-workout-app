@@ -168,7 +168,7 @@ export function Workout() {
                   </span>
                   <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
                   <p className="mt-0.5 text-sm text-zinc-400">
-                    {pe.sets} sets × {pe.reps} reps · tempo {pe.tempo}
+                    {pe.sets} sets × {pe.reps} reps
                   </p>
                 </div>
                 {ex && (

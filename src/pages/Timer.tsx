@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Check, Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore, DEFAULT_INTERVAL_SETTINGS, type IntervalSettings } from '../store'
 import { cn, uid } from '../lib/utils'
@@ -196,7 +196,7 @@ function Countdown() {
 
         <div className="flex w-full items-center gap-2">
           <label htmlFor="timer-sound" className="text-xs font-medium text-zinc-400">
-            End sound
+            Alert
           </label>
           <select
             id="timer-sound"
@@ -306,7 +306,7 @@ function Stopwatch() {
   )
 }
 
-const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'FOR TIME', 'TABATA'] as const
+const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
 /** Short tick cue for the final 3 seconds of a phase. */
@@ -346,7 +346,7 @@ function NumIn({
           if (max !== undefined && v > max) v = max
           onChange(v)
         }}
-        className="input py-2 text-sm disabled:opacity-50"
+        className="input no-spin py-2 text-sm disabled:opacity-50"
       />
     </label>
   )
@@ -361,20 +361,17 @@ function Interval() {
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
   const [remaining, setRemaining] = useState(DEFAULT_INTERVAL_SETTINGS.tabataWork)
-  const [elapsed, setElapsed] = useState(0)
   const [finished, setFinished] = useState(false)
+  const [countdown, setCountdown] = useState<number | null>(null)
+  const [amrapInput, setAmrapInput] = useState('')
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine without stale closures.
   const cfgRef = useRef({ work: 20, rest: 10, rounds: 8 })
-  const capRef = useRef(DEFAULT_INTERVAL_SETTINGS.forTimeCap)
-  const isCountUpRef = useRef(false)
   const roundRef = useRef(1)
   const phaseRef = useRef<'work' | 'rest'>('work')
   const remainingRef = useRef(20)
-  const elapsedRef = useRef(0)
 
-  const isCountUp = format === 'FOR TIME'
   const cfg =
     format === 'EMOM'
       ? { work: settings.emomInterval, rest: 0, rounds: settings.emomRounds }
@@ -386,9 +383,6 @@ function Interval() {
 
   // Reconfigure runtime refs + display for a given format/settings pair.
   function applyConfig(fmt: IntervalFormat | null, sett: IntervalSettings) {
-    const up = fmt === 'FOR TIME'
-    isCountUpRef.current = up
-    capRef.current = Math.max(1, sett.forTimeCap)
     const c =
       fmt === 'EMOM'
         ? { work: sett.emomInterval, rest: 0, rounds: sett.emomRounds }
@@ -400,12 +394,10 @@ function Interval() {
     if (c) cfgRef.current = c
     setRunning(false)
     setFinished(false)
-    if (up) {
-      elapsedRef.current = 0
-      setElapsed(0)
-    } else if (c) {
-      roundRef.current = 1
-      phaseRef.current = 'work'
+    setCountdown(null)
+    roundRef.current = 1
+    phaseRef.current = 'work'
+    if (c) {
       remainingRef.current = c.work
       setRound(1)
       setPhase('work')
@@ -418,22 +410,26 @@ function Interval() {
     applyConfig(f, settings)
   }
 
+  // 5-4-3-2-1 intro countdown effect
+  useEffect(() => {
+    if (countdown === null) return
+    const t = window.setTimeout(() => {
+      if (countdown <= 1) {
+        beep(1000)
+        setCountdown(null)
+        playSound(useStore.getState().timerSound)
+        setRunning(true)
+      } else {
+        beep(1000)
+        setCountdown(countdown - 1)
+      }
+    }, 1000)
+    return () => window.clearTimeout(t)
+  }, [countdown])
+
   useEffect(() => {
     if (!running) return
     const t = window.setInterval(() => {
-      // Count-up "FOR TIME": tick toward the cap.
-      if (isCountUpRef.current) {
-        elapsedRef.current += 1
-        setElapsed(elapsedRef.current)
-        tickCue(capRef.current - elapsedRef.current)
-        if (elapsedRef.current >= capRef.current) {
-          window.clearInterval(t)
-          setRunning(false)
-          setFinished(true)
-          playSound(useStore.getState().timerSound)
-        }
-        return
-      }
       // Countdown rounds (EMOM / AMRAP / TABATA).
       if (remainingRef.current > 1) {
         remainingRef.current -= 1
@@ -470,27 +466,22 @@ function Interval() {
 
   function resetRuntime() {
     setFinished(false)
-    if (isCountUp) {
-      elapsedRef.current = 0
-      setElapsed(0)
-    } else {
-      const c = cfgRef.current
-      roundRef.current = 1
-      phaseRef.current = 'work'
-      remainingRef.current = c.work
-      setRound(1)
-      setPhase('work')
-      setRemaining(c.work)
-    }
+    setCountdown(null)
+    const c = cfgRef.current
+    roundRef.current = 1
+    phaseRef.current = 'work'
+    remainingRef.current = c.work
+    setRound(1)
+    setPhase('work')
+    setRemaining(c.work)
   }
 
   function start() {
     if (!format) return
-    const atEnd = isCountUp ? elapsedRef.current >= capRef.current : finished
-    if (finished || atEnd) resetRuntime()
+    if (finished) resetRuntime()
     setFinished(false)
     beep(660)
-    setRunning(true)
+    setCountdown(5)
   }
 
   function reset() {
@@ -498,20 +489,9 @@ function Interval() {
     resetRuntime()
   }
 
-  function finish() {
-    setRunning(false)
-    setFinished(true)
-    playSound(useStore.getState().timerSound)
-  }
-
   const phaseTotal = phase === 'work' ? cfg?.work ?? 1 : cfg?.rest ?? 1
-  const capSeconds = Math.max(1, settings.forTimeCap)
-  const ringValue = isCountUp
-    ? elapsed / capSeconds
-    : phaseTotal
-      ? remaining / phaseTotal
-      : 0
-  const display = isCountUp ? elapsed : remaining
+  const ringValue = phaseTotal ? remaining / phaseTotal : 0
+  const display = countdown !== null ? countdown : remaining
 
   const desc =
     format === 'EMOM'
@@ -520,14 +500,12 @@ function Interval() {
         ? `${fmt(settings.amrapCap)} time cap`
         : format === 'TABATA'
           ? `${settings.tabataWork}s work / ${settings.tabataRest}s rest × ${settings.tabataRounds}`
-          : format === 'FOR TIME'
-            ? `${fmt(settings.forTimeCap)} cap · count up`
-            : ''
+          : ''
 
   const subtitle = !format
     ? 'Select a format'
-    : isCountUp
-      ? `Cap ${fmt(settings.forTimeCap)}`
+    : countdown !== null
+      ? 'Get ready!'
       : format === 'AMRAP'
         ? 'Time cap'
         : `Round ${round}/${cfg?.rounds ?? 1}`
@@ -549,7 +527,7 @@ function Interval() {
                 phase === 'work' ? 'text-gold' : 'text-zinc-400',
               )}
             >
-              {finished ? 'Done' : !format ? 'Interval' : isCountUp ? 'Elapsed' : phase}
+              {finished ? 'Done' : !format ? 'Interval' : countdown !== null ? 'Ready' : phase}
             </span>
             <span className="heading text-5xl font-bold tabular-nums text-zinc-50">
               {fmt(display)}
@@ -563,7 +541,7 @@ function Interval() {
 
         <div className="flex w-full gap-2">
           <button
-            onClick={running ? () => setRunning(false) : start}
+            onClick={running ? () => setRunning(false) : countdown !== null ? reset : start}
             disabled={!format}
             className="btn-gold flex-1 py-3 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -571,17 +549,14 @@ function Interval() {
               <span className="inline-flex items-center gap-2">
                 <Pause className="h-4 w-4" /> Pause
               </span>
+            ) : countdown !== null ? (
+              <span>Cancel</span>
             ) : (
               <span className="inline-flex items-center gap-2">
                 <Play className="h-4 w-4" /> Start
               </span>
             )}
           </button>
-          {running && isCountUp && (
-            <button onClick={finish} className="btn-ghost px-4 py-3" aria-label="Finish">
-              <Check className="h-4 w-4" />
-            </button>
-          )}
           <button onClick={reset} className="btn-ghost px-4 py-3" aria-label="Reset">
             <RotateCcw className="h-4 w-4" />
           </button>
@@ -599,14 +574,14 @@ function Interval() {
                 label="Interval (sec)"
                 value={settings.emomInterval}
                 min={5}
-                disabled={running}
+                disabled={running || countdown !== null}
                 onChange={(v) => upd({ emomInterval: v })}
               />
               <NumIn
                 label="Rounds"
                 value={settings.emomRounds}
                 min={1}
-                disabled={running}
+                disabled={running || countdown !== null}
                 onChange={(v) => upd({ emomRounds: v })}
               />
             </div>
@@ -617,61 +592,51 @@ function Interval() {
                 label="Work (sec)"
                 value={settings.tabataWork}
                 min={1}
-                disabled={running}
+                disabled={running || countdown !== null}
                 onChange={(v) => upd({ tabataWork: v })}
               />
               <NumIn
                 label="Rest (sec)"
                 value={settings.tabataRest}
                 min={0}
-                disabled={running}
+                disabled={running || countdown !== null}
                 onChange={(v) => upd({ tabataRest: v })}
               />
               <NumIn
                 label="Rounds"
                 value={settings.tabataRounds}
                 min={1}
-                disabled={running}
+                disabled={running || countdown !== null}
                 onChange={(v) => upd({ tabataRounds: v })}
               />
             </div>
           )}
           {format === 'AMRAP' && (
-            <div className="grid grid-cols-2 gap-3">
-              <NumIn
-                label="Cap (min)"
-                value={Math.floor(settings.amrapCap / 60)}
-                min={0}
-                disabled={running}
-                onChange={(m) => upd({ amrapCap: m * 60 + (settings.amrapCap % 60) })}
-              />
-              <NumIn
-                label="Cap (sec)"
-                value={settings.amrapCap % 60}
-                min={0}
-                max={59}
-                disabled={running}
-                onChange={(s) => upd({ amrapCap: Math.floor(settings.amrapCap / 60) * 60 + s })}
-              />
-            </div>
-          )}
-          {format === 'FOR TIME' && (
-            <div className="grid grid-cols-2 gap-3">
-              <NumIn
-                label="Cap (min)"
-                value={Math.floor(settings.forTimeCap / 60)}
-                min={0}
-                disabled={running}
-                onChange={(m) => upd({ forTimeCap: m * 60 + (settings.forTimeCap % 60) })}
-              />
-              <NumIn
-                label="Cap (sec)"
-                value={settings.forTimeCap % 60}
-                min={0}
-                max={59}
-                disabled={running}
-                onChange={(s) => upd({ forTimeCap: Math.floor(settings.forTimeCap / 60) * 60 + s })}
-              />
+            <div>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-zinc-400">Cap time (mm:ss)</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder={fmt(settings.amrapCap)}
+                  value={amrapInput}
+                  disabled={running || countdown !== null}
+                  onChange={(e) => setAmrapInput(e.target.value)}
+                  onBlur={() => {
+                    const parsed = parseTime(amrapInput)
+                    if (parsed !== null && parsed > 0) upd({ amrapCap: parsed })
+                    setAmrapInput('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const parsed = parseTime(amrapInput)
+                      if (parsed !== null && parsed > 0) upd({ amrapCap: parsed })
+                      setAmrapInput('')
+                    }
+                  }}
+                  className="input no-spin py-2 text-sm disabled:opacity-50"
+                />
+              </label>
             </div>
           )}
         </div>

@@ -127,6 +127,9 @@ def _send_reset_email(to_email: str, reset_url: str) -> bool:
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json",
+            # Resend sits behind Cloudflare, which blocks urllib's default
+            # User-Agent (error 1010); send an explicit one.
+            "User-Agent": "SMELLIS/1.0",
         },
         method="POST",
     )

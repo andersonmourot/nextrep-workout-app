@@ -32,7 +32,6 @@ export function Settings() {
       </button>
 
       <div>
-        <p className="label-eyebrow">Make it yours</p>
         <h1 className="heading text-3xl font-bold text-zinc-50">Settings</h1>
       </div>
 

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
+  Check,
   ChevronRight,
   ImagePlus,
   Pencil,
@@ -295,18 +296,20 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                   <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800 px-2 py-1.5 shadow-lg">
                     <button
                       onClick={() => setConfirmId(null)}
-                      className="px-1 text-xs font-medium text-zinc-300 hover:text-zinc-100"
+                      aria-label="Cancel"
+                      className="grid h-7 w-7 place-items-center rounded-lg text-zinc-300 hover:text-zinc-100"
                     >
-                      Cancel
+                      <X className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => {
                         deleteExercise(e.id)
                         setConfirmId(null)
                       }}
-                      className="px-1 text-xs font-semibold text-red-400 hover:text-red-300"
+                      aria-label="Confirm delete"
+                      className="grid h-7 w-7 place-items-center rounded-lg text-red-400 hover:text-red-300"
                     >
-                      Delete
+                      <Check className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (

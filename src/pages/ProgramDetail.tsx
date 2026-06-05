@@ -11,6 +11,7 @@ import {
   Play,
   Target,
   Trash2,
+  X,
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
@@ -147,15 +148,25 @@ export function ProgramDetail() {
               </button>
             )}
             {confirmDelete ? (
-              <button
-                onClick={() => {
-                  deleteProgram(program.id)
-                  navigate('/programs')
-                }}
-                className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
-              >
-                <Trash2 className="h-4 w-4" /> Confirm
-              </button>
+              <div className="flex flex-1 items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    deleteProgram(program.id)
+                    navigate('/programs')
+                  }}
+                  aria-label="Confirm delete"
+                  className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                >
+                  <Check className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  aria-label="Cancel"
+                  className="btn-ghost flex-1"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}

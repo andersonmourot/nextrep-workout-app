@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, Clock, Dumbbell, Plus, RotateCcw, Settings2, Trash2 } from 'lucide-react'
+import {
+  Check,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+  Plus,
+  RotateCcw,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { useAllPrograms, useStore } from '../store'
 import type { ProgramCategory } from '../types'
 import { cn } from '../lib/utils'
@@ -136,18 +146,20 @@ export function Programs() {
                   <div className="absolute right-2 top-2 z-10 flex items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800 px-2 py-1.5 shadow-lg">
                     <button
                       onClick={() => setConfirmId(null)}
-                      className="px-1 text-xs font-medium text-zinc-300 hover:text-zinc-100"
+                      aria-label="Cancel"
+                      className="grid h-7 w-7 place-items-center rounded-lg text-zinc-300 hover:text-zinc-100"
                     >
-                      Cancel
+                      <X className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => {
                         deleteProgram(p.id)
                         setConfirmId(null)
                       }}
-                      className="px-1 text-xs font-semibold text-red-400 hover:text-red-300"
+                      aria-label="Confirm delete"
+                      className="grid h-7 w-7 place-items-center rounded-lg text-red-400 hover:text-red-300"
                     >
-                      Delete
+                      <Check className="h-4 w-4" />
                     </button>
                   </div>
                 ) : (

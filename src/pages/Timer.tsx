@@ -114,6 +114,7 @@ function Countdown() {
   const [running, setRunning] = useState(false)
   const [done, setDone] = useState(false)
   const [input, setInput] = useState('')
+  const [countdown, setCountdown] = useState<number | null>(null)
 
   const savedTimers = useStore((s) => s.savedTimers)
   const addSavedTimer = useStore((s) => s.addSavedTimer)
@@ -138,6 +139,23 @@ function Countdown() {
     return () => window.clearInterval(t)
   }, [running])
 
+  // 3-2-1 intro countdown effect (ticks each second, plays Alert + starts at 0).
+  useEffect(() => {
+    if (countdown === null) return
+    const t = window.setTimeout(() => {
+      if (countdown <= 1) {
+        beep(1000)
+        setCountdown(null)
+        playSound(useStore.getState().timerSound)
+        setRunning(true)
+      } else {
+        beep(1000)
+        setCountdown(countdown - 1)
+      }
+    }, 1000)
+    return () => window.clearTimeout(t)
+  }, [countdown])
+
   function start() {
     const secs = parseTime(input) ?? total
     const v = Math.max(1, Math.round(secs || 0))
@@ -145,13 +163,15 @@ function Countdown() {
     setTotal(v)
     setRemaining(v)
     setDone(false)
-    setRunning(true)
     addSavedTimer({ id: uid(), label: fmt(v), seconds: v })
+    beep(660)
+    setCountdown(3)
   }
 
   function reset() {
     setRunning(false)
     setDone(false)
+    setCountdown(null)
     setRemaining(total)
   }
 
@@ -159,6 +179,7 @@ function Countdown() {
     const v = Math.max(1, Math.round(seconds))
     setRunning(false)
     setDone(false)
+    setCountdown(null)
     setTotal(v)
     setRemaining(v)
     setInput(fmt(v))
@@ -167,17 +188,22 @@ function Countdown() {
   return (
     <div className="space-y-4">
       <div className="card flex flex-col items-center gap-5 p-6">
-        <ProgressRing value={total ? remaining / total : 0} size={200} stroke={12}>
+        <ProgressRing
+          value={countdown !== null ? 1 : total ? remaining / total : 0}
+          size={200}
+          stroke={12}
+        >
           <span
             className={cn(
               'heading text-5xl font-bold tabular-nums',
               done ? 'text-gold' : 'text-zinc-50',
             )}
           >
-            {fmt(remaining)}
+            {countdown !== null ? countdown : fmt(remaining)}
           </span>
         </ProgressRing>
 
+        {countdown !== null && <p className="text-sm font-semibold text-gold">Get ready!</p>}
         {done && <p className="text-sm font-semibold text-gold">Time's up!</p>}
 
         <div className="flex w-full items-center gap-2">
@@ -185,17 +211,17 @@ function Countdown() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') start()
+              if (e.key === 'Enter' && !running && countdown === null) start()
             }}
             placeholder="Set time (mm:ss or seconds)"
             inputMode="numeric"
             className="input"
           />
           <button
-            onClick={running ? reset : start}
+            onClick={running ? reset : countdown !== null ? () => setCountdown(null) : start}
             className="btn-gold shrink-0 px-6 py-2.5 text-sm font-semibold"
           >
-            {running ? 'Reset' : 'Start'}
+            {running ? 'Reset' : countdown !== null ? 'Cancel' : 'Start'}
           </button>
         </div>
 
@@ -472,7 +498,7 @@ function Interval() {
           ? ['amrap']
           : []
 
-  // 5-4-3-2-1 intro countdown effect
+  // 3-2-1 intro countdown effect
   useEffect(() => {
     if (countdown === null) return
     const t = window.setTimeout(() => {
@@ -549,7 +575,7 @@ function Interval() {
     if (finished) resetRuntime()
     setFinished(false)
     beep(660)
-    setCountdown(5)
+    setCountdown(3)
   }
 
   function reset() {

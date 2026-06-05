@@ -114,28 +114,31 @@ export function Progress() {
               const setCount = log.exercises.reduce((a, e) => a + e.sets.length, 0)
               return (
                 <li key={log.id} className="card p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
+                  <div className="flex items-start justify-between gap-3">
+                    <Link
+                      to={`/programs/${log.programId}`}
+                      className="min-w-0 flex-1 transition hover:opacity-80"
+                    >
                       <p className="text-sm font-semibold text-zinc-100">{log.dayName}</p>
                       <p className="text-xs text-zinc-500">
                         {log.programName} · {formatDate(log.date)}
                       </p>
-                    </div>
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
+                        <span>{formatDuration(log.durationSec)}</span>
+                        <span>{setCount} sets</span>
+                        <span className="inline-flex items-center gap-1 text-gold">
+                          <TrendingUp className="h-3.5 w-3.5" />
+                          {Math.round(log.totalVolume).toLocaleString()} {unit}
+                        </span>
+                      </div>
+                    </Link>
                     <button
                       onClick={() => deleteLog(log.id)}
-                      className="text-zinc-600 hover:text-red-400"
+                      className="shrink-0 text-zinc-600 hover:text-red-400"
                       aria-label="Delete workout"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
-                    <span>{formatDuration(log.durationSec)}</span>
-                    <span>{setCount} sets</span>
-                    <span className="inline-flex items-center gap-1 text-gold">
-                      <TrendingUp className="h-3.5 w-3.5" />
-                      {Math.round(log.totalVolume).toLocaleString()} {unit}
-                    </span>
                   </div>
                 </li>
               )

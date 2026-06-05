@@ -39,6 +39,11 @@ export function Nutrition() {
     setNutritionEntry({ ...entry, [field]: Math.max(0, entry[field] + delta), date })
   }
 
+  /** Set one field of the selected day's entry to an exact value (clamped at 0). */
+  function setField(field: keyof typeof EMPTY, value: number) {
+    setNutritionEntry({ ...entry, [field]: Math.max(0, value), date })
+  }
+
   return (
     <div className="animate-fade-in space-y-6">
       <button
@@ -152,22 +157,26 @@ export function Nutrition() {
           </span>
         </div>
         <div className="flex flex-wrap gap-2">
-          {Array.from({ length: Math.max(goals.water, entry.water) }).map((_, i) => (
-            <span
-              key={i}
-              aria-hidden
-              className={cn(
-                'grid h-8 w-8 place-items-center rounded-lg border',
-                i < entry.water
-                  ? 'border-sky-400/50 bg-sky-500/20 text-sky-300'
-                  : 'border-white/10 bg-ink-900 text-zinc-600',
-              )}
-            >
-              <Droplet className="h-4 w-4" />
-            </span>
-          ))}
+          {Array.from({ length: Math.max(goals.water, entry.water) }).map((_, i) => {
+            const filled = i < entry.water
+            return (
+              <button
+                key={i}
+                type="button"
+                aria-label={`Set water to ${i + 1} glasses`}
+                onClick={() => setField('water', entry.water === i + 1 ? i : i + 1)}
+                className={cn(
+                  'grid h-8 w-8 place-items-center rounded-lg border transition hover:border-sky-400/60',
+                  filled
+                    ? 'border-sky-400/50 bg-sky-500/20 text-sky-300'
+                    : 'border-white/10 bg-ink-900 text-zinc-600',
+                )}
+              >
+                <Droplet className="h-4 w-4" />
+              </button>
+            )
+          })}
         </div>
-        <AddField label="Add glasses" unit="glasses" onAdd={(v) => add('water', v)} />
       </section>
 
       <Goals />

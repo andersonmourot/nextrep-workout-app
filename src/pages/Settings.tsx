@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, KeyRound, LogOut, Moon, Sun, Trash2 } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  KeyRound,
+  LogOut,
+  Moon,
+  ShieldCheck,
+  Sun,
+  Trash2,
+} from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiChangePassword } from '../api'
@@ -46,6 +56,26 @@ export function Settings() {
           />
         </div>
       </section>
+
+      {account?.is_admin && (
+        <section className="card p-2">
+          <Link
+            to="/admin/users"
+            className="flex items-center justify-between rounded-xl p-3 transition hover:bg-white/5"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-semibold text-zinc-100">Users</span>
+                <span className="block text-xs text-zinc-500">Admin · view registered users</span>
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-zinc-500" />
+          </Link>
+        </section>
+      )}
 
       <section className="card space-y-4 p-5">
         <h2 className="heading text-lg font-bold text-zinc-50">Appearance</h2>

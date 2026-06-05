@@ -6,6 +6,14 @@ export interface SessionUser {
   id: string
   name: string
   email: string
+  is_admin?: boolean
+}
+
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  created_at: string
 }
 
 export interface AuthResponse {
@@ -72,6 +80,10 @@ export function apiLogin(email: string, password: string): Promise<ApiResult<Aut
 
 export function apiMe(token: string): Promise<ApiResult<SessionUser>> {
   return request('/me', {}, token)
+}
+
+export function apiAdminUsers(token: string): Promise<ApiResult<AdminUser[]>> {
+  return request('/api/admin/users', {}, token)
 }
 
 export function apiChangePassword(

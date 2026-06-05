@@ -20,6 +20,20 @@ def _now_ms() -> int:
 
 Base.metadata.create_all(bind=engine)
 
+# Accounts whose email is in this set get admin privileges (e.g. the Users
+# directory in Settings). Configurable via the ADMIN_EMAILS env var (comma
+# separated); defaults to the project owner.
+ADMIN_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("ADMIN_EMAILS", "andersonmourot@aol.com").split(",")
+    if e.strip()
+}
+
+
+def _is_admin(user: "User") -> bool:
+    return user.email.lower() in ADMIN_EMAILS
+
+
 app = FastAPI(title="SMELLIS Backend")
 
 app.add_middleware(
@@ -52,6 +66,7 @@ class PublicUser(BaseModel):
     id: str
     name: str
     email: str
+    is_admin: bool = False
 
 
 class AuthResponse(BaseModel):
@@ -85,6 +100,13 @@ class SharedUser(BaseModel):
     name: str
 
 
+class AdminUser(BaseModel):
+    id: str
+    name: str
+    email: str
+    created_at: str
+
+
 class SharedPrograms(BaseModel):
     user: SharedUser
     programs: list[dict]
@@ -105,7 +127,9 @@ class BatchBody(BaseModel):
 
 # ---- Helpers ----
 def _public(user: User) -> PublicUser:
-    return PublicUser(id=user.id, name=user.name, email=user.email)
+    return PublicUser(
+        id=user.id, name=user.name, email=user.email, is_admin=_is_admin(user)
+    )
 
 
 def _custom_programs(user: User) -> list[dict]:
@@ -280,6 +304,25 @@ def change_password(
 @app.get("/me", response_model=PublicUser)
 def me(user: User = Depends(current_user)):
     return _public(user)
+
+
+@app.get("/api/admin/users", response_model=list[AdminUser])
+def admin_users(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    if not _is_admin(user):
+        raise HTTPException(status_code=403, detail="Admin access required.")
+    rows = db.query(User).order_by(User.created_at.asc()).all()
+    return [
+        AdminUser(
+            id=u.id,
+            name=u.name,
+            email=u.email,
+            created_at=(u.created_at.isoformat() if u.created_at else ""),
+        )
+        for u in rows
+    ]
 
 
 @app.get("/api/data")

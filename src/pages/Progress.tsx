@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, Trash2, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Apple, ChevronRight, Dumbbell, Plus, Trash2, TrendingUp } from 'lucide-react'
 import { useStore } from '../store'
 import {
   computeStreak,
@@ -37,6 +38,12 @@ export function Progress() {
         <Stat value={`${logs.length}`} label="Workouts" />
         <Stat value={`${streak}`} label="Day streak" />
         <Stat value={`${(vol / 1000).toFixed(1)}k`} label={`Volume (${unit})`} />
+      </section>
+
+      {/* Trackers */}
+      <section className="space-y-2">
+        <NavButton to="/nutrition" Icon={Apple} label="Nutrition" />
+        <NavButton to="/max" Icon={Dumbbell} label="Max Tracker" />
       </section>
 
       {/* Body weight */}
@@ -137,6 +144,31 @@ export function Progress() {
         )}
       </section>
     </div>
+  )
+}
+
+function NavButton({
+  to,
+  Icon,
+  label,
+}: {
+  to: string
+  Icon: typeof Apple
+  label: string
+}) {
+  return (
+    <Link
+      to={to}
+      className="card flex items-center justify-between p-4 transition hover:border-white/20"
+    >
+      <span className="flex items-center gap-3">
+        <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="font-semibold text-zinc-100">{label}</span>
+      </span>
+      <ChevronRight className="h-5 w-5 text-zinc-500" />
+    </Link>
   )
 }
 

@@ -123,4 +123,38 @@ export interface BodyWeightEntry {
   weight: number
 }
 
+/** One day's logged nutrition totals (keyed by date). */
+export interface NutritionEntry {
+  date: string // ISO (date only)
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  water: number // glasses of water
+}
+
+/** Daily nutrition targets the user is aiming for. */
+export interface NutritionGoals {
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  water: number
+}
+
+/** A single dated max attempt for a tracked lift. */
+export interface MaxRecord {
+  id: string
+  date: string // ISO (date only)
+  weight: number
+  reps: number
+}
+
+/** A tracked lift (one card) with its history of max attempts. */
+export interface MaxTracker {
+  id: string
+  name: string
+  records: MaxRecord[]
+}
+
 export type Unit = 'kg' | 'lb'

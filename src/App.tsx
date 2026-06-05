@@ -10,9 +10,13 @@ import { Exercises } from './pages/Exercises'
 import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { Progress } from './pages/Progress'
+import { Nutrition } from './pages/Nutrition'
+import { MaxTracker } from './pages/MaxTracker'
+import { MaxTrackerDetail } from './pages/MaxTrackerDetail'
 import { People } from './pages/People'
 import { Timer } from './pages/Timer'
 import { Settings } from './pages/Settings'
+import { AdminUsers } from './pages/AdminUsers'
 import { Auth } from './pages/Auth'
 import { useAuth } from './auth'
 import { useStore } from './store'
@@ -53,7 +57,11 @@ export default function App() {
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/exercises/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/progress" element={<Progress />} />
+          <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/max" element={<MaxTracker />} />
+          <Route path="/max/:id" element={<MaxTrackerDetail />} />
           <Route path="/people" element={<People />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/workout/:programId/:dayId" element={<Workout />} />

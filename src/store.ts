@@ -1,11 +1,22 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import type { BodyWeightEntry, Exercise, Program, Unit, WorkoutLog } from './types'
+import type {
+  BodyWeightEntry,
+  Exercise,
+  MaxRecord,
+  MaxTracker,
+  NutritionEntry,
+  NutritionGoals,
+  Program,
+  Unit,
+  WorkoutLog,
+} from './types'
 import { PROGRAMS, getProgram } from './data/programs'
 import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
+import { uid } from './lib/utils'
 
 export interface SavedTimer {
   id: string
@@ -21,6 +32,14 @@ export interface IntervalSettings {
   tabataRest: number
   tabataRounds: number
   forTimeCap: number
+}
+
+export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
+  calories: 2200,
+  protein: 160,
+  carbs: 220,
+  fat: 70,
+  water: 8,
 }
 
 export const DEFAULT_INTERVAL_SETTINGS: IntervalSettings = {
@@ -49,7 +68,14 @@ const DEFAULTS = {
   savedTimers: [] as SavedTimer[],
   timerSound: 'beep' as string,
   intervalSettings: DEFAULT_INTERVAL_SETTINGS as IntervalSettings,
+  favoriteUserIds: [] as string[],
+  nutritionLog: [] as NutritionEntry[],
+  nutritionGoals: DEFAULT_NUTRITION_GOALS as NutritionGoals,
+  maxTrackers: [] as MaxTracker[],
 }
+
+/** Max number of users that can be pinned to the top of the following list. */
+export const MAX_FAVORITES = 3
 
 /** Resolve the per-user storage key so each account keeps isolated data. */
 function dataKey(fallback: string): string {
@@ -79,6 +105,10 @@ interface AppState {
   savedTimers: SavedTimer[]
   timerSound: string
   intervalSettings: IntervalSettings
+  favoriteUserIds: string[]
+  nutritionLog: NutritionEntry[]
+  nutritionGoals: NutritionGoals
+  maxTrackers: MaxTracker[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -104,6 +134,13 @@ interface AppState {
   removeSavedTimer: (id: string) => void
   setTimerSound: (sound: string) => void
   setIntervalSettings: (settings: IntervalSettings) => void
+  toggleFavoriteUser: (id: string) => void
+  setNutritionEntry: (entry: NutritionEntry) => void
+  setNutritionGoals: (goals: NutritionGoals) => void
+  addMaxRecord: (name: string, record: MaxRecord) => void
+  addMaxRecordToTracker: (trackerId: string, record: MaxRecord) => void
+  deleteMaxRecord: (trackerId: string, recordId: string) => void
+  deleteMaxTracker: (id: string) => void
   resetAll: () => void
 }
 
@@ -194,6 +231,54 @@ export const useStore = create<AppState>()(
         set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
       setTimerSound: (timerSound) => set({ timerSound }),
       setIntervalSettings: (intervalSettings) => set({ intervalSettings }),
+      toggleFavoriteUser: (id) =>
+        set((s) => {
+          if (s.favoriteUserIds.includes(id))
+            return { favoriteUserIds: s.favoriteUserIds.filter((x) => x !== id) }
+          // Cap the number of pinned favorites.
+          if (s.favoriteUserIds.length >= MAX_FAVORITES) return {}
+          return { favoriteUserIds: [...s.favoriteUserIds, id] }
+        }),
+      setNutritionEntry: (entry) =>
+        set((s) => ({
+          nutritionLog: [
+            ...s.nutritionLog.filter((e) => e.date !== entry.date),
+            entry,
+          ].sort((a, b) => (a.date < b.date ? -1 : 1)),
+        })),
+      setNutritionGoals: (nutritionGoals) => set({ nutritionGoals }),
+      addMaxRecord: (name, record) =>
+        set((s) => {
+          const clean = name.trim()
+          const existing = s.maxTrackers.find(
+            (t) => t.name.toLowerCase() === clean.toLowerCase(),
+          )
+          if (existing) {
+            return {
+              maxTrackers: s.maxTrackers.map((t) =>
+                t.id === existing.id ? { ...t, records: [...t.records, record] } : t,
+              ),
+            }
+          }
+          const tracker: MaxTracker = { id: uid(), name: clean, records: [record] }
+          return { maxTrackers: [tracker, ...s.maxTrackers] }
+        }),
+      addMaxRecordToTracker: (trackerId, record) =>
+        set((s) => ({
+          maxTrackers: s.maxTrackers.map((t) =>
+            t.id === trackerId ? { ...t, records: [...t.records, record] } : t,
+          ),
+        })),
+      deleteMaxRecord: (trackerId, recordId) =>
+        set((s) => ({
+          maxTrackers: s.maxTrackers.map((t) =>
+            t.id === trackerId
+              ? { ...t, records: t.records.filter((r) => r.id !== recordId) }
+              : t,
+          ),
+        })),
+      deleteMaxTracker: (id) =>
+        set((s) => ({ maxTrackers: s.maxTrackers.filter((t) => t.id !== id) })),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -209,6 +294,10 @@ export const useStore = create<AppState>()(
           savedTimers: [],
           timerSound: 'beep',
           intervalSettings: DEFAULT_INTERVAL_SETTINGS,
+          favoriteUserIds: [],
+          nutritionLog: [],
+          nutritionGoals: DEFAULT_NUTRITION_GOALS,
+          maxTrackers: [],
         })
       },
     }),
@@ -234,6 +323,10 @@ function snapshot(s: AppState): typeof DEFAULTS {
     savedTimers: s.savedTimers,
     timerSound: s.timerSound,
     intervalSettings: s.intervalSettings,
+    favoriteUserIds: s.favoriteUserIds,
+    nutritionLog: s.nutritionLog,
+    nutritionGoals: s.nutritionGoals,
+    maxTrackers: s.maxTrackers,
   }
 }
 

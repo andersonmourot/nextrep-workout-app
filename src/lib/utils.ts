@@ -20,7 +20,6 @@ export function formatDate(iso: string): string {
 export function formatDateLong(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleDateString(undefined, {
-    weekday: 'short',
     month: 'short',
     day: 'numeric',
     year: 'numeric',

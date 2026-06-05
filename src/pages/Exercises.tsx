@@ -351,7 +351,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   )
 }
 
-function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose: () => void }) {
+export function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose: () => void }) {
   const addCustomExercise = useStore((s) => s.addCustomExercise)
   const setExerciseOverride = useStore((s) => s.setExerciseOverride)
   const isEdit = !!editing

@@ -1,11 +1,14 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lightbulb, Timer } from 'lucide-react'
+import { ArrowLeft, Lightbulb, Pencil, Timer } from 'lucide-react'
 import { EXERCISE_MAP } from '../data/exercises'
 import { useStore } from '../store'
+import { ExerciseModal } from './Exercises'
 
 export function ExerciseDetail() {
   const { exerciseId } = useParams()
   const navigate = useNavigate()
+  const [editing, setEditing] = useState(false)
   // Read store slices so the page re-renders after an edit/override.
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
@@ -30,12 +33,20 @@ export function ExerciseDetail() {
 
   return (
     <div className="animate-fade-in space-y-6">
-      <button
-        onClick={() => navigate(-1)}
-        className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <button
+          onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-ink-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 hover:border-white/30"
+        >
+          <Pencil className="h-4 w-4" /> Edit
+        </button>
+      </div>
 
       <div>
         <span className="label-eyebrow">{ex.primaryMuscle}</span>
@@ -123,6 +134,8 @@ export function ExerciseDetail() {
           </div>
         </section>
       )}
+
+      {editing && <ExerciseModal editing={ex} onClose={() => setEditing(false)} />}
     </div>
   )
 }

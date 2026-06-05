@@ -233,6 +233,30 @@ export function Settings() {
         )}
       </section>
 
+      <section className="card p-2">
+        <Link
+          to="/legal/privacy"
+          className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-white/5"
+        >
+          Privacy Policy
+          <ChevronRight className="h-4 w-4 text-zinc-500" />
+        </Link>
+        <Link
+          to="/legal/terms"
+          className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-white/5"
+        >
+          Terms of Service
+          <ChevronRight className="h-4 w-4 text-zinc-500" />
+        </Link>
+        <Link
+          to="/legal/disclaimer"
+          className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm text-zinc-300 transition hover:bg-white/5"
+        >
+          Health &amp; Fitness Disclaimer
+          <ChevronRight className="h-4 w-4 text-zinc-500" />
+        </Link>
+      </section>
+
       <p className="pb-2 text-center text-xs text-zinc-600">
         SMELLIS · Train with intent.
       </p>

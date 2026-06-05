@@ -19,6 +19,7 @@ import { AdminUsers } from './pages/AdminUsers'
 import { Auth } from './pages/Auth'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
+import { Legal } from './pages/Legal'
 import { useAuth } from './auth'
 import { useStore } from './store'
 import { applyTheme } from './lib/theme'
@@ -67,6 +68,9 @@ export default function App() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/legal/privacy" element={<Legal doc="privacy" />} />
+          <Route path="/legal/terms" element={<Legal doc="terms" />} />
+          <Route path="/legal/disclaimer" element={<Legal doc="disclaimer" />} />
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Route>

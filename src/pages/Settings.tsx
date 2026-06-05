@@ -82,8 +82,6 @@ export function Settings() {
         </section>
       )}
 
-      <InstallApp />
-
       <section className="card space-y-4 p-5">
         <h2 className="heading text-lg font-bold text-zinc-50">Appearance</h2>
 
@@ -203,8 +201,10 @@ export function Settings() {
         </section>
       )}
 
+      <InstallApp />
+
       <section className="card border-red-500/20 p-5">
-        <h2 className="heading text-lg font-bold text-red-300">Danger Zone</h2>
+        <h2 className="heading text-lg font-bold text-red-300">Data Reset</h2>
         <p className="mt-1 text-sm text-zinc-400">
           Reset clears your active program, workout history, and body-weight log. This can't be undone.
         </p>

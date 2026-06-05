@@ -7,6 +7,12 @@ import { getCurrentUserId, getToken } from './auth'
 import { apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
 
+export interface SavedTimer {
+  id: string
+  label: string
+  seconds: number
+}
+
 const DEFAULTS = {
   name: 'Athlete',
   unit: 'lb' as Unit,
@@ -19,6 +25,7 @@ const DEFAULTS = {
   customExercises: [] as Exercise[],
   hiddenProgramIds: [] as string[],
   hiddenExerciseIds: [] as string[],
+  savedTimers: [] as SavedTimer[],
 }
 
 /** Resolve the per-user storage key so each account keeps isolated data. */
@@ -45,6 +52,7 @@ interface AppState {
   customExercises: Exercise[]
   hiddenProgramIds: string[]
   hiddenExerciseIds: string[]
+  savedTimers: SavedTimer[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -64,6 +72,8 @@ interface AppState {
   deleteExercise: (id: string) => void
   restoreExercises: () => void
   restorePrograms: () => void
+  addSavedTimer: (timer: SavedTimer) => void
+  removeSavedTimer: (id: string) => void
   resetAll: () => void
 }
 
@@ -133,6 +143,15 @@ export const useStore = create<AppState>()(
           }
         }),
       restorePrograms: () => set({ hiddenProgramIds: [] }),
+      addSavedTimer: (timer) =>
+        set((s) => ({
+          savedTimers: [
+            timer,
+            ...s.savedTimers.filter((t) => t.seconds !== timer.seconds),
+          ].sort((a, b) => a.seconds - b.seconds),
+        })),
+      removeSavedTimer: (id) =>
+        set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
       resetAll: () => {
         setCustomExercises([])
         set({
@@ -143,6 +162,7 @@ export const useStore = create<AppState>()(
           customExercises: [],
           hiddenProgramIds: [],
           hiddenExerciseIds: [],
+          savedTimers: [],
         })
       },
     }),
@@ -164,6 +184,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     customExercises: s.customExercises,
     hiddenProgramIds: s.hiddenProgramIds,
     hiddenExerciseIds: s.hiddenExerciseIds,
+    savedTimers: s.savedTimers,
   }
 }
 

@@ -71,7 +71,9 @@ const DEFAULTS = {
   exerciseOverrides: {} as Record<string, Exercise>,
   savedTimers: [] as SavedTimer[],
   timerSound: 'beep' as string,
+  timerMode: 'timer' as string,
   intervalSettings: DEFAULT_INTERVAL_SETTINGS as IntervalSettings,
+  intervalFormat: null as string | null,
   favoriteUserIds: [] as string[],
   favoriteProgramIds: [] as string[],
   nutritionLog: [] as NutritionEntry[],
@@ -118,7 +120,9 @@ interface AppState {
   exerciseOverrides: Record<string, Exercise>
   savedTimers: SavedTimer[]
   timerSound: string
+  timerMode: string
   intervalSettings: IntervalSettings
+  intervalFormat: string | null
   favoriteUserIds: string[]
   favoriteProgramIds: string[]
   nutritionLog: NutritionEntry[]
@@ -156,7 +160,9 @@ interface AppState {
   addSavedTimer: (timer: SavedTimer) => void
   removeSavedTimer: (id: string) => void
   setTimerSound: (sound: string) => void
+  setTimerMode: (mode: string) => void
   setIntervalSettings: (settings: IntervalSettings) => void
+  setIntervalFormat: (format: string | null) => void
   toggleFavoriteUser: (id: string) => void
   toggleFavoriteProgram: (id: string) => void
   startWorkout: (programId: string, dayId: string) => void
@@ -315,7 +321,9 @@ export const useStore = create<AppState>()(
       removeSavedTimer: (id) =>
         set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
       setTimerSound: (timerSound) => set({ timerSound }),
+      setTimerMode: (timerMode) => set({ timerMode }),
       setIntervalSettings: (intervalSettings) => set({ intervalSettings }),
+      setIntervalFormat: (intervalFormat) => set({ intervalFormat }),
       toggleFavoriteUser: (id) =>
         set((s) => {
           if (s.favoriteUserIds.includes(id))
@@ -419,7 +427,9 @@ export const useStore = create<AppState>()(
           exerciseOverrides: {},
           savedTimers: [],
           timerSound: 'beep',
+          timerMode: 'timer',
           intervalSettings: DEFAULT_INTERVAL_SETTINGS,
+          intervalFormat: null,
           favoriteUserIds: [],
           favoriteProgramIds: [],
           nutritionLog: [],
@@ -452,7 +462,9 @@ function snapshot(s: AppState): typeof DEFAULTS {
     exerciseOverrides: s.exerciseOverrides,
     savedTimers: s.savedTimers,
     timerSound: s.timerSound,
+    timerMode: s.timerMode,
     intervalSettings: s.intervalSettings,
+    intervalFormat: s.intervalFormat,
     favoriteUserIds: s.favoriteUserIds,
     favoriteProgramIds: s.favoriteProgramIds,
     nutritionLog: s.nutritionLog,

@@ -71,7 +71,12 @@ function playSound(id: string) {
 }
 
 export function Timer() {
-  const [mode, setMode] = useState<Mode>('timer')
+  const storedMode = useStore((s) => s.timerMode)
+  const setTimerMode = useStore((s) => s.setTimerMode)
+  const mode = (['timer', 'stopwatch', 'interval'] as string[]).includes(storedMode)
+    ? (storedMode as Mode)
+    : 'timer'
+  const setMode = (m: Mode) => setTimerMode(m)
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -309,6 +314,20 @@ function Stopwatch() {
 const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
+/** Resolve work/rest/rounds for a format + settings pair (null if no format). */
+function intervalConfig(
+  fmt: IntervalFormat | null,
+  sett: IntervalSettings,
+): { work: number; rest: number; rounds: number } | null {
+  return fmt === 'EMOM'
+    ? { work: sett.emomInterval, rest: 0, rounds: sett.emomRounds }
+    : fmt === 'TABATA'
+      ? { work: sett.tabataWork, rest: sett.tabataRest, rounds: sett.tabataRounds }
+      : fmt === 'AMRAP'
+        ? { work: Math.max(1, sett.amrapCap), rest: 0, rounds: 1 }
+        : null
+}
+
 /** Short tick cue for the final 3 seconds of a phase. */
 function tickCue(secLeft: number) {
   if (secLeft === 3 || secLeft === 2 || secLeft === 1) beep(1000)
@@ -382,14 +401,26 @@ function Interval() {
   const settings = useStore((s) => s.intervalSettings)
   const setIntervalSettings = useStore((s) => s.setIntervalSettings)
 
-  const [format, setFormat] = useState<IntervalFormat | null>(null)
+  const storedFormat = useStore((s) => s.intervalFormat)
+  const setIntervalFormat = useStore((s) => s.setIntervalFormat)
+  const format = (INTERVAL_FORMATS as readonly string[]).includes(storedFormat ?? '')
+    ? (storedFormat as IntervalFormat)
+    : null
+  const setFormat = (f: IntervalFormat | null) => setIntervalFormat(f)
+
+  // Initial config for the restored format so the display/refs rehydrate
+  // correctly when returning to the tab — no mount effect needed.
+  const initialCfg = intervalConfig(format, settings)
+
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
-  const [remaining, setRemaining] = useState(DEFAULT_INTERVAL_SETTINGS.tabataWork)
+  const [remaining, setRemaining] = useState(
+    initialCfg ? initialCfg.work : DEFAULT_INTERVAL_SETTINGS.tabataWork,
+  )
   const [finished, setFinished] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
-  const [amrapInput, setAmrapInput] = useState('')
+  const [amrapInput, setAmrapInput] = useState(format === 'AMRAP' ? fmt(settings.amrapCap) : '')
   // Which required fields are currently blank/invalid, and whether to surface
   // those as red outlines (only after the user tries to start).
   const [blanks, setBlanks] = useState<Record<string, boolean>>({})
@@ -400,30 +431,16 @@ function Interval() {
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine without stale closures.
-  const cfgRef = useRef({ work: 20, rest: 10, rounds: 8 })
+  const cfgRef = useRef(initialCfg ?? { work: 20, rest: 10, rounds: 8 })
   const roundRef = useRef(1)
   const phaseRef = useRef<'work' | 'rest'>('work')
-  const remainingRef = useRef(20)
+  const remainingRef = useRef(initialCfg ? initialCfg.work : 20)
 
-  const cfg =
-    format === 'EMOM'
-      ? { work: settings.emomInterval, rest: 0, rounds: settings.emomRounds }
-      : format === 'TABATA'
-        ? { work: settings.tabataWork, rest: settings.tabataRest, rounds: settings.tabataRounds }
-        : format === 'AMRAP'
-          ? { work: Math.max(1, settings.amrapCap), rest: 0, rounds: 1 }
-          : null
+  const cfg = intervalConfig(format, settings)
 
   // Reconfigure runtime refs + display for a given format/settings pair.
   function applyConfig(fmt: IntervalFormat | null, sett: IntervalSettings) {
-    const c =
-      fmt === 'EMOM'
-        ? { work: sett.emomInterval, rest: 0, rounds: sett.emomRounds }
-        : fmt === 'TABATA'
-          ? { work: sett.tabataWork, rest: sett.tabataRest, rounds: sett.tabataRounds }
-          : fmt === 'AMRAP'
-            ? { work: Math.max(1, sett.amrapCap), rest: 0, rounds: 1 }
-            : null
+    const c = intervalConfig(fmt, sett)
     if (c) cfgRef.current = c
     setRunning(false)
     setFinished(false)

@@ -173,7 +173,7 @@ export function Exercises() {
                     )}
                   </p>
                   <div className="mt-1 flex flex-wrap gap-1.5">
-                    <span className="chip" style={{ color: '#4c8a55' }}>
+                    <span className="chip" style={{ color: 'rgb(var(--accent-400))' }}>
                       {e.primaryMuscle}
                     </span>
                     <span className="chip">{e.equipment}</span>

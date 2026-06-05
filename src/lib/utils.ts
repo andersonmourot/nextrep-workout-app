@@ -8,17 +8,36 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 }
 
+/** YYYY-MM-DD for a Date using the user's local calendar day (not UTC). */
+function localDateKey(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/**
+ * Parse a stored date string into a Date. Date-only strings (YYYY-MM-DD) are
+ * interpreted in the local timezone so the calendar day doesn't shift for users
+ * behind UTC; full ISO timestamps are parsed as-is.
+ */
+function parseStoredDate(iso: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return new Date(iso)
+}
+
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return localDateKey(new Date())
 }
 
 export function formatDate(iso: string): string {
-  const d = new Date(iso)
+  const d = parseStoredDate(iso)
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 export function formatDateLong(iso: string): string {
-  const d = new Date(iso)
+  const d = parseStoredDate(iso)
   return d.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -27,7 +46,7 @@ export function formatDateLong(iso: string): string {
 }
 
 export function formatDateTime(iso: string): string {
-  const d = new Date(iso)
+  const d = parseStoredDate(iso)
   return d.toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -62,14 +81,14 @@ export function nextDayIndex(program: Program, logs: WorkoutLog[]): number {
 /** Number of consecutive days (ending today or yesterday) with at least one workout. */
 export function computeStreak(logs: WorkoutLog[]): number {
   if (logs.length === 0) return 0
-  const days = new Set(logs.map((l) => l.date.slice(0, 10)))
+  const days = new Set(logs.map((l) => localDateKey(parseStoredDate(l.date))))
   let streak = 0
   const cursor = new Date()
   // Allow the streak to count even if today has no workout yet.
-  if (!days.has(cursor.toISOString().slice(0, 10))) {
+  if (!days.has(localDateKey(cursor))) {
     cursor.setDate(cursor.getDate() - 1)
   }
-  while (days.has(cursor.toISOString().slice(0, 10))) {
+  while (days.has(localDateKey(cursor))) {
     streak += 1
     cursor.setDate(cursor.getDate() - 1)
   }

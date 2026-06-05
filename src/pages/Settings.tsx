@@ -4,17 +4,22 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
+  Download,
   KeyRound,
   LogOut,
   Moon,
+  Plus,
+  Share,
   ShieldCheck,
   Sun,
   Trash2,
+  X,
 } from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiChangePassword } from '../api'
 import { cn } from '../lib/utils'
+import { usePwaInstall } from '../lib/usePwaInstall'
 import { THEME_COLORS, type ThemeMode } from '../lib/theme'
 import { PasswordField } from '../components/PasswordField'
 import { PasswordHints, PASSWORD_MIN_LENGTH } from '../components/PasswordHints'
@@ -76,6 +81,8 @@ export function Settings() {
           </Link>
         </section>
       )}
+
+      <InstallApp />
 
       <section className="card space-y-4 p-5">
         <h2 className="heading text-lg font-bold text-zinc-50">Appearance</h2>
@@ -230,6 +237,97 @@ export function Settings() {
         SMELLIS · Train with intent.
       </p>
     </div>
+  )
+}
+
+function InstallApp() {
+  const { canPrompt, promptInstall, isIOS, isStandalone } = usePwaInstall()
+  const [showIOS, setShowIOS] = useState(false)
+
+  // Already installed / launched from the home screen — nothing to do.
+  if (isStandalone) return null
+
+  async function handleClick() {
+    if (canPrompt) {
+      await promptInstall()
+      return
+    }
+    // iOS (and any browser without a native prompt): show manual instructions.
+    setShowIOS(true)
+  }
+
+  return (
+    <section className="card space-y-3 p-5">
+      <div>
+        <h2 className="heading text-lg font-bold text-zinc-50">Install app</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Add SMELLIS to your home screen to launch it fullscreen, like a native app.
+        </p>
+      </div>
+
+      <button onClick={handleClick} className="btn-gold w-full">
+        <Download className="h-4 w-4" /> Install app
+      </button>
+
+      {showIOS && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-4 sm:items-center"
+          onClick={() => setShowIOS(false)}
+        >
+          <div
+            className="card w-full max-w-sm space-y-4 p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="heading text-lg font-bold text-zinc-50">Add to Home Screen</h3>
+              <button
+                onClick={() => setShowIOS(false)}
+                aria-label="Close"
+                className="rounded-md p-1 text-zinc-400 hover:bg-white/5 hover:text-zinc-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-zinc-400">
+              {isIOS
+                ? 'On iPhone, install from the Safari Share menu:'
+                : 'To install, use your browser menu:'}
+            </p>
+            <ol className="space-y-3 text-sm text-zinc-200">
+              <li className="flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
+                  <Share className="h-5 w-5" />
+                </span>
+                <span>
+                  Tap the <span className="font-semibold">Share</span> button in Safari's toolbar.
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
+                  <Plus className="h-5 w-5" />
+                </span>
+                <span>
+                  Scroll down and tap{' '}
+                  <span className="font-semibold">Add to Home Screen</span>.
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gold/15 text-gold">
+                  <Check className="h-5 w-5" />
+                </span>
+                <span>
+                  Tap <span className="font-semibold">Add</span> — SMELLIS will appear on your home
+                  screen.
+                </span>
+              </li>
+            </ol>
+            <button onClick={() => setShowIOS(false)} className="btn-ghost w-full">
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 

@@ -177,4 +177,16 @@ export interface MaxTracker {
   records: MaxRecord[]
 }
 
+/** A deleted custom program kept in Trash until it's purged (7 days). */
+export interface TrashedProgram {
+  program: Program
+  deletedAt: number // epoch ms
+}
+
+/** A deleted custom exercise kept in Trash until it's purged (7 days). */
+export interface TrashedExercise {
+  exercise: Exercise
+  deletedAt: number // epoch ms
+}
+
 export type Unit = 'kg' | 'lb'

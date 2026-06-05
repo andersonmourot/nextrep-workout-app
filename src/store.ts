@@ -10,6 +10,8 @@ import type {
   NutritionGoals,
   Program,
   SetLog,
+  TrashedExercise,
+  TrashedProgram,
   Unit,
   WorkoutLog,
 } from './types'
@@ -76,6 +78,8 @@ const DEFAULTS = {
   nutritionGoals: DEFAULT_NUTRITION_GOALS as NutritionGoals,
   maxTrackers: [] as MaxTracker[],
   activeWorkout: null as ActiveWorkout | null,
+  trashedPrograms: [] as TrashedProgram[],
+  trashedExercises: [] as TrashedExercise[],
 }
 
 /** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
@@ -121,6 +125,8 @@ interface AppState {
   nutritionGoals: NutritionGoals
   maxTrackers: MaxTracker[]
   activeWorkout: ActiveWorkout | null
+  trashedPrograms: TrashedProgram[]
+  trashedExercises: TrashedExercise[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -143,6 +149,10 @@ interface AppState {
   restoreExercises: () => void
   restoreProgram: (id: string) => void
   restorePrograms: () => void
+  restoreTrashedProgram: (id: string) => void
+  purgeTrashedProgram: (id: string) => void
+  restoreTrashedExercise: (id: string) => void
+  purgeTrashedExercise: (id: string) => void
   addSavedTimer: (timer: SavedTimer) => void
   removeSavedTimer: (id: string) => void
   setTimerSound: (sound: string) => void
@@ -203,16 +213,22 @@ export const useStore = create<AppState>()(
         }),
       deleteExercise: (id) =>
         set((s) => {
-          // Custom exercises are removed outright; built-in/default exercises
-          // are hidden so they can be restored later.
-          const isCustom = s.customExercises.some((e) => e.id === id)
-          const nextCustom = s.customExercises.filter((e) => e.id !== id)
-          setCustomExercises(nextCustom)
+          // Custom exercises move to Trash (kept 7 days before purge); built-in/
+          // default exercises are hidden so they can be restored later.
+          const custom = s.customExercises.find((e) => e.id === id)
+          if (custom) {
+            const nextCustom = s.customExercises.filter((e) => e.id !== id)
+            setCustomExercises(nextCustom)
+            return {
+              customExercises: nextCustom,
+              trashedExercises: [
+                { exercise: custom, deletedAt: Date.now() },
+                ...s.trashedExercises.filter((t) => t.exercise.id !== id),
+              ],
+            }
+          }
           return {
-            customExercises: nextCustom,
-            hiddenExerciseIds: isCustom
-              ? s.hiddenExerciseIds
-              : Array.from(new Set([...s.hiddenExerciseIds, id])),
+            hiddenExerciseIds: Array.from(new Set([...s.hiddenExerciseIds, id])),
           }
         }),
       setExerciseOverride: (exercise) =>
@@ -224,23 +240,69 @@ export const useStore = create<AppState>()(
       restoreExercise: (id) =>
         set((s) => ({ hiddenExerciseIds: s.hiddenExerciseIds.filter((x) => x !== id) })),
       restoreExercises: () => set({ hiddenExerciseIds: [] }),
+      restoreTrashedExercise: (id) =>
+        set((s) => {
+          const trashed = s.trashedExercises.find((t) => t.exercise.id === id)
+          if (!trashed) return {}
+          const nextCustom = [
+            ...s.customExercises.filter((e) => e.id !== id),
+            trashed.exercise,
+          ]
+          setCustomExercises(nextCustom)
+          return {
+            customExercises: nextCustom,
+            trashedExercises: s.trashedExercises.filter((t) => t.exercise.id !== id),
+          }
+        }),
+      purgeTrashedExercise: (id) =>
+        set((s) => ({
+          trashedExercises: s.trashedExercises.filter((t) => t.exercise.id !== id),
+        })),
       deleteProgram: (id) =>
         set((s) => {
-          const isCustom = s.customPrograms.some((p) => p.id === id)
-          return {
-            customPrograms: s.customPrograms.filter((p) => p.id !== id),
-            hiddenProgramIds: isCustom
-              ? s.hiddenProgramIds
-              : Array.from(new Set([...s.hiddenProgramIds, id])),
+          // Custom programs move to Trash (kept 7 days before purge); built-in/
+          // default programs are hidden so they can be restored later.
+          const custom = s.customPrograms.find((p) => p.id === id)
+          const base = {
             activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
             favoriteProgramIds: s.favoriteProgramIds.filter((x) => x !== id),
             activeWorkout:
               s.activeWorkout?.programId === id ? null : s.activeWorkout,
           }
+          if (custom) {
+            return {
+              ...base,
+              customPrograms: s.customPrograms.filter((p) => p.id !== id),
+              trashedPrograms: [
+                { program: custom, deletedAt: Date.now() },
+                ...s.trashedPrograms.filter((t) => t.program.id !== id),
+              ],
+            }
+          }
+          return {
+            ...base,
+            hiddenProgramIds: Array.from(new Set([...s.hiddenProgramIds, id])),
+          }
         }),
       restoreProgram: (id) =>
         set((s) => ({ hiddenProgramIds: s.hiddenProgramIds.filter((x) => x !== id) })),
       restorePrograms: () => set({ hiddenProgramIds: [] }),
+      restoreTrashedProgram: (id) =>
+        set((s) => {
+          const trashed = s.trashedPrograms.find((t) => t.program.id === id)
+          if (!trashed) return {}
+          return {
+            customPrograms: [
+              ...s.customPrograms.filter((p) => p.id !== id),
+              trashed.program,
+            ],
+            trashedPrograms: s.trashedPrograms.filter((t) => t.program.id !== id),
+          }
+        }),
+      purgeTrashedProgram: (id) =>
+        set((s) => ({
+          trashedPrograms: s.trashedPrograms.filter((t) => t.program.id !== id),
+        })),
       addSavedTimer: (timer) =>
         set((s) => ({
           // Keep the five most recent, newest first; replace the oldest as new
@@ -364,6 +426,8 @@ export const useStore = create<AppState>()(
           nutritionGoals: DEFAULT_NUTRITION_GOALS,
           maxTrackers: [],
           activeWorkout: null,
+          trashedPrograms: [],
+          trashedExercises: [],
         })
       },
     }),
@@ -395,6 +459,21 @@ function snapshot(s: AppState): typeof DEFAULTS {
     nutritionGoals: s.nutritionGoals,
     maxTrackers: s.maxTrackers,
     activeWorkout: s.activeWorkout,
+    trashedPrograms: s.trashedPrograms,
+    trashedExercises: s.trashedExercises,
+  }
+}
+
+/** Trash retention window: items are purged 7 days after deletion. */
+export const TRASH_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Drop any trashed items whose 7-day retention window has elapsed. */
+function purgeExpiredTrash(next: typeof DEFAULTS): typeof DEFAULTS {
+  const cutoff = Date.now() - TRASH_TTL_MS
+  return {
+    ...next,
+    trashedPrograms: (next.trashedPrograms ?? []).filter((t) => t.deletedAt > cutoff),
+    trashedExercises: (next.trashedExercises ?? []).filter((t) => t.deletedAt > cutoff),
   }
 }
 
@@ -413,7 +492,8 @@ useStore.subscribe((state) => {
   }, 600)
 })
 
-function applyState(next: typeof DEFAULTS): void {
+function applyState(raw: typeof DEFAULTS): void {
+  const next = purgeExpiredTrash(raw)
   applyingRemote = true
   try {
     useStore.setState(next)

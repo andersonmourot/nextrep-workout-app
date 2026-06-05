@@ -93,6 +93,19 @@ export function totalVolume(logs: WorkoutLog[]): number {
   return logs.reduce((sum, l) => sum + l.totalVolume, 0)
 }
 
+/**
+ * Human-readable time left before a trashed item (deleted at `deletedAt` epoch
+ * ms) is purged for good, given a total retention window in ms.
+ */
+export function trashTimeLeft(deletedAt: number, ttlMs: number): string {
+  const remaining = deletedAt + ttlMs - Date.now()
+  if (remaining <= 0) return 'Deleting soon'
+  const days = Math.floor(remaining / (24 * 60 * 60 * 1000))
+  if (days >= 1) return `${days} day${days === 1 ? '' : 's'} left`
+  const hours = Math.max(1, Math.floor(remaining / (60 * 60 * 1000)))
+  return `${hours} hour${hours === 1 ? '' : 's'} left`
+}
+
 export function greeting(): string {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'

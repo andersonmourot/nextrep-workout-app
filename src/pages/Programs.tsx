@@ -15,10 +15,10 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { useAllPrograms, useStore, MAX_FAVORITES } from '../store'
+import { useAllPrograms, useStore, MAX_FAVORITES, TRASH_TTL_MS } from '../store'
 import { PROGRAMS } from '../data/programs'
 import type { ProgramCategory } from '../types'
-import { cn } from '../lib/utils'
+import { cn, trashTimeLeft } from '../lib/utils'
 
 const CATEGORIES: Array<ProgramCategory | 'All'> = [
   'All',
@@ -35,6 +35,7 @@ export function Programs() {
   const [query, setQuery] = useState('')
   const [managing, setManaging] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const activeProgramId = useStore((s) => s.activeProgramId)
   const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
@@ -42,9 +43,12 @@ export function Programs() {
   const customPrograms = useStore((s) => s.customPrograms)
   const hiddenProgramIds = useStore((s) => s.hiddenProgramIds)
   const hiddenCount = hiddenProgramIds.length
+  const trashedPrograms = useStore((s) => s.trashedPrograms)
   const deleteProgram = useStore((s) => s.deleteProgram)
   const restoreProgram = useStore((s) => s.restoreProgram)
   const restorePrograms = useStore((s) => s.restorePrograms)
+  const restoreTrashedProgram = useStore((s) => s.restoreTrashedProgram)
+  const purgeTrashedProgram = useStore((s) => s.purgeTrashedProgram)
   const customIds = useMemo(() => new Set(customPrograms.map((p) => p.id)), [customPrograms])
   const allPrograms = useAllPrograms()
 
@@ -81,6 +85,7 @@ export function Programs() {
     setManaging((m) => !m)
     setConfirmId(null)
     setShowHidden(false)
+    setShowTrash(false)
   }
 
   if (showHidden) {
@@ -124,6 +129,58 @@ export function Programs() {
     )
   }
 
+  if (showTrash) {
+    return (
+      <div className="animate-fade-in space-y-5">
+        <button
+          onClick={() => setShowTrash(false)}
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <h1 className="heading text-3xl font-bold text-zinc-50">Trash</h1>
+        <p className="text-xs text-zinc-500">
+          {trashedPrograms.length === 0
+            ? 'No deleted custom programs.'
+            : 'Deleted custom programs are kept for 7 days, then removed for good.'}
+        </p>
+        <ul className="space-y-2">
+          {trashedPrograms.map((t) => (
+            <li key={t.program.id} className="card flex items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-100">{t.program.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="chip" style={{ color: t.program.accent }}>
+                    {t.program.category}
+                  </span>
+                  <span className="chip">{t.program.level}</span>
+                  <span className="text-[11px] font-medium text-zinc-500">
+                    {trashTimeLeft(t.deletedAt, TRASH_TTL_MS)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => restoreTrashedProgram(t.program.id)}
+                  className="btn-ghost inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gold"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Restore
+                </button>
+                <button
+                  onClick={() => purgeTrashedProgram(t.program.id)}
+                  aria-label={`Delete ${t.program.name} permanently`}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:text-red-400"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
   return (
     <div className="animate-fade-in space-y-5">
       <div className="flex items-end justify-between gap-3">
@@ -134,6 +191,15 @@ export function Programs() {
           {managing && hiddenCount > 0 && (
             <button onClick={() => setShowHidden(true)} className="btn-ghost px-3 py-2 text-sm">
               Hidden ({hiddenCount})
+            </button>
+          )}
+          {managing && trashedPrograms.length > 0 && (
+            <button
+              onClick={() => setShowTrash(true)}
+              aria-label={`Trash (${trashedPrograms.length})`}
+              className="btn-ghost inline-flex items-center gap-1.5 px-3 py-2 text-sm"
+            >
+              <Trash2 className="h-4 w-4" /> {trashedPrograms.length}
             </button>
           )}
           <Link to="/programs/exercises" aria-label="Exercises" className="btn-ghost px-3 py-2 text-sm">

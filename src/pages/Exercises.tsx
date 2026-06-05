@@ -16,11 +16,11 @@ import {
   X,
 } from 'lucide-react'
 import { EXERCISES } from '../data/exercises'
-import { useStore } from '../store'
+import { useStore, TRASH_TTL_MS } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertExercise } from '../api'
 import type { Difficulty, Equipment, Exercise, Muscle } from '../types'
-import { cn, uid } from '../lib/utils'
+import { cn, uid, trashTimeLeft } from '../lib/utils'
 
 const MUSCLES: Array<Muscle | 'All'> = [
   'All',
@@ -103,12 +103,16 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [managing, setManaging] = useState(false)
   const [showHidden, setShowHidden] = useState(false)
+  const [showTrash, setShowTrash] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
   const hiddenExerciseIds = useStore((s) => s.hiddenExerciseIds)
+  const trashedExercises = useStore((s) => s.trashedExercises)
   const deleteExercise = useStore((s) => s.deleteExercise)
   const restoreExercise = useStore((s) => s.restoreExercise)
+  const restoreTrashedExercise = useStore((s) => s.restoreTrashedExercise)
+  const purgeTrashedExercise = useStore((s) => s.purgeTrashedExercise)
 
   // Custom exercises first, then the built-in library (with per-user edits
   // applied and hidden ones removed).
@@ -139,6 +143,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
     setManaging((m) => !m)
     setConfirmId(null)
     setShowHidden(false)
+    setShowTrash(false)
   }
 
   const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
@@ -193,6 +198,58 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
     )
   }
 
+  if (showTrash) {
+    return (
+      <div className="animate-fade-in space-y-5">
+        <button
+          onClick={() => setShowTrash(false)}
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+        <h1 className="heading text-3xl font-bold text-zinc-50">Trash</h1>
+        <p className="text-xs text-zinc-500">
+          {trashedExercises.length === 0
+            ? 'No deleted custom exercises.'
+            : 'Deleted custom exercises are kept for 7 days, then removed for good.'}
+        </p>
+        <ul className="space-y-2">
+          {trashedExercises.map((t) => (
+            <li key={t.exercise.id} className="card flex items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-100">{t.exercise.name}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="chip" style={{ color: 'rgb(var(--accent-400))' }}>
+                    {t.exercise.primaryMuscle}
+                  </span>
+                  <span className="chip">{t.exercise.equipment}</span>
+                  <span className="text-[11px] font-medium text-zinc-500">
+                    {trashTimeLeft(t.deletedAt, TRASH_TTL_MS)}
+                  </span>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  onClick={() => restoreTrashedExercise(t.exercise.id)}
+                  className="btn-ghost inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gold"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" /> Restore
+                </button>
+                <button
+                  onClick={() => purgeTrashedExercise(t.exercise.id)}
+                  aria-label={`Delete ${t.exercise.name} permanently`}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-zinc-400 hover:text-red-400"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
+
   return (
     <div className="animate-fade-in space-y-5">
       {showBack && (
@@ -214,6 +271,15 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
               className="btn-ghost px-3 py-2 text-sm"
             >
               Hidden ({hiddenExerciseIds.length})
+            </button>
+          )}
+          {managing && trashedExercises.length > 0 && (
+            <button
+              onClick={() => setShowTrash(true)}
+              aria-label={`Trash (${trashedExercises.length})`}
+              className="btn-ghost inline-flex items-center gap-1.5 px-3 py-2 text-sm"
+            >
+              <Trash2 className="h-4 w-4" /> {trashedExercises.length}
             </button>
           )}
           <button

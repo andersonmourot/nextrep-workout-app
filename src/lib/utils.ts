@@ -100,10 +100,9 @@ export function totalVolume(logs: WorkoutLog[]): number {
 export function trashTimeLeft(deletedAt: number, ttlMs: number): string {
   const remaining = deletedAt + ttlMs - Date.now()
   if (remaining <= 0) return 'Deleting soon'
-  const days = Math.floor(remaining / (24 * 60 * 60 * 1000))
-  if (days >= 1) return `${days} day${days === 1 ? '' : 's'} left`
-  const hours = Math.max(1, Math.floor(remaining / (60 * 60 * 1000)))
-  return `${hours} hour${hours === 1 ? '' : 's'} left`
+  // Round up so an item deleted moments ago reads "7 days left", not "6".
+  const days = Math.ceil(remaining / (24 * 60 * 60 * 1000))
+  return `${days} day${days === 1 ? '' : 's'} left`
 }
 
 export function greeting(): string {

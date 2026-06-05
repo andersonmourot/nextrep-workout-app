@@ -217,7 +217,7 @@ function Stopwatch() {
     <div className="card flex flex-col items-center gap-6 p-6">
       <span className="heading text-6xl font-bold tabular-nums text-zinc-50">
         {m}:{s.toString().padStart(2, '0')}
-        <span className="text-3xl text-zinc-400">.{hundredths.toString().padStart(2, '0')}</span>
+        <span className="text-zinc-400">.{hundredths.toString().padStart(2, '0')}</span>
       </span>
       <div className="flex w-full gap-2">
         <button onClick={() => setRunning((r) => !r)} className="btn-gold flex-1 py-3">

@@ -98,12 +98,13 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [managing, setManaging] = useState(false)
+  const [showDeleted, setShowDeleted] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
   const hiddenExerciseIds = useStore((s) => s.hiddenExerciseIds)
   const deleteExercise = useStore((s) => s.deleteExercise)
-  const restoreExercises = useStore((s) => s.restoreExercises)
+  const restoreExercise = useStore((s) => s.restoreExercise)
 
   // Custom exercises first, then the built-in library (with per-user edits
   // applied and hidden ones removed).
@@ -133,9 +134,60 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   function toggleManaging() {
     setManaging((m) => !m)
     setConfirmId(null)
+    setShowDeleted(false)
   }
 
   const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
+
+  // Default exercises the user has deleted (moved to the hidden "Deleted" list).
+  const deletedList = useMemo(
+    () =>
+      EXERCISES.filter((e) => hiddenExerciseIds.includes(e.id))
+        .map((e) => overrides[e.id] ?? e)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [hiddenExerciseIds, overrides],
+  )
+
+  if (showDeleted) {
+    return (
+      <div className="animate-fade-in space-y-5">
+        <button
+          onClick={() => setShowDeleted(false)}
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to exercises
+        </button>
+        <h1 className="heading text-3xl font-bold text-zinc-50">Deleted exercises</h1>
+        <p className="text-xs text-zinc-500">
+          {deletedList.length === 0
+            ? 'No deleted exercises.'
+            : 'Restore an exercise to return it to the main list.'}
+        </p>
+        <ul className="space-y-2">
+          {deletedList.map((e) => (
+            <li key={e.id} className="card flex items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-zinc-100">{e.name}</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <span className="chip" style={{ color: 'rgb(var(--accent-400))' }}>
+                    {e.primaryMuscle}
+                  </span>
+                  <span className="chip">{e.equipment}</span>
+                  <span className="chip">{e.difficulty}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => restoreExercise(e.id)}
+                className="btn-ghost inline-flex shrink-0 items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gold"
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Restore
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -152,6 +204,14 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
           <h1 className="heading text-3xl font-bold text-zinc-50">Exercises</h1>
         </div>
         <div className="flex shrink-0 gap-2">
+          {managing && (
+            <button
+              onClick={() => setShowDeleted(true)}
+              className="btn-ghost px-3 py-2 text-sm"
+            >
+              Deleted{hiddenExerciseIds.length > 0 ? ` (${hiddenExerciseIds.length})` : ''}
+            </button>
+          )}
           <button
             onClick={toggleManaging}
             aria-label={managing ? 'Done managing' : 'Manage exercises'}
@@ -196,16 +256,6 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
         ))}
       </div>
 
-      {managing && hiddenExerciseIds.length > 0 && (
-        <button
-          onClick={restoreExercises}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gold hover:text-gold-400"
-        >
-          <RotateCcw className="h-3.5 w-3.5" /> Restore {hiddenExerciseIds.length} default exercise
-          {hiddenExerciseIds.length > 1 ? 's' : ''}
-        </button>
-      )}
-
       <p className="text-xs text-zinc-500">{list.length} exercises</p>
 
       <ul className="space-y-2">
@@ -217,7 +267,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                 to={`/exercises/${e.id}`}
                 className={cn(
                   'card flex items-center justify-between p-4 hover:border-white/10',
-                  managing ? 'pr-12' : 'pr-10',
+                  managing ? 'pr-24' : 'pr-10',
                 )}
               >
                 <div className="min-w-0">
@@ -240,16 +290,6 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                 {!managing && <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />}
               </Link>
 
-              {!managing && (
-                <button
-                  onClick={() => setEditing(e)}
-                  aria-label={`Edit ${e.name}`}
-                  className="absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-gold"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-              )}
-
               {managing &&
                 (confirmId === e.id ? (
                   <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1.5 rounded-lg border border-white/10 bg-ink-800 px-2 py-1.5 shadow-lg">
@@ -270,13 +310,22 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => setConfirmId(e.id)}
-                    aria-label={`Delete ${e.name}`}
-                    className="absolute right-2 top-1/2 z-10 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-red-400"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="absolute right-2 top-1/2 z-10 flex -translate-y-1/2 items-center gap-1.5">
+                    <button
+                      onClick={() => setEditing(e)}
+                      aria-label={`Edit ${e.name}`}
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-gold"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(e.id)}
+                      aria-label={`Delete ${e.name}`}
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-red-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
             </li>
           )

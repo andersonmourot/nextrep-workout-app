@@ -73,6 +73,7 @@ interface AppState {
   removeCustomExercise: (id: string) => void
   deleteExercise: (id: string) => void
   setExerciseOverride: (exercise: Exercise) => void
+  restoreExercise: (id: string) => void
   restoreExercises: () => void
   restorePrograms: () => void
   addSavedTimer: (timer: SavedTimer) => void
@@ -139,6 +140,8 @@ export const useStore = create<AppState>()(
           setExerciseOverrides(next)
           return { exerciseOverrides: next }
         }),
+      restoreExercise: (id) =>
+        set((s) => ({ hiddenExerciseIds: s.hiddenExerciseIds.filter((x) => x !== id) })),
       restoreExercises: () => set({ hiddenExerciseIds: [] }),
       deleteProgram: (id) =>
         set((s) => {

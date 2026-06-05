@@ -1,7 +1,18 @@
 import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronRight, Plus, RotateCcw, Search, Settings2, Trash2, X } from 'lucide-react'
+import {
+  ArrowLeft,
+  ChevronRight,
+  ImagePlus,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Search,
+  Settings2,
+  Trash2,
+  X,
+} from 'lucide-react'
 import { EXERCISES } from '../data/exercises'
 import { useStore } from '../store'
 import type { Difficulty, Equipment, Exercise, Muscle } from '../types'
@@ -49,21 +60,59 @@ const EQUIPMENT: Equipment[] = [
 
 const DIFFICULTIES: Difficulty[] = ['Beginner', 'Intermediate', 'Advanced']
 
+const DEFAULT_IDS = new Set(EXERCISES.map((e) => e.id))
+
+/** Read an image file and return a downscaled JPEG data URL to keep payloads small. */
+function downscaleImage(file: File, maxDim = 800, quality = 0.7): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error('decode failed'))
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+        const w = Math.max(1, Math.round(img.width * scale))
+        const h = Math.max(1, Math.round(img.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return reject(new Error('no canvas context'))
+        ctx.drawImage(img, 0, 0, w, h)
+        resolve(canvas.toDataURL('image/jpeg', quality))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
 export function Exercises() {
+  return <ExercisesPage />
+}
+
+export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const [q, setQ] = useState('')
   const [muscle, setMuscle] = useState<Muscle | 'All'>('All')
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<Exercise | null>(null)
   const [managing, setManaging] = useState(false)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const customExercises = useStore((s) => s.customExercises)
+  const overrides = useStore((s) => s.exerciseOverrides)
   const hiddenExerciseIds = useStore((s) => s.hiddenExerciseIds)
   const deleteExercise = useStore((s) => s.deleteExercise)
   const restoreExercises = useStore((s) => s.restoreExercises)
 
-  // Custom exercises first, then the built-in library (minus hidden ones).
+  // Custom exercises first, then the built-in library (with per-user edits
+  // applied and hidden ones removed).
   const all = useMemo(
-    () => [...customExercises, ...EXERCISES].filter((e) => !hiddenExerciseIds.includes(e.id)),
-    [customExercises, hiddenExerciseIds],
+    () =>
+      [...customExercises, ...EXERCISES.map((e) => overrides[e.id] ?? e)].filter(
+        (e) => !hiddenExerciseIds.includes(e.id),
+      ),
+    [customExercises, overrides, hiddenExerciseIds],
   )
 
   const list = useMemo(() => {
@@ -90,6 +139,14 @@ export function Exercises() {
 
   return (
     <div className="animate-fade-in space-y-5">
+      {showBack && (
+        <Link
+          to="/programs"
+          className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </Link>
+      )}
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="heading text-3xl font-bold text-zinc-50">Exercises</h1>
@@ -160,7 +217,7 @@ export function Exercises() {
                 to={`/exercises/${e.id}`}
                 className={cn(
                   'card flex items-center justify-between p-4 hover:border-white/10',
-                  managing && 'pr-12',
+                  managing ? 'pr-12' : 'pr-10',
                 )}
               >
                 <div className="min-w-0">
@@ -182,6 +239,16 @@ export function Exercises() {
                 </div>
                 {!managing && <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />}
               </Link>
+
+              {!managing && (
+                <button
+                  onClick={() => setEditing(e)}
+                  aria-label={`Edit ${e.name}`}
+                  className="absolute right-2 top-2 z-10 grid h-7 w-7 place-items-center rounded-lg bg-ink-900/80 text-zinc-400 backdrop-blur hover:text-gold"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
 
               {managing &&
                 (confirmId === e.id ? (
@@ -219,31 +286,56 @@ export function Exercises() {
         )}
       </ul>
 
-      {creating && <NewExerciseModal onClose={() => setCreating(false)} />}
+      {(creating || editing) && (
+        <ExerciseModal
+          editing={editing}
+          onClose={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function NewExerciseModal({ onClose }: { onClose: () => void }) {
+function ExerciseModal({ editing, onClose }: { editing: Exercise | null; onClose: () => void }) {
   const addCustomExercise = useStore((s) => s.addCustomExercise)
-  const [name, setName] = useState('')
-  const [primaryMuscle, setPrimaryMuscle] = useState<Muscle>('Chest')
-  const [secondary, setSecondary] = useState<Muscle[]>([])
-  const [equipment, setEquipment] = useState<Equipment>('Barbell')
-  const [difficulty, setDifficulty] = useState<Difficulty>('Beginner')
-  const [tempo, setTempo] = useState('2-0-1-0')
-  const [instructions, setInstructions] = useState('')
-  const [tips, setTips] = useState('')
+  const setExerciseOverride = useStore((s) => s.setExerciseOverride)
+  const isEdit = !!editing
+  const isDefault = !!editing && DEFAULT_IDS.has(editing.id)
+
+  const [name, setName] = useState(editing?.name ?? '')
+  const [primaryMuscle, setPrimaryMuscle] = useState<Muscle>(editing?.primaryMuscle ?? 'Chest')
+  const [secondary, setSecondary] = useState<Muscle[]>(editing?.secondaryMuscles ?? [])
+  const [equipment, setEquipment] = useState<Equipment>(editing?.equipment ?? 'Barbell')
+  const [difficulty, setDifficulty] = useState<Difficulty>(editing?.difficulty ?? 'Beginner')
+  const [tempo, setTempo] = useState(editing?.tempo ?? '2-0-1-0')
+  const [instructions, setInstructions] = useState((editing?.instructions ?? []).join('\n'))
+  const [tips, setTips] = useState((editing?.tips ?? []).join('\n'))
+  const [photos, setPhotos] = useState<string[]>(editing?.photos ?? [])
   const [error, setError] = useState('')
 
   function toggleSecondary(m: Muscle) {
     setSecondary((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]))
   }
 
+  async function onPickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      const dataUrl = await downscaleImage(file)
+      setPhotos((p) => [...p, dataUrl].slice(0, 2))
+    } catch {
+      setError('Could not load that image.')
+    }
+  }
+
   function save() {
     if (!name.trim()) return setError('Give the exercise a name.')
     const exercise: Exercise = {
-      id: `custom-ex-${uid()}`,
+      id: editing?.id ?? `custom-ex-${uid()}`,
       name: name.trim(),
       primaryMuscle,
       secondaryMuscles: secondary.filter((m) => m !== primaryMuscle),
@@ -258,8 +350,10 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean),
+      photos: photos.length ? photos : undefined,
     }
-    addCustomExercise(exercise)
+    if (isDefault) setExerciseOverride(exercise)
+    else addCustomExercise(exercise)
     onClose()
   }
 
@@ -267,7 +361,9 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-0 py-6 sm:items-center sm:p-4">
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-ink-900 p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="heading text-xl font-bold text-zinc-50">New Exercise</h2>
+          <h2 className="heading text-xl font-bold text-zinc-50">
+            {isEdit ? 'Edit Exercise' : 'New Exercise'}
+          </h2>
           <button onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-200">
             <X className="h-4 w-4" />
           </button>
@@ -354,6 +450,30 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
             />
           </Field>
 
+          <Field label="Photos (up to 2)">
+            <div className="flex flex-wrap gap-3">
+              {photos.map((src, i) => (
+                <div key={i} className="relative h-24 w-24 overflow-hidden rounded-lg border border-white/10">
+                  <img src={src} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos((p) => p.filter((_, j) => j !== i))}
+                    aria-label="Remove photo"
+                    className="absolute right-1 top-1 grid h-6 w-6 place-items-center rounded-full bg-black/60 text-white hover:bg-black/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < 2 && (
+                <label className="grid h-24 w-24 cursor-pointer place-items-center rounded-lg border border-dashed border-white/20 text-zinc-400 hover:border-white/40 hover:text-zinc-200">
+                  <ImagePlus className="h-6 w-6" />
+                  <input type="file" accept="image/*" className="hidden" onChange={onPickPhoto} />
+                </label>
+              )}
+            </div>
+          </Field>
+
           {error && <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p>}
 
           <div className="flex gap-2 pt-1">
@@ -361,7 +481,7 @@ function NewExerciseModal({ onClose }: { onClose: () => void }) {
               Cancel
             </button>
             <button onClick={save} className="btn-gold flex-1">
-              Create Exercise
+              {isEdit ? 'Save Changes' : 'Create Exercise'}
             </button>
           </div>
         </div>

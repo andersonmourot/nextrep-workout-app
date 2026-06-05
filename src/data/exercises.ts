@@ -462,17 +462,30 @@ export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(
 // lookups below (used app-wide) can resolve them without prop-drilling.
 let CUSTOM_EXERCISES: Exercise[] = []
 
+// Per-user edits to built-in exercises, keyed by exercise id. An override
+// fully replaces the built-in definition while the original stays intact.
+let OVERRIDES: Record<string, Exercise> = {}
+
 export function setCustomExercises(list: Exercise[]): void {
   CUSTOM_EXERCISES = Array.isArray(list) ? list : []
 }
 
+export function setExerciseOverrides(map: Record<string, Exercise>): void {
+  OVERRIDES = map && typeof map === 'object' ? map : {}
+}
+
+/** Built-in library with any per-user overrides applied. */
+function builtinsWithOverrides(): Exercise[] {
+  return EXERCISES.map((e) => OVERRIDES[e.id] ?? e)
+}
+
 /** All exercises available to the current user: custom first, then built-ins. */
 export function allExercises(): Exercise[] {
-  return [...CUSTOM_EXERCISES, ...EXERCISES]
+  return [...CUSTOM_EXERCISES, ...builtinsWithOverrides()]
 }
 
 export function getExercise(id: string): Exercise | undefined {
-  return CUSTOM_EXERCISES.find((e) => e.id === id) ?? EXERCISE_MAP[id]
+  return CUSTOM_EXERCISES.find((e) => e.id === id) ?? OVERRIDES[id] ?? EXERCISE_MAP[id]
 }
 
 /** Find an exercise (custom or built-in) by its display name (case-insensitive). */
@@ -481,7 +494,7 @@ export function findExerciseByName(name: string): Exercise | undefined {
   if (!q) return undefined
   return (
     CUSTOM_EXERCISES.find((e) => e.name.toLowerCase() === q) ??
-    EXERCISES.find((e) => e.name.toLowerCase() === q)
+    builtinsWithOverrides().find((e) => e.name.toLowerCase() === q)
   )
 }
 

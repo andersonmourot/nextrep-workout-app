@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Pause, Play, RotateCcw } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore } from '../store'
 import { cn, uid } from '../lib/utils'
@@ -94,7 +94,6 @@ function Countdown() {
 
   const savedTimers = useStore((s) => s.savedTimers)
   const addSavedTimer = useStore((s) => s.addSavedTimer)
-  const removeSavedTimer = useStore((s) => s.removeSavedTimer)
 
   useEffect(() => {
     if (!running) return
@@ -113,27 +112,15 @@ function Countdown() {
     return () => window.clearInterval(t)
   }, [running])
 
-  function setDuration(seconds: number) {
-    const v = Math.max(1, Math.round(seconds))
-    setRunning(false)
-    setDone(false)
+  function start() {
+    const secs = parseTime(input) ?? total
+    const v = Math.max(1, Math.round(secs || 0))
+    if (!v) return
     setTotal(v)
     setRemaining(v)
-  }
-
-  function applyInput() {
-    const secs = parseTime(input)
-    if (secs && secs > 0) setDuration(secs)
-  }
-
-  function toggle() {
-    if (done || remaining === 0) {
-      setRemaining(total)
-      setDone(false)
-      setRunning(true)
-      return
-    }
-    setRunning((r) => !r)
+    setDone(false)
+    setRunning(true)
+    addSavedTimer({ id: uid(), label: fmt(v), seconds: v })
   }
 
   function reset() {
@@ -142,11 +129,14 @@ function Countdown() {
     setRemaining(total)
   }
 
-  function save() {
-    addSavedTimer({ id: uid(), label: fmt(total), seconds: total })
+  function loadRecent(seconds: number) {
+    const v = Math.max(1, Math.round(seconds))
+    setRunning(false)
+    setDone(false)
+    setTotal(v)
+    setRemaining(v)
+    setInput(fmt(v))
   }
-
-  const alreadySaved = savedTimers.some((t) => t.seconds === total)
 
   return (
     <div className="space-y-4">
@@ -169,39 +159,17 @@ function Countdown() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') applyInput()
+              if (e.key === 'Enter') start()
             }}
             placeholder="Set time (mm:ss or seconds)"
             inputMode="numeric"
             className="input"
           />
-          <button onClick={applyInput} className="btn-ghost shrink-0 px-3 py-2.5 text-sm font-semibold">
-            Set
-          </button>
-        </div>
-
-        <div className="flex w-full gap-2">
-          <button onClick={toggle} className="btn-gold flex-1 py-3">
-            {running ? (
-              <span className="inline-flex items-center gap-2">
-                <Pause className="h-4 w-4" /> Pause
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-2">
-                <Play className="h-4 w-4" /> {remaining === total && !done ? 'Start' : 'Resume'}
-              </span>
-            )}
-          </button>
-          <button onClick={reset} className="btn-ghost px-4 py-3" aria-label="Reset">
-            <RotateCcw className="h-4 w-4" />
-          </button>
           <button
-            onClick={save}
-            disabled={alreadySaved}
-            className="btn-ghost px-4 py-3 disabled:opacity-40"
-            aria-label="Save this timer"
+            onClick={running ? reset : start}
+            className="btn-gold shrink-0 px-6 py-2.5 text-sm font-semibold"
           >
-            <Plus className="h-4 w-4" />
+            {running ? 'Reset' : 'Start'}
           </button>
         </div>
       </div>
@@ -209,26 +177,18 @@ function Countdown() {
       {savedTimers.length > 0 && (
         <div className="space-y-2">
           <h2 className="heading text-sm font-bold uppercase tracking-wider text-zinc-400">
-            Saved timers
+            Recent timers
           </h2>
           <div className="space-y-2">
             {savedTimers.map((t) => (
-              <div key={t.id} className="card flex items-center justify-between gap-3 p-3">
-                <button
-                  onClick={() => setDuration(t.seconds)}
-                  className="flex flex-1 items-center gap-2 text-left"
-                >
-                  <Play className="h-4 w-4 text-gold" />
-                  <span className="font-semibold tabular-nums text-zinc-100">{t.label}</span>
-                </button>
-                <button
-                  onClick={() => removeSavedTimer(t.id)}
-                  className="shrink-0 rounded-lg p-2 text-zinc-500 transition hover:text-red-400"
-                  aria-label="Delete saved timer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
+              <button
+                key={t.id}
+                onClick={() => loadRecent(t.seconds)}
+                className="card flex w-full items-center gap-2 p-3 text-left hover:border-white/10"
+              >
+                <Play className="h-4 w-4 text-gold" />
+                <span className="font-semibold tabular-nums text-zinc-100">{t.label}</span>
+              </button>
             ))}
           </div>
         </div>
@@ -286,11 +246,15 @@ function Stopwatch() {
   )
 }
 
-function Interval() {
-  const [work, setWork] = useState(30)
-  const [rest, setRest] = useState(15)
-  const [rounds, setRounds] = useState(8)
+const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'For Time', 'TABATA'] as const
+type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
+function Interval() {
+  const work = 30
+  const rest = 15
+  const rounds = 8
+
+  const [format, setFormat] = useState<IntervalFormat | null>(null)
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
   const [phase, setPhase] = useState<'work' | 'rest'>('work')
@@ -408,37 +372,22 @@ function Interval() {
         </div>
       </div>
 
-      <div className="card grid grid-cols-3 gap-3 p-4">
-        <NumField label="Work (s)" value={work} onChange={setWork} />
-        <NumField label="Rest (s)" value={rest} onChange={setRest} />
-        <NumField label="Rounds" value={rounds} onChange={setRounds} />
+      <div className="card space-y-2 p-4">
+        {INTERVAL_FORMATS.map((f) => (
+          <button
+            key={f}
+            onClick={() => setFormat(f)}
+            className={cn(
+              'w-full rounded-xl border py-3 text-sm font-semibold transition',
+              format === f
+                ? 'border-gold bg-gold text-white'
+                : 'border-white/10 bg-ink-900 text-zinc-300 hover:border-white/20',
+            )}
+          >
+            {f}
+          </button>
+        ))}
       </div>
     </div>
-  )
-}
-
-function NumField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: number
-  onChange: (n: number) => void
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-center text-xs font-medium text-zinc-400">{label}</span>
-      <input
-        type="text"
-        inputMode="numeric"
-        value={value}
-        onChange={(e) => {
-          const n = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10)
-          onChange(Number.isNaN(n) ? 0 : n)
-        }}
-        className="input text-center"
-      />
-    </label>
   )
 }

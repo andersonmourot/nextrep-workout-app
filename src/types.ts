@@ -42,6 +42,8 @@ export interface Exercise {
   tempo: string
   instructions: string[]
   tips: string[]
+  /** Up to two reference photos (data URLs) shown on the exercise page. */
+  photos?: string[]
 }
 
 export interface PlannedExercise {

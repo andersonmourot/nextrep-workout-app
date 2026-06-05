@@ -1,11 +1,19 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Lightbulb, Timer } from 'lucide-react'
-import { getExercise } from '../data/exercises'
+import { EXERCISE_MAP } from '../data/exercises'
+import { useStore } from '../store'
 
 export function ExerciseDetail() {
   const { exerciseId } = useParams()
   const navigate = useNavigate()
-  const ex = exerciseId ? getExercise(exerciseId) : undefined
+  // Read store slices so the page re-renders after an edit/override.
+  const customExercises = useStore((s) => s.customExercises)
+  const overrides = useStore((s) => s.exerciseOverrides)
+  const ex = exerciseId
+    ? customExercises.find((e) => e.id === exerciseId) ??
+      overrides[exerciseId] ??
+      EXERCISE_MAP[exerciseId]
+    : undefined
 
   if (!ex) {
     return (
@@ -17,6 +25,8 @@ export function ExerciseDetail() {
       </div>
     )
   }
+
+  const photos = ex.photos ?? []
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -53,42 +63,66 @@ export function ExerciseDetail() {
         </div>
       </div>
 
-      <div className="card flex items-center justify-between p-4">
-        <div className="flex items-center gap-2 text-sm text-zinc-300">
-          <Timer className="h-4 w-4 text-gold" /> Recommended tempo
+      {ex.tempo.trim() && (
+        <div className="card flex items-center justify-between p-4">
+          <div className="flex items-center gap-2 text-sm text-zinc-300">
+            <Timer className="h-4 w-4 text-gold" /> Recommended tempo
+          </div>
+          <span className="heading text-lg font-bold text-zinc-50">{ex.tempo}</span>
         </div>
-        <span className="heading text-lg font-bold text-zinc-50">{ex.tempo}</span>
-      </div>
+      )}
 
-      <section>
-        <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
-          How to perform
-        </h2>
-        <ol className="card divide-y divide-white/5 p-0">
-          {ex.instructions.map((step, i) => (
-            <li key={i} className="flex gap-3 p-4">
-              <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-bold text-white">
-                {i + 1}
-              </span>
-              <p className="text-sm text-zinc-300">{step}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {ex.instructions.length > 0 && (
+        <section>
+          <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
+            How to perform
+          </h2>
+          <ol className="card divide-y divide-white/5 p-0">
+            {ex.instructions.map((step, i) => (
+              <li key={i} className="flex gap-3 p-4">
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-gold text-xs font-bold text-white">
+                  {i + 1}
+                </span>
+                <p className="text-sm text-zinc-300">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
-      <section>
-        <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
-          Coaching cues
-        </h2>
-        <ul className="space-y-2">
-          {ex.tips.map((tip, i) => (
-            <li key={i} className="card flex items-start gap-3 p-4">
-              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-              <p className="text-sm text-zinc-300">{tip}</p>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {ex.tips.length > 0 && (
+        <section>
+          <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
+            Coaching cues
+          </h2>
+          <ul className="space-y-2">
+            {ex.tips.map((tip, i) => (
+              <li key={i} className="card flex items-start gap-3 p-4">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                <p className="text-sm text-zinc-300">{tip}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {photos.length > 0 && (
+        <section>
+          <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
+            Photos
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            {photos.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                alt={`${ex.name} ${i + 1}`}
+                className="aspect-square w-full rounded-xl border border-white/10 object-cover"
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

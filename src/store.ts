@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { BodyWeightEntry, Exercise, Program, Unit, WorkoutLog } from './types'
 import { PROGRAMS, getProgram } from './data/programs'
-import { setCustomExercises } from './data/exercises'
+import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
@@ -25,6 +25,7 @@ const DEFAULTS = {
   customExercises: [] as Exercise[],
   hiddenProgramIds: [] as string[],
   hiddenExerciseIds: [] as string[],
+  exerciseOverrides: {} as Record<string, Exercise>,
   savedTimers: [] as SavedTimer[],
 }
 
@@ -52,6 +53,7 @@ interface AppState {
   customExercises: Exercise[]
   hiddenProgramIds: string[]
   hiddenExerciseIds: string[]
+  exerciseOverrides: Record<string, Exercise>
   savedTimers: SavedTimer[]
 
   setName: (name: string) => void
@@ -70,6 +72,7 @@ interface AppState {
   addCustomExercise: (exercise: Exercise) => void
   removeCustomExercise: (id: string) => void
   deleteExercise: (id: string) => void
+  setExerciseOverride: (exercise: Exercise) => void
   restoreExercises: () => void
   restorePrograms: () => void
   addSavedTimer: (timer: SavedTimer) => void
@@ -130,6 +133,12 @@ export const useStore = create<AppState>()(
               : Array.from(new Set([...s.hiddenExerciseIds, id])),
           }
         }),
+      setExerciseOverride: (exercise) =>
+        set((s) => {
+          const next = { ...s.exerciseOverrides, [exercise.id]: exercise }
+          setExerciseOverrides(next)
+          return { exerciseOverrides: next }
+        }),
       restoreExercises: () => set({ hiddenExerciseIds: [] }),
       deleteProgram: (id) =>
         set((s) => {
@@ -145,15 +154,18 @@ export const useStore = create<AppState>()(
       restorePrograms: () => set({ hiddenProgramIds: [] }),
       addSavedTimer: (timer) =>
         set((s) => ({
+          // Keep the five most recent, newest first; replace the oldest as new
+          // ones come in and de-duplicate by duration.
           savedTimers: [
             timer,
             ...s.savedTimers.filter((t) => t.seconds !== timer.seconds),
-          ].sort((a, b) => a.seconds - b.seconds),
+          ].slice(0, 5),
         })),
       removeSavedTimer: (id) =>
         set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
       resetAll: () => {
         setCustomExercises([])
+        setExerciseOverrides({})
         set({
           activeProgramId: null,
           logs: [],
@@ -162,6 +174,7 @@ export const useStore = create<AppState>()(
           customExercises: [],
           hiddenProgramIds: [],
           hiddenExerciseIds: [],
+          exerciseOverrides: {},
           savedTimers: [],
         })
       },
@@ -184,6 +197,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     customExercises: s.customExercises,
     hiddenProgramIds: s.hiddenProgramIds,
     hiddenExerciseIds: s.hiddenExerciseIds,
+    exerciseOverrides: s.exerciseOverrides,
     savedTimers: s.savedTimers,
   }
 }
@@ -208,6 +222,7 @@ function applyState(next: typeof DEFAULTS): void {
   try {
     useStore.setState(next)
     setCustomExercises(next.customExercises ?? [])
+    setExerciseOverrides(next.exerciseOverrides ?? {})
   } finally {
     applyingRemote = false
   }

@@ -41,7 +41,7 @@ export function ProgramHistory() {
       <div>
         <h1 className="heading text-3xl font-bold text-zinc-50">Program History</h1>
         <p className="mt-1 text-sm text-zinc-400">
-          Completed programs are saved here with every day's logged data.
+          Completed programs are saved here.
         </p>
       </div>
 

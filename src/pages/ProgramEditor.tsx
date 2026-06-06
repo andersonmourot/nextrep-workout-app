@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, GripVertical, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ChevronRight, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { findExerciseByName, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
@@ -54,6 +54,11 @@ export function ProgramEditor() {
   const [tags, setTags] = useState((existing?.tags ?? []).join(', '))
   const [collaborative, setCollaborative] = useState(existing?.collaborative ?? false)
   const [days, setDays] = useState<ProgramDay[]>(existing?.days ?? [blankDay(1)])
+  const [overrides, setOverrides] = useState<
+    Record<string, { fromWeek: number; day: ProgramDay }[]>
+  >(existing?.weekOverrides ?? {})
+  const [week, setWeek] = useState(1)
+  const [applyConfirm, setApplyConfirm] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -63,8 +68,52 @@ export function ProgramEditor() {
   // (legacy), or one you created. Only the owner may toggle collaboration.
   const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
 
+  const totalWeeks = Math.max(1, durationWeeks || 1)
+  useEffect(() => {
+    if (week > totalWeeks) setWeek(totalWeeks)
+  }, [week, totalWeeks])
+
+  // The day plans shown for the selected week: Week 1 is the base plan; later
+  // weeks apply any per-week-onward override for that day (falling back to base).
+  const viewDays = useMemo(
+    () =>
+      days.map((base) => {
+        const list = overrides[base.id]
+        if (!list || list.length === 0) return base
+        let chosen: ProgramDay | undefined
+        let best = 0
+        for (const o of list) {
+          if (o.fromWeek <= week && o.fromWeek > best) {
+            best = o.fromWeek
+            chosen = o.day
+          }
+        }
+        return chosen ?? base
+      }),
+    [days, overrides, week],
+  )
+
+  // Persist an edited day for the selected week. Week 1 rewrites the base plan;
+  // later weeks store a per-week-onward override keyed by the base day id.
+  function commitDay(dayIdx: number, day: ProgramDay) {
+    if (week <= 1) {
+      setDays((prev) => prev.map((d, i) => (i === dayIdx ? day : d)))
+      return
+    }
+    const baseId = days[dayIdx].id
+    const normalized: ProgramDay = { ...day, id: baseId }
+    setOverrides((prev) => {
+      const next = { ...prev }
+      const list = (next[baseId] ?? []).filter((o) => o.fromWeek !== week)
+      list.push({ fromWeek: week, day: normalized })
+      list.sort((a, b) => a.fromWeek - b.fromWeek)
+      next[baseId] = list
+      return next
+    })
+  }
+
   function updateDay(dayIdx: number, patch: Partial<ProgramDay>) {
-    setDays((prev) => prev.map((d, i) => (i === dayIdx ? { ...d, ...patch } : d)))
+    commitDay(dayIdx, { ...viewDays[dayIdx], ...patch })
   }
 
   function setExerciseName(dayIdx: number, exIdx: number, typed: string, prev: PlannedExercise) {
@@ -78,35 +127,46 @@ export function ProgramEditor() {
   }
 
   function updateExercise(dayIdx: number, exIdx: number, patch: Partial<PlannedExercise>) {
-    setDays((prev) =>
-      prev.map((d, i) =>
-        i === dayIdx
-          ? { ...d, exercises: d.exercises.map((e, j) => (j === exIdx ? { ...e, ...patch } : e)) }
-          : d,
-      ),
-    )
+    const d = viewDays[dayIdx]
+    commitDay(dayIdx, {
+      ...d,
+      exercises: d.exercises.map((e, j) => (j === exIdx ? { ...e, ...patch } : e)),
+    })
   }
 
   function addExercise(dayIdx: number) {
-    setDays((prev) =>
-      prev.map((d, i) => (i === dayIdx ? { ...d, exercises: [...d.exercises, blankExercise()] } : d)),
-    )
+    const d = viewDays[dayIdx]
+    commitDay(dayIdx, { ...d, exercises: [...d.exercises, blankExercise()] })
   }
 
   function removeExercise(dayIdx: number, exIdx: number) {
-    setDays((prev) =>
-      prev.map((d, i) =>
-        i === dayIdx ? { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) } : d,
-      ),
-    )
+    const d = viewDays[dayIdx]
+    commitDay(dayIdx, { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) })
   }
 
+  // Structural changes (number of training days) only apply to the base plan
+  // (Week 1) so every week keeps the same day slots.
   function addDay() {
     setDays((prev) => [...prev, blankDay(prev.length + 1)])
   }
 
   function removeDay(dayIdx: number) {
+    const id = days[dayIdx].id
     setDays((prev) => prev.filter((_, i) => i !== dayIdx))
+    setOverrides((prev) => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
+  // Copy the currently-viewed week's plan to every week: it becomes the new base
+  // and all per-week overrides are cleared, so all weeks match.
+  function applyToAllWeeks() {
+    setDays(viewDays.map((d) => ({ ...d, exercises: d.exercises.map((e) => ({ ...e })) })))
+    setOverrides({})
+    setApplyConfirm(false)
+    setWeek(1)
   }
 
   async function save() {
@@ -116,6 +176,14 @@ export function ProgramEditor() {
       if (d.exercises.length === 0) return setError(`"${d.name}" needs at least one exercise.`)
       const blank = d.exercises.find((e) => !e.name?.trim() && !getExercise(e.exerciseId))
       if (blank) return setError(`Name every exercise in "${d.name}".`)
+    }
+    for (const list of Object.values(overrides)) {
+      for (const o of list) {
+        if (o.day.exercises.length === 0)
+          return setError(`Week ${o.fromWeek}'s "${o.day.name}" needs at least one exercise.`)
+        const blank = o.day.exercises.find((e) => !e.name?.trim() && !getExercise(e.exerciseId))
+        if (blank) return setError(`Name every exercise in Week ${o.fromWeek}'s "${o.day.name}".`)
+      }
     }
 
     const program: Program = {
@@ -137,6 +205,7 @@ export function ProgramEditor() {
         .map((t) => t.trim())
         .filter(Boolean),
       days: days.map((d) => ({ ...d, name: d.name.trim() || 'Day', focus: d.focus.trim() })),
+      weekOverrides: Object.keys(overrides).length ? overrides : undefined,
       ownerId: existing?.ownerId ?? currentUserId,
       ownerName: existing?.ownerName ?? currentUserName ?? coach.trim() ?? 'You',
       // Owner controls the flag; collaborators keep the existing setting.
@@ -360,9 +429,67 @@ export function ProgramEditor() {
           <h2 className="heading text-sm font-semibold tracking-wider text-zinc-300">
             Training Days · {days.length}
           </h2>
+          {totalWeeks > 1 && (
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setWeek((w) => Math.max(1, w - 1))}
+                disabled={week <= 1}
+                aria-label="Previous week"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-ink-850 text-zinc-300 disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[5.5rem] text-center text-xs font-semibold text-zinc-200">
+                Week {week} / {totalWeeks}
+              </span>
+              <button
+                type="button"
+                onClick={() => setWeek((w) => Math.min(totalWeeks, w + 1))}
+                disabled={week >= totalWeeks}
+                aria-label="Next week"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-ink-850 text-zinc-300 disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {days.map((day, dayIdx) => (
+        {totalWeeks > 1 && (
+          <div className="rounded-xl border border-white/5 bg-ink-900 p-3">
+            <p className="text-xs text-zinc-400">
+              {week === 1
+                ? 'Editing Week 1 — the base plan. It applies to every week you haven’t edited individually.'
+                : `Editing Week ${week}. Changes apply from Week ${week} onward; earlier weeks keep their plan.`}
+            </p>
+            {applyConfirm ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className="text-xs text-zinc-300">Copy Week {week} to all weeks?</span>
+                <button type="button" onClick={applyToAllWeeks} className="btn-gold px-3 py-1.5 text-xs">
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApplyConfirm(false)}
+                  className="btn-ghost px-3 py-1.5 text-xs"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setApplyConfirm(true)}
+                className="btn-outline mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
+              >
+                <Copy className="h-3.5 w-3.5" /> Copy Week {week} to all weeks
+              </button>
+            )}
+          </div>
+        )}
+
+        {viewDays.map((day, dayIdx) => (
           <div key={day.id} className="card p-4">
             <div className="flex items-start gap-2">
               <GripVertical className="mt-2 h-4 w-4 shrink-0 text-zinc-600" />
@@ -382,7 +509,7 @@ export function ProgramEditor() {
               </div>
               <button
                 onClick={() => removeDay(dayIdx)}
-                disabled={days.length === 1}
+                disabled={days.length === 1 || week > 1}
                 className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-red-400 disabled:opacity-40"
                 aria-label="Remove day"
               >
@@ -444,9 +571,15 @@ export function ProgramEditor() {
           </div>
         ))}
 
-        <button onClick={addDay} className="btn-outline w-full border-dashed">
-          <Plus className="h-4 w-4" /> Add training day
-        </button>
+        {week === 1 ? (
+          <button onClick={addDay} className="btn-outline w-full border-dashed">
+            <Plus className="h-4 w-4" /> Add training day
+          </button>
+        ) : (
+          <p className="text-center text-xs text-zinc-500">
+            Switch to Week 1 to add or remove training days.
+          </p>
+        )}
       </section>
 
       {error && (

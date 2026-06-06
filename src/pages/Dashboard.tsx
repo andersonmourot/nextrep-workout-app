@@ -21,7 +21,8 @@ export function Dashboard() {
   const weekCount = workoutsThisWeek(logs)
   const run = program ? programRun(program, logs, programAnchors[program.id]) : undefined
   const dayIdx = run?.nextDayIndex ?? 0
-  const nextDay = program ? program.days[dayIdx] : undefined
+  const programComplete = !!run?.isComplete
+  const nextDay = program && !programComplete ? program.days[dayIdx] : undefined
   const weekTarget = program?.daysPerWeek ?? 4
   const recent = logs.slice(0, 3)
 
@@ -34,7 +35,41 @@ export function Dashboard() {
 
       {/* Today's workout — the whole card opens the program detail; the Start
           button stops propagation so it keeps its own action. */}
-      {program && nextDay ? (
+      {program && programComplete ? (
+        <section
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate(`/programs/${program.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              navigate(`/programs/${program.id}`)
+            }
+          }}
+          className="card cursor-pointer overflow-hidden text-left transition hover:border-white/10"
+        >
+          <div
+            className="px-5 pb-5 pt-4"
+            style={{ background: `linear-gradient(180deg, ${program.accent}1a, transparent 70%)` }}
+          >
+            <span className="label-eyebrow">{program.name}</span>
+            <h2 className="heading mt-2 text-2xl font-bold text-zinc-50">Program complete</h2>
+            <p className="mt-1 text-sm text-zinc-400">
+              You finished all {program.durationWeeks} weeks. Open it to save to History &amp; reset, or run it again.
+            </p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                navigate(`/programs/${program.id}`)
+              }}
+              className="btn-gold mt-4 w-full"
+            >
+              View Program
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </section>
+      ) : program && nextDay ? (
         <section
           role="button"
           tabIndex={0}

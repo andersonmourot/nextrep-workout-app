@@ -14,6 +14,7 @@ import {
   Settings2,
   Star,
   Trash2,
+  Wrench,
   X,
 } from 'lucide-react'
 import { useAllPrograms, useStore, TRASH_TTL_MS } from '../store'
@@ -274,26 +275,32 @@ export function Programs() {
                     </span>
                     {isCustom && (
                       <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        className="inline-flex items-center justify-center rounded-full p-1"
                         style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                        title="Custom"
+                        aria-label="Custom"
                       >
-                        Custom
+                        <Wrench className="h-3 w-3" />
                       </span>
                     )}
                     {isActive && (
                       <span
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        className="inline-flex items-center justify-center rounded-full p-1"
                         style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                        title="Active"
+                        aria-label="Active"
                       >
-                        <CheckCircle2 className="h-3 w-3" /> Active
+                        <CheckCircle2 className="h-3 w-3" />
                       </span>
                     )}
-                    {isFavorite && !isActive && (
+                    {isFavorite && (
                       <span
-                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        className="inline-flex items-center justify-center rounded-full p-1"
                         style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                        title="Favorite"
+                        aria-label="Favorite"
                       >
-                        <Star className="h-3 w-3 fill-current" /> Favorite
+                        <Star className="h-3 w-3 fill-current" />
                       </span>
                     )}
                   </div>

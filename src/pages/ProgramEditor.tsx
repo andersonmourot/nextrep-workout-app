@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ChevronLeft, ChevronRight, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
 import { findExerciseByName, getExercise } from '../data/exercises'
@@ -57,7 +57,7 @@ export function ProgramEditor() {
   const [overrides, setOverrides] = useState<
     Record<string, { fromWeek: number; day: ProgramDay }[]>
   >(existing?.weekOverrides ?? {})
-  const [week, setWeek] = useState(1)
+  const [weekRaw, setWeek] = useState(1)
   const [applyConfirm, setApplyConfirm] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -69,9 +69,9 @@ export function ProgramEditor() {
   const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
 
   const totalWeeks = Math.max(1, durationWeeks || 1)
-  useEffect(() => {
-    if (week > totalWeeks) setWeek(totalWeeks)
-  }, [week, totalWeeks])
+  // Clamp to the current program length: shrinking the Weeks field shouldn't
+  // leave you on a week that no longer exists.
+  const week = Math.min(Math.max(1, weekRaw), totalWeeks)
 
   // The day plans shown for the selected week: Week 1 is the base plan; later
   // weeks apply any per-week-onward override for that day (falling back to base).
@@ -429,8 +429,13 @@ export function ProgramEditor() {
           <h2 className="heading text-sm font-semibold tracking-wider text-zinc-300">
             Training Days · {days.length}
           </h2>
-          {totalWeeks > 1 && (
-            <div className="flex items-center gap-1">
+        </div>
+
+        {totalWeeks > 1 && (
+          <div className="rounded-xl border border-white/5 bg-ink-900 p-3 text-center">
+            {/* Stacked & centered: week stepper on top, info in the middle,
+                full-width copy button beneath. */}
+            <div className="flex items-center justify-center gap-2">
               <button
                 type="button"
                 onClick={() => setWeek((w) => Math.max(1, w - 1))}
@@ -440,7 +445,7 @@ export function ProgramEditor() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <span className="min-w-[5.5rem] text-center text-xs font-semibold text-zinc-200">
+              <span className="min-w-[6.5rem] text-center text-sm font-semibold text-zinc-200">
                 Week {week} / {totalWeeks}
               </span>
               <button
@@ -453,26 +458,26 @@ export function ProgramEditor() {
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-          )}
-        </div>
 
-        {totalWeeks > 1 && (
-          <div className="rounded-xl border border-white/5 bg-ink-900 p-3">
-            <p className="text-xs text-zinc-400">
+            <p className="mt-3 text-xs text-zinc-400">
               {week === 1
                 ? 'Editing Week 1 — the base plan. It applies to every week you haven’t edited individually.'
                 : `Editing Week ${week}. Changes apply from Week ${week} onward; earlier weeks keep their plan.`}
             </p>
+
             {applyConfirm ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="text-xs text-zinc-300">Copy Week {week} to all weeks?</span>
-                <button type="button" onClick={applyToAllWeeks} className="btn-gold px-3 py-1.5 text-xs">
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={applyToAllWeeks}
+                  className="btn-gold flex-1 justify-center px-3 py-2 text-xs"
+                >
                   Confirm
                 </button>
                 <button
                   type="button"
                   onClick={() => setApplyConfirm(false)}
-                  className="btn-ghost px-3 py-1.5 text-xs"
+                  className="btn-ghost flex-1 justify-center px-3 py-2 text-xs"
                 >
                   Cancel
                 </button>
@@ -481,7 +486,7 @@ export function ProgramEditor() {
               <button
                 type="button"
                 onClick={() => setApplyConfirm(true)}
-                className="btn-outline mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
+                className="btn-gold mt-3 inline-flex w-full items-center justify-center gap-1.5 px-3 py-2 text-xs"
               >
                 <Copy className="h-3.5 w-3.5" /> Copy Week {week} to all weeks
               </button>

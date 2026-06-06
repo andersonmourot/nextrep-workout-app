@@ -99,12 +99,14 @@ export interface ProgramRun {
   daysLen: number
   /** How many program days have been completed in this run. */
   completedCount: number
-  /** Total weeks to show (program length, or further if the user kept going). */
+  /** Total weeks in the program (its scheduled length — never grows past it). */
   totalWeeks: number
   /** 0-based week index containing the next day to complete. */
   currentWeekIndex: number
   /** 0-based day index (within the week) that is up next. */
   nextDayIndex: number
+  /** True once every scheduled day (totalWeeks × daysLen) has been logged. */
+  isComplete: boolean
 }
 
 /** Progress through a program derived from its completed workout logs. */
@@ -115,10 +117,17 @@ export function programRun(
 ): ProgramRun {
   const daysLen = Math.max(1, program.days.length)
   const completedCount = programLogsChrono(program, logs, since).length
-  const currentWeekIndex = Math.floor(completedCount / daysLen)
-  const nextDayIndex = completedCount % daysLen
-  const totalWeeks = Math.max(program.durationWeeks || 1, currentWeekIndex + 1)
-  return { daysLen, completedCount, totalWeeks, currentWeekIndex, nextDayIndex }
+  const totalWeeks = Math.max(1, program.durationWeeks || 1)
+  const totalDays = totalWeeks * daysLen
+  const isComplete = completedCount >= totalDays
+  // Cap progress at the program's scheduled length so a finished program shows
+  // as complete instead of continuing to spawn new weeks.
+  const capped = Math.min(completedCount, totalDays)
+  const currentWeekIndex = isComplete
+    ? totalWeeks - 1
+    : Math.floor(capped / daysLen)
+  const nextDayIndex = isComplete ? 0 : capped % daysLen
+  return { daysLen, completedCount, totalWeeks, currentWeekIndex, nextDayIndex, isComplete }
 }
 
 /**

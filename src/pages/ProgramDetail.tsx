@@ -42,6 +42,7 @@ export function ProgramDetail() {
   const currentUserName = useAuth((s) => s.user?.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmComplete, setConfirmComplete] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [showActions, setShowActions] = useState(false)
   // null = follow the current week automatically; a number = a week the user
@@ -180,6 +181,47 @@ export function ProgramDetail() {
             'Set as Active Program'
           )}
         </button>
+
+        {isActive && run?.isComplete && (
+          <div
+            className="mt-4 rounded-xl border p-3 text-center"
+            style={{ borderColor: `${program.accent}66`, background: `${program.accent}14` }}
+          >
+            <p className="text-sm font-semibold text-zinc-100">Program complete</p>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              You finished all {program.durationWeeks} weeks — it's saved to{' '}
+              <Link to="/programs/history" className="font-medium underline" style={{ color: program.accent }}>
+                Program History
+              </Link>
+              .
+            </p>
+            {confirmComplete ? (
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    resetProgramProgress(program.id)
+                    setConfirmComplete(false)
+                    setWeekOverride(null)
+                  }}
+                  className="btn-gold flex-1"
+                >
+                  <RotateCcw className="h-4 w-4" /> Reset & run again
+                </button>
+                <button onClick={() => setConfirmComplete(false)} className="btn-ghost flex-1">
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmComplete(true)}
+                className="btn-gold mt-3 w-full"
+                title="Your history is already saved — this restarts the program at Week 1, Day 1"
+              >
+                <RotateCcw className="h-4 w-4" /> Save to History & Reset
+              </button>
+            )}
+          </div>
+        )}
 
         {isCustom && !canEdit && (
           <p className="mt-3 text-center text-xs text-zinc-500">

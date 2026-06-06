@@ -158,6 +158,8 @@ export interface NutritionEntry {
   carbs: number
   fat: number
   water: number // glasses of water
+  /** Up to 3 photos for the day, stored as compressed data URLs. */
+  photos?: string[]
 }
 
 /** Daily nutrition targets the user is aiming for. */

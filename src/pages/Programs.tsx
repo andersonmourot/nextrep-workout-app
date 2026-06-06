@@ -14,7 +14,7 @@ import {
   Settings2,
   Star,
   Trash2,
-  Wrench,
+  Pencil,
   X,
 } from 'lucide-react'
 import { useAllPrograms, useStore, TRASH_TTL_MS } from '../store'
@@ -280,7 +280,7 @@ export function Programs() {
                         title="Custom"
                         aria-label="Custom"
                       >
-                        <Wrench className="h-3 w-3" />
+                        <Pencil className="h-3 w-3" />
                       </span>
                     )}
                     {isActive && (

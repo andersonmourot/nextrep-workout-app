@@ -1,12 +1,25 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, Droplet, History, Plus, Target } from 'lucide-react'
+import {
+  ArrowLeft,
+  Check,
+  Droplet,
+  History,
+  Image as ImageIcon,
+  ImagePlus,
+  Plus,
+  Target,
+  X,
+} from 'lucide-react'
 import { useStore } from '../store'
-import type { NutritionEntry, NutritionGoals } from '../types'
+import type { NutritionGoals } from '../types'
 import { formatDateLong, todayISO } from '../lib/utils'
 import { cn } from '../lib/utils'
 
-const EMPTY: Omit<NutritionEntry, 'date'> = {
+/** The numeric, stepper-driven fields of a nutrition entry. */
+type NumericField = 'calories' | 'protein' | 'carbs' | 'fat' | 'water'
+
+const EMPTY: Record<NumericField, number> = {
   calories: 0,
   protein: 0,
   carbs: 0,
@@ -179,8 +192,127 @@ export function Nutrition() {
         </div>
       </section>
 
+      {/* Photos — up to 3 per day, at the bottom of the day's inputs. */}
+      <DayPhotos
+        photos={entry.photos ?? []}
+        onChange={(photos) => setNutritionEntry({ ...entry, photos, date })}
+      />
+
       <Goals />
     </div>
+  )
+}
+
+/** Read an image file, scale it down, and return a compressed JPEG data URL so
+   stored photos stay small enough to sync with the rest of the app data. */
+async function compressImage(file: File, maxDim = 1080, quality = 0.6): Promise<string> {
+  const dataUrl = await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('read failed'))
+    reader.readAsDataURL(file)
+  })
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image()
+    i.onload = () => resolve(i)
+    i.onerror = () => reject(new Error('decode failed'))
+    i.src = dataUrl
+  })
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+  const w = Math.round(img.width * scale)
+  const h = Math.round(img.height * scale)
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return dataUrl
+  ctx.drawImage(img, 0, 0, w, h)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
+/** A grid of up to 3 day photos with add (file picker) and per-photo remove. */
+function DayPhotos({
+  photos,
+  onChange,
+}: {
+  photos: string[]
+  onChange: (photos: string[]) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function onFiles(files: FileList | null) {
+    if (!files || files.length === 0) return
+    setBusy(true)
+    try {
+      const room = 3 - photos.length
+      const picked = Array.from(files).slice(0, Math.max(0, room))
+      const next = [...photos]
+      for (const f of picked) {
+        try {
+          next.push(await compressImage(f))
+        } catch {
+          // Skip files that can't be read/decoded.
+        }
+      }
+      onChange(next.slice(0, 3))
+    } finally {
+      setBusy(false)
+      if (inputRef.current) inputRef.current.value = ''
+    }
+  }
+
+  return (
+    <section className="card space-y-3 p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="heading flex items-center gap-2 text-lg font-bold text-zinc-50">
+          <ImageIcon className="h-5 w-5 text-gold" /> Photos
+        </h2>
+        <span className="text-sm text-zinc-400">{photos.length} / 3</span>
+      </div>
+      <p className="text-sm text-zinc-400">
+        Add up to 3 photos for this day (meals, progress, etc.).
+      </p>
+      <div className="grid grid-cols-3 gap-2">
+        {photos.map((src, i) => (
+          <div
+            key={i}
+            className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-ink-900"
+          >
+            <img src={src} alt={`Day photo ${i + 1}`} className="h-full w-full object-cover" />
+            <button
+              type="button"
+              aria-label={`Remove photo ${i + 1}`}
+              onClick={() => onChange(photos.filter((_, j) => j !== i))}
+              className="absolute right-1 top-1 grid h-7 w-7 place-items-center rounded-full bg-black/60 text-white backdrop-blur transition hover:bg-black/80"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        {photos.length < 3 && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="grid aspect-square place-items-center rounded-xl border border-dashed border-white/15 bg-ink-900 text-zinc-500 transition hover:border-gold/50 hover:text-gold disabled:opacity-50"
+          >
+            <span className="flex flex-col items-center gap-1 text-xs">
+              <ImagePlus className="h-6 w-6" />
+              {busy ? 'Adding…' : 'Add photo'}
+            </span>
+          </button>
+        )}
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => onFiles(e.target.files)}
+      />
+    </section>
   )
 }
 

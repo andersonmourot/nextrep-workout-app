@@ -8,9 +8,14 @@ import { useStore } from '../store'
 export function Layout() {
   const { pathname } = useLocation()
   const activeWorkout = useStore((s) => s.activeWorkout)
-  // While a workout is live it takes over the Programs tab, but the bottom nav
-  // stays visible so the user can hop to other tabs and come back to it.
-  const showWorkout = !!activeWorkout && pathname === '/programs'
+  const activeProgramId = useStore((s) => s.activeProgramId)
+  // While a workout for the active program is live it takes over the Programs
+  // tab, but the bottom nav stays visible so the user can hop to other tabs and
+  // come back to it. An in-progress workout from a program that is no longer
+  // active is kept in state (saved until that program is reset) but doesn't
+  // hijack the Programs tab — it resurfaces when that program is active again.
+  const showWorkout =
+    !!activeWorkout && activeWorkout.programId === activeProgramId && pathname === '/programs'
 
   // App-shell layout: a full-height flex column where only <main> scrolls and the
   // bottom nav is an in-flow element pinned to the bottom. This avoids iOS quirks

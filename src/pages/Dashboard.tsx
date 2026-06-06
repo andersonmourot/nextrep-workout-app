@@ -109,7 +109,7 @@ export function Dashboard() {
             </div>
 
             <div className="mt-4 flex gap-2">
-              {activeWorkout ? (
+              {activeWorkout && activeWorkout.programId === program.id ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()

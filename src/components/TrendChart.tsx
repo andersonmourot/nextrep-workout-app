@@ -4,11 +4,17 @@ export function TrendChart({
   accent = 'rgb(var(--accent))',
   emptyLabel = 'Add an entry to start a trend line.',
   oneMoreLabel = 'Add one more entry to see your trend.',
+  unit,
+  showSummary = true,
 }: {
   points: { value: number }[]
   accent?: string
   emptyLabel?: string
   oneMoreLabel?: string
+  /** Unit shown next to the current value (e.g. "lb"). */
+  unit?: string
+  /** Show the current value + "+N since start" header (like the weight tracker). */
+  showSummary?: boolean
 }) {
   if (points.length < 2) {
     return (
@@ -39,7 +45,10 @@ export function TrendChart({
   const area = `${path} L ${coords[n - 1][0].toFixed(1)} ${h - pad} L ${coords[0][0].toFixed(1)} ${h - pad} Z`
   const gid = `tc-${Math.round(min)}-${Math.round(max)}-${n}`
 
-  return (
+  const last = values[n - 1]
+  const diff = +(last - values[0]).toFixed(1)
+
+  const chart = (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gid} x1="0" x2="0" y1="0" y2="1">
@@ -60,5 +69,27 @@ export function TrendChart({
         <circle key={i} cx={x} cy={y} r={2.5} fill={accent} />
       ))}
     </svg>
+  )
+
+  if (!showSummary) return chart
+
+  return (
+    <div>
+      <div className="mb-1 flex items-end justify-between">
+        <span className="heading text-2xl font-bold text-zinc-50">
+          {last}
+          {unit ? ` ${unit}` : ''}
+        </span>
+        <span
+          className={`text-xs font-semibold ${
+            diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-gold' : 'text-zinc-500'
+          }`}
+        >
+          {diff > 0 ? '+' : ''}
+          {diff} since start
+        </span>
+      </div>
+      {chart}
+    </div>
   )
 }

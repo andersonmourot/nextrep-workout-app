@@ -70,6 +70,7 @@ export function MaxTrackerDetail() {
         <TrendChart
           points={sorted.map((r) => ({ value: r.weight }))}
           accent={themeColor}
+          unit={unit}
           emptyLabel="Log a max to start a trend line."
           oneMoreLabel="Log one more max to see your trend."
         />

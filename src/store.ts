@@ -197,7 +197,17 @@ export const useStore = create<AppState>()(
       setUnit: (unit) => set({ unit }),
       setThemeColor: (themeColor) => set({ themeColor }),
       setThemeMode: (themeMode) => set({ themeMode }),
-      startProgram: (id) => set({ activeProgramId: id }),
+      startProgram: (id) =>
+        set((s) => ({
+          activeProgramId: id,
+          // Switching to a different program abandons any in-progress workout
+          // that belonged to the previously active program, so the old session
+          // no longer lingers on the dashboard / Programs tab.
+          activeWorkout:
+            s.activeWorkout && s.activeWorkout.programId !== id
+              ? null
+              : s.activeWorkout,
+        })),
       clearProgram: () => set({ activeProgramId: null }),
       // Restart a program from Week 1 / Day 1: anchor progress to now (logs stay,
       // so global history/stats are untouched) and drop any in-progress session.

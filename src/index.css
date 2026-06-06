@@ -59,6 +59,17 @@
     height: 100%;
   }
 
+  /* iOS standalone (PWA) computes `height: 100%` shorter than the screen, which
+     leaves a gap of background below the bottom nav. The dynamic viewport unit
+     fills the true screen height so the app shell reaches the very bottom. */
+  @supports (height: 100dvh) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+    }
+  }
+
   body {
     @apply bg-ink-950 text-zinc-100 font-sans antialiased;
     background-image: radial-gradient(

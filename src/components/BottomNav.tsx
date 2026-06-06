@@ -15,7 +15,7 @@ export function BottomNav() {
   // `position: fixed`, so it sits flush at the true bottom on every page and the
   // keyboard simply covers it while typing.
   return (
-    <nav className="z-40 shrink-0 border-t border-white/5 bg-ink-900/90 pb-[max(0px,calc(env(safe-area-inset-bottom)_-_1.5rem))] backdrop-blur">
+    <nav className="z-40 shrink-0 border-t border-white/5 bg-ink-900/90 pb-[env(safe-area-inset-bottom)] backdrop-blur">
       <div className="container-app flex items-stretch justify-between">
         {TABS.map(({ to, label, icon: Icon, end }) => (
           <NavLink

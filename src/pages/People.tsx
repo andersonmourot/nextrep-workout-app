@@ -6,8 +6,6 @@ import {
   Plus,
   Search,
   Star,
-  UserMinus,
-  UserPlus,
   Users,
 } from 'lucide-react'
 import {
@@ -423,15 +421,7 @@ function SearchResultCard({
               : 'btn-gold',
           )}
         >
-          {user.following ? (
-            <>
-              <UserMinus className="h-4 w-4" /> Following
-            </>
-          ) : (
-            <>
-              <UserPlus className="h-4 w-4" /> Follow
-            </>
-          )}
+          {user.following ? 'Following' : 'Follow'}
         </button>
       </div>
 
@@ -526,7 +516,7 @@ function FollowingCard({
             disabled={busy}
             className="rounded-lg border border-white/15 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
           >
-            <UserMinus className="h-4 w-4" /> Unfollow
+            Unfollow
           </button>
         </div>
       </div>

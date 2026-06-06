@@ -361,8 +361,12 @@ def _publish_owned_programs(db: Session, owner: User) -> list[dict]:
             changed = True
     if changed:
         db.commit()
+    # Only surface programs the owner still keeps in their data blob. Programs
+    # they've deleted linger in the shared store (so collaborators who added
+    # them keep working), but must not show up in the owner's search listing.
+    blob_ids = {p.get("id") for p in blob_progs}
     owned = db.query(SharedProgram).filter(SharedProgram.owner_id == owner.id).all()
-    return [json.loads(sp.data) for sp in owned]
+    return [json.loads(sp.data) for sp in owned if sp.id in blob_ids]
 
 
 def _enrich_exercise(exercise: dict, se: SharedExercise) -> dict:
@@ -416,8 +420,11 @@ def _publish_owned_exercises(db: Session, owner: User) -> list[dict]:
             changed = True
     if changed:
         db.commit()
+    # Mirror the program rule: only list exercises the owner still shares in
+    # their blob, so unsharing/deleting removes them from search results.
+    blob_ids = {e.get("id") for e in _shared_exercises(owner)}
     owned = db.query(SharedExercise).filter(SharedExercise.owner_id == owner.id).all()
-    return [json.loads(se.data) for se in owned]
+    return [json.loads(se.data) for se in owned if se.id in blob_ids]
 
 
 def current_user(

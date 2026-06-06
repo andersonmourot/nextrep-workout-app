@@ -99,6 +99,10 @@ export function ProgramDetail() {
   }
 
   const isActive = program.id === activeProgramId
+  // A program with any logged workouts has progress worth resetting, even if it
+  // isn't the currently active program (e.g. you finished it or switched away).
+  const hasHistory = logs.some((l) => l.programId === program.id)
+  const canReset = isActive || hasHistory
   // You can edit a custom program if you're its creator, or if it's marked
   // collaborative. Non-owners of a non-collaborative program are view-only.
   const isOwner = !program.ownerId || program.ownerId === currentUserId
@@ -230,7 +234,7 @@ export function ProgramDetail() {
           </p>
         )}
 
-        {(isCustom || isActive) && (
+        {(isCustom || isActive || hasHistory) && (
           showActions ? (
             <>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -252,7 +256,7 @@ export function ProgramDetail() {
                   <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
                 </button>
               )}
-              {isActive &&
+              {canReset &&
                 (confirmReset ? (
                   <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
                     <button
@@ -335,7 +339,7 @@ export function ProgramDetail() {
             </button>
           )
         )}
-        {isActive && confirmReset && (
+        {canReset && confirmReset && (
           <p className="mt-2 text-center text-xs text-zinc-500">
             Restart this program at Week 1, Day 1. Your logged workouts and stats are kept.
           </p>

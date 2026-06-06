@@ -7,6 +7,7 @@ import type {
   MaxRecord,
   MaxTracker,
   NutritionEntry,
+  CompletedProgram,
   NutritionGoals,
   Program,
   SetLog,
@@ -20,7 +21,7 @@ import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiExercisesBatch, apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
-import { uid } from './lib/utils'
+import { programLogsChrono, programRun, resolveProgramDay, uid } from './lib/utils'
 
 export interface SavedTimer {
   id: string
@@ -86,6 +87,7 @@ const DEFAULTS = {
   activeWorkout: null as ActiveWorkout | null,
   trashedPrograms: [] as TrashedProgram[],
   trashedExercises: [] as TrashedExercise[],
+  completedPrograms: [] as CompletedProgram[],
 }
 
 /** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
@@ -136,6 +138,7 @@ interface AppState {
   activeWorkout: ActiveWorkout | null
   trashedPrograms: TrashedProgram[]
   trashedExercises: TrashedExercise[]
+  completedPrograms: CompletedProgram[]
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -146,6 +149,7 @@ interface AppState {
   resetProgramProgress: (id: string) => void
   addLog: (log: WorkoutLog) => void
   deleteLog: (id: string) => void
+  removeCompletedProgram: (id: string) => void
   addBodyWeight: (entry: BodyWeightEntry) => void
   deleteBodyWeight: (id: string) => void
   addProgram: (program: Program) => void
@@ -171,7 +175,7 @@ interface AppState {
   setIntervalFormat: (format: string | null) => void
   toggleFavoriteUser: (id: string) => void
   toggleFavoriteProgram: (id: string) => void
-  startWorkout: (programId: string, dayId: string) => void
+  startWorkout: (programId: string, dayId: string, week?: number) => void
   setActiveWorkoutSets: (sets: SetLog[][]) => void
   setActiveWorkoutRest: (restEndsAt: number | null, restTotal: number) => void
   endWorkout: () => void
@@ -202,8 +206,44 @@ export const useStore = create<AppState>()(
           programAnchors: { ...s.programAnchors, [id]: new Date().toISOString() },
           activeWorkout: s.activeWorkout?.programId === id ? null : s.activeWorkout,
         })),
-      addLog: (log) => set((s) => ({ logs: [log, ...s.logs] })),
+      addLog: (log) =>
+        set((s) => {
+          const logs = [log, ...s.logs]
+          // Archive a program to Program History the moment its final scheduled
+          // day is logged (Week durationWeeks · last day). Keyed per run so it
+          // archives once; later weeks/edits won't create duplicates.
+          const pid = log.programId
+          const program = pid
+            ? s.customPrograms.find((p) => p.id === pid) ?? getProgram(pid)
+            : undefined
+          if (!program) return { logs }
+          const anchor = s.programAnchors[program.id]
+          const chrono = programLogsChrono(program, logs, anchor)
+          const run = programRun(program, logs, anchor)
+          const totalDays = Math.max(1, program.durationWeeks) * run.daysLen
+          if (chrono.length < totalDays) return { logs }
+          const runStartId = chrono[0]?.id ?? 'run'
+          const archiveId = `${program.id}-${runStartId}`
+          if (s.completedPrograms.some((c) => c.id === archiveId)) return { logs }
+          const runLogs = chrono.slice(0, totalDays)
+          const entry: CompletedProgram = {
+            id: archiveId,
+            programId: program.id,
+            name: program.name,
+            accent: program.accent,
+            durationWeeks: program.durationWeeks,
+            daysPerWeek: program.daysPerWeek,
+            completedAt: runLogs[runLogs.length - 1]?.date ?? new Date().toISOString(),
+            program,
+            logs: runLogs,
+          }
+          return { logs, completedPrograms: [entry, ...s.completedPrograms] }
+        }),
       deleteLog: (id) => set((s) => ({ logs: s.logs.filter((l) => l.id !== id) })),
+      removeCompletedProgram: (id) =>
+        set((s) => ({
+          completedPrograms: s.completedPrograms.filter((c) => c.id !== id),
+        })),
       addBodyWeight: (entry) =>
         set((s) => ({
           bodyWeight: [...s.bodyWeight.filter((e) => e.date !== entry.date), entry].sort((a, b) =>
@@ -353,12 +393,16 @@ export const useStore = create<AppState>()(
           if (s.favoriteProgramIds.length >= MAX_FAVORITES) return {}
           return { favoriteProgramIds: [...s.favoriteProgramIds, id] }
         }),
-      startWorkout: (programId, dayId) =>
+      startWorkout: (programId, dayId, week) =>
         set((s) => {
           const program =
             s.customPrograms.find((p) => p.id === programId) ?? getProgram(programId)
-          const day = program?.days.find((d) => d.id === dayId)
-          if (!program || !day) return {}
+          if (!program) return {}
+          const dayLocalIdx = program.days.findIndex((d) => d.id === dayId)
+          if (dayLocalIdx < 0) return {}
+          // Resolve the plan for the week being trained so per-week edits apply.
+          const day = resolveProgramDay(program, dayLocalIdx, week ?? 1)
+          if (!day) return {}
           const sets: SetLog[][] = day.exercises.map((pe) =>
             Array.from({ length: pe.sets }, () => ({
               weight: 0,
@@ -370,6 +414,7 @@ export const useStore = create<AppState>()(
             activeWorkout: {
               programId,
               dayId,
+              week,
               startedAt: Date.now(),
               sets,
               restEndsAt: null,
@@ -452,6 +497,7 @@ export const useStore = create<AppState>()(
           activeWorkout: null,
           trashedPrograms: [],
           trashedExercises: [],
+          completedPrograms: [],
         })
       },
     }),
@@ -488,6 +534,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     activeWorkout: s.activeWorkout,
     trashedPrograms: s.trashedPrograms,
     trashedExercises: s.trashedExercises,
+    completedPrograms: s.completedPrograms,
   }
 }
 

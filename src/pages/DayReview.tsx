@@ -1,10 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Info, Minus, Plus } from 'lucide-react'
-import { exerciseLabel, getExercise } from '../data/exercises'
-import { useProgram, useStore } from '../store'
-import type { SetLog, WorkoutLog } from '../types'
-import { cn, programLogsChrono, uid } from '../lib/utils'
+import { ArrowLeft, Check, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { exerciseLabel, findExerciseByName, getExercise } from '../data/exercises'
+import { useIsCustomProgram, useProgram, useStore } from '../store'
+import { getToken, useAuth } from '../auth'
+import { apiUpsertProgram } from '../api'
+import type { PlannedExercise, Program, ProgramDay, SetLog, WorkoutLog } from '../types'
+import { cn, programLogsChrono, resolveProgramDay, uid, withDayOverride } from '../lib/utils'
+
+function buildSets(d: ProgramDay): SetLog[][] {
+  return d.exercises.map((pe) =>
+    Array.from({ length: pe.sets }, () => ({
+      weight: 0,
+      reps: parseReps(pe.reps),
+      completed: false,
+    })),
+  )
+}
 
 /**
  * View / edit the logged data for a single program day. Reachable by tapping a
@@ -15,17 +27,21 @@ export function DayReview() {
   const { programId, dayIndex: dayIndexParam } = useParams()
   const navigate = useNavigate()
   const program = useProgram(programId)
+  const isCustom = useIsCustomProgram(programId)
+  const currentUserId = useAuth((s) => s.user?.id)
   const logs = useStore((s) => s.logs)
   const unit = useStore((s) => s.unit)
   const programAnchors = useStore((s) => s.programAnchors)
   const addLog = useStore((s) => s.addLog)
   const deleteLog = useStore((s) => s.deleteLog)
+  const updateProgram = useStore((s) => s.updateProgram)
 
   const globalIdx = Number(dayIndexParam ?? 0)
   const daysLen = program ? Math.max(1, program.days.length) : 1
   const dayLocalIdx = globalIdx % daysLen
   const weekNum = Math.floor(globalIdx / daysLen) + 1
-  const day = program?.days[dayLocalIdx]
+  // Show the plan resolved for the week being viewed (per-week edits apply).
+  const day = program ? resolveProgramDay(program, dayLocalIdx, weekNum) : undefined
 
   const anchor = program ? programAnchors[program.id] : undefined
   const chrono = useMemo(
@@ -60,6 +76,16 @@ export function DayReview() {
   })
 
   const [saved, setSaved] = useState(false)
+
+  // Day-plan editing (exercises/sets/reps/rest). Saving applies the change from
+  // this week onward via a per-week override (Week 1 edits the base plan).
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState<ProgramDay | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState('')
+
+  const isOwner = !program?.ownerId || program.ownerId === currentUserId
+  const canEdit = isCustom && (isOwner || !!program?.collaborative)
 
   if (!program || !day) {
     return (
@@ -113,6 +139,79 @@ export function DayReview() {
     setSaved(true)
   }
 
+  function startEdit() {
+    if (!day) return
+    // Deep-copy the resolved day so edits don't mutate the live plan until save.
+    setDraft({
+      ...day,
+      exercises: day.exercises.map((e) => ({ ...e })),
+    })
+    setEditError('')
+    setEditing(true)
+  }
+
+  function updateDraftExercise(idx: number, patch: Partial<PlannedExercise>) {
+    setDraft((prev) =>
+      prev
+        ? { ...prev, exercises: prev.exercises.map((e, i) => (i === idx ? { ...e, ...patch } : e)) }
+        : prev,
+    )
+  }
+
+  function setDraftExerciseName(idx: number, typed: string, prev: PlannedExercise) {
+    const match = findExerciseByName(typed)
+    if (match) {
+      updateDraftExercise(idx, { exerciseId: match.id, name: undefined })
+      return
+    }
+    const id = prev.exerciseId.startsWith('custom-') ? prev.exerciseId : `custom-${uid()}`
+    updateDraftExercise(idx, { exerciseId: id, name: typed })
+  }
+
+  function addDraftExercise() {
+    setDraft((prev) =>
+      prev
+        ? {
+            ...prev,
+            exercises: [
+              ...prev.exercises,
+              { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '8-12', restSec: 90 },
+            ],
+          }
+        : prev,
+    )
+  }
+
+  function removeDraftExercise(idx: number) {
+    setDraft((prev) =>
+      prev ? { ...prev, exercises: prev.exercises.filter((_, i) => i !== idx) } : prev,
+    )
+  }
+
+  async function saveEdit() {
+    if (!program || !day || !draft) return
+    if (draft.exercises.length === 0) {
+      setEditError('Add at least one exercise.')
+      return
+    }
+    const blank = draft.exercises.find((e) => !e.name?.trim() && !getExercise(e.exerciseId))
+    if (blank) {
+      setEditError('Name every exercise.')
+      return
+    }
+    setSavingEdit(true)
+    const updated: Program = withDayOverride(program, day.id, weekNum, draft)
+    updateProgram(updated)
+    const token = getToken()
+    if (token) await apiUpsertProgram<Program>(token, updated)
+    // Refresh the logging template to match the new plan.
+    setSets(buildSets(draft))
+    setSaved(false)
+    setSavingEdit(false)
+    setEditing(false)
+    setDraft(null)
+  }
+
   const hasCompleted = sets.flat().some((s) => s.completed)
 
   return (
@@ -133,15 +232,111 @@ export function DayReview() {
         <ArrowLeft className="h-5 w-5" />
       </button>
 
-      <div>
-        <span className="label-eyebrow" style={{ color: program.accent }}>
-          Week {weekNum} · Day {dayLocalIdx + 1}
-        </span>
-        <h1 className="heading text-2xl font-bold text-zinc-50">{day.name}</h1>
-        {day.focus && <p className="mt-0.5 text-xs text-zinc-400">{day.focus}</p>}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <span className="label-eyebrow" style={{ color: program.accent }}>
+            Week {weekNum} · Day {dayLocalIdx + 1}
+          </span>
+          <h1 className="heading text-2xl font-bold text-zinc-50">{day.name}</h1>
+          {day.focus && <p className="mt-0.5 text-xs text-zinc-400">{day.focus}</p>}
+        </div>
+        {canEdit && !editing && (
+          <button
+            onClick={startEdit}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-ink-850 px-3 py-2 text-xs font-medium text-zinc-300 hover:text-zinc-100"
+            style={{ color: program.accent }}
+            aria-label="Edit this day"
+          >
+            <Pencil className="h-3.5 w-3.5" /> Edit this day
+          </button>
+        )}
       </div>
 
-      {day.exercises.map((pe, exIdx) => {
+      {editing && draft && (
+        <div className="card space-y-3 p-5">
+          <div>
+            <h2 className="heading text-lg font-bold text-zinc-50">Edit this day</h2>
+            <p className="mt-0.5 text-xs text-zinc-400">
+              {weekNum <= 1
+                ? 'Changes apply to the whole program.'
+                : `Changes apply from Week ${weekNum} onward. Earlier weeks keep the current plan.`}
+            </p>
+          </div>
+          {draft.exercises.map((pe, exIdx) => {
+            const ex = getExercise(pe.exerciseId)
+            return (
+              <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    value={pe.name ?? ex?.name ?? ''}
+                    onChange={(e) => setDraftExerciseName(exIdx, e.target.value, pe)}
+                    placeholder="Type an exercise name"
+                    className="input flex-1"
+                  />
+                  <button
+                    onClick={() => removeDraftExercise(exIdx)}
+                    disabled={draft.exercises.length === 1}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-red-400 disabled:opacity-40"
+                    aria-label="Remove exercise"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="mt-1 px-1 text-[11px] text-zinc-500">
+                  {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <EditNumField
+                    label="Sets"
+                    value={pe.sets}
+                    onChange={(v) => updateDraftExercise(exIdx, { sets: v })}
+                  />
+                  <EditTextField
+                    label="Reps"
+                    value={pe.reps}
+                    onChange={(v) => updateDraftExercise(exIdx, { reps: v })}
+                  />
+                  <EditNumField
+                    label="Rest s"
+                    value={pe.restSec}
+                    onChange={(v) => updateDraftExercise(exIdx, { restSec: v })}
+                  />
+                </div>
+              </div>
+            )
+          })}
+          <button
+            onClick={addDraftExercise}
+            className="btn-outline w-full border-dashed py-2 text-xs"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add exercise
+          </button>
+          {editError && (
+            <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{editError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setEditing(false)
+                setDraft(null)
+                setEditError('')
+              }}
+              className="btn-ghost flex-1"
+            >
+              <X className="h-4 w-4" /> Cancel
+            </button>
+            <button
+              onClick={() => void saveEdit()}
+              disabled={savingEdit}
+              className="btn-gold flex-1 disabled:opacity-60"
+            >
+              {savingEdit ? 'Saving…' : 'Save day'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!editing && day.exercises.map((pe, exIdx) => {
         const ex = getExercise(pe.exerciseId)
         const exerciseSets = sets[exIdx] ?? []
         return (
@@ -220,7 +415,7 @@ export function DayReview() {
         )
       })}
 
-      {hasCompleted && (
+      {!editing && hasCompleted && (
         <button onClick={save} disabled={saved} className="btn-gold w-full disabled:opacity-60">
           {saved ? 'Saved' : existingLog ? 'Update Workout' : 'Save Workout'}
         </button>
@@ -232,6 +427,57 @@ export function DayReview() {
 function parseReps(reps: string): number {
   const n = parseInt(reps, 10)
   return Number.isNaN(n) ? 0 : n
+}
+
+function EditNumField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: number
+  onChange: (v: number) => void
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        {label}
+      </span>
+      <input
+        type="text"
+        inputMode="numeric"
+        value={value}
+        onChange={(e) => {
+          const raw = e.target.value.replace(/[^0-9]/g, '')
+          onChange(raw === '' ? 0 : Math.max(0, Number(raw)))
+        }}
+        className="input px-2 py-2 text-center text-base"
+      />
+    </label>
+  )
+}
+
+function EditTextField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="input px-2 py-2 text-center text-base"
+      />
+    </label>
+  )
 }
 
 function Stepper({

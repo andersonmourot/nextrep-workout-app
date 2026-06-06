@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
-import { cn, programLogsChrono, programRun, uid } from '../lib/utils'
+import { cn, programLogsChrono, programRun, resolveProgramDay, uid } from '../lib/utils'
 import { accentVars } from '../lib/theme'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
@@ -329,7 +329,9 @@ export function ProgramDetail() {
             </div>
           )}
         </div>
-        {program.days.map((day, i) => {
+        {program.days.map((baseDay, i) => {
+          // Show the plan resolved for the week being viewed (per-week edits).
+          const day = resolveProgramDay(program, i, selectedWeek) ?? baseDay
           const globalIdx = (selectedWeek - 1) * program.days.length + i
           const completedCount = run?.completedCount ?? 0
           const completed = globalIdx < completedCount
@@ -337,7 +339,7 @@ export function ProgramDetail() {
           const log = completed ? chrono[globalIdx] : undefined
           return (
             <div
-              key={day.id}
+              key={baseDay.id}
               className="card overflow-hidden"
               style={
                 isNext
@@ -378,7 +380,7 @@ export function ProgramDetail() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    startWorkout(program.id, day.id)
+                    startWorkout(program.id, baseDay.id, selectedWeek)
                     navigate('/programs')
                   }}
                   className="btn-outline shrink-0 px-3 py-2 text-xs"

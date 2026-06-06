@@ -86,6 +86,14 @@ export interface Program {
   description: string
   tags: string[]
   days: ProgramDay[]
+  /**
+   * Per-week-onward overrides of a day's plan, keyed by the base day's id. Each
+   * entry replaces that day's plan starting at `fromWeek` (1-based) onward,
+   * until a later override for the same day takes over. Weeks before the
+   * earliest override use the base `days` entry. Lets a program be edited
+   * independently per week (e.g. change Week 3 Day 1 without touching Weeks 1-2).
+   */
+  weekOverrides?: Record<string, { fromWeek: number; day: ProgramDay }[]>
   /** Id of the account that created this program (set once published/shared). */
   ownerId?: string
   /** Display name of the creator, shown on shared programs. */
@@ -110,6 +118,8 @@ export interface SetLog {
 export interface ActiveWorkout {
   programId: string
   dayId: string
+  /** 1-based week the session belongs to, so per-week day overrides resolve. */
+  week?: number
   startedAt: number // epoch ms; elapsed is derived from this
   sets: SetLog[][]
   restEndsAt: number | null // epoch ms when the current rest ends, or null
@@ -172,6 +182,29 @@ export interface MaxTracker {
   id: string
   name: string
   records: MaxRecord[]
+}
+
+/**
+ * A finished program archived in Program History. Captures a snapshot of the
+ * program (its plan at completion, including per-week overrides) plus every
+ * workout logged during the run, so the user can reference past programs in
+ * full even after deleting or resetting the original.
+ */
+export interface CompletedProgram {
+  /** Unique archive id (one per completed run). */
+  id: string
+  /** Id of the source program (may no longer exist). */
+  programId: string
+  name: string
+  accent: string
+  durationWeeks: number
+  daysPerWeek: number
+  /** ISO timestamp of when the final day was logged. */
+  completedAt: string
+  /** Snapshot of the program plan at completion. */
+  program: Program
+  /** The logs that make up this run, in chronological (day) order. */
+  logs: WorkoutLog[]
 }
 
 /** A deleted custom program kept in Trash until it's purged (7 days). */

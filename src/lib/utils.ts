@@ -1,4 +1,4 @@
-import type { Program, WorkoutLog } from '../types'
+import type { Program, ProgramDay, WorkoutLog } from '../types'
 
 export function cn(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ')
@@ -119,6 +119,61 @@ export function programRun(
   const nextDayIndex = completedCount % daysLen
   const totalWeeks = Math.max(program.durationWeeks || 1, currentWeekIndex + 1)
   return { daysLen, completedCount, totalWeeks, currentWeekIndex, nextDayIndex }
+}
+
+/**
+ * The plan for a program day in a given (1-based) week, applying any per-week
+ * overrides. Picks the override with the largest `fromWeek` <= `week`; weeks
+ * before the earliest override fall back to the base `program.days` entry.
+ */
+export function resolveProgramDay(
+  program: Program,
+  dayLocalIdx: number,
+  week: number,
+): ProgramDay | undefined {
+  const base = program.days[dayLocalIdx]
+  if (!base) return base
+  const list = program.weekOverrides?.[base.id]
+  if (!list || list.length === 0) return base
+  let chosen: ProgramDay | undefined
+  let best = 0
+  for (const o of list) {
+    if (o.fromWeek <= week && o.fromWeek > best) {
+      best = o.fromWeek
+      chosen = o.day
+    }
+  }
+  return chosen ?? base
+}
+
+/**
+ * Return a copy of `program` with `day` applied to the slot `baseDayId` from
+ * `fromWeek` (1-based) onward. Editing Week 1 rewrites the base plan (all weeks
+ * that lack their own override); later weeks store a per-week-onward override.
+ * The stored day keeps the base id so it maps back to the same slot.
+ */
+export function withDayOverride(
+  program: Program,
+  baseDayId: string,
+  fromWeek: number,
+  day: ProgramDay,
+): Program {
+  const baseIdx = program.days.findIndex((d) => d.id === baseDayId)
+  if (baseIdx < 0) return program
+  const normalized: ProgramDay = { ...day, id: baseDayId }
+  if (fromWeek <= 1) {
+    return {
+      ...program,
+      days: program.days.map((d, i) => (i === baseIdx ? normalized : d)),
+      version: Date.now(),
+    }
+  }
+  const overrides = { ...(program.weekOverrides ?? {}) }
+  const list = (overrides[baseDayId] ?? []).filter((o) => o.fromWeek !== fromWeek)
+  list.push({ fromWeek, day: normalized })
+  list.sort((a, b) => a.fromWeek - b.fromWeek)
+  overrides[baseDayId] = list
+  return { ...program, weekOverrides: overrides, version: Date.now() }
 }
 
 /** Number of consecutive days (ending today or yesterday) with at least one workout. */

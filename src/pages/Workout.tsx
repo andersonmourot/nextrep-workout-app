@@ -4,13 +4,20 @@ import { Check, Info, Minus, Plus, SkipForward, Timer, X } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
-import { cn, formatClock, uid } from '../lib/utils'
+import { cn, formatClock, resolveProgramDay, uid } from '../lib/utils'
 
 export function Workout() {
   const navigate = useNavigate()
   const activeWorkout = useStore((s) => s.activeWorkout)
   const program = useProgram(activeWorkout?.programId)
-  const day = program?.days.find((d) => d.id === activeWorkout?.dayId)
+  // Resolve the day for the week being trained so per-week edits apply.
+  const dayLocalIdx = program
+    ? program.days.findIndex((d) => d.id === activeWorkout?.dayId)
+    : -1
+  const day =
+    program && dayLocalIdx >= 0
+      ? resolveProgramDay(program, dayLocalIdx, activeWorkout?.week ?? 1)
+      : undefined
   const unit = useStore((s) => s.unit)
   const activeProgramId = useStore((s) => s.activeProgramId)
   const addLog = useStore((s) => s.addLog)

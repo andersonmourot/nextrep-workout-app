@@ -62,6 +62,10 @@ const DEFAULTS = {
   themeColor: DEFAULT_THEME_COLOR,
   themeMode: DEFAULT_THEME_MODE as ThemeMode,
   activeProgramId: null as string | null,
+  // Per-program reset anchor (ISO). Progress (current week/day) counts only logs
+  // on/after this date, so "Reset Program" restarts a program at Week 1 / Day 1
+  // without deleting the workout history that feeds global stats.
+  programAnchors: {} as Record<string, string>,
   logs: [] as WorkoutLog[],
   bodyWeight: [] as BodyWeightEntry[],
   customPrograms: [] as Program[],
@@ -111,6 +115,7 @@ interface AppState {
   themeColor: string
   themeMode: ThemeMode
   activeProgramId: string | null
+  programAnchors: Record<string, string>
   logs: WorkoutLog[]
   bodyWeight: BodyWeightEntry[]
   customPrograms: Program[]
@@ -138,6 +143,7 @@ interface AppState {
   setThemeMode: (mode: ThemeMode) => void
   startProgram: (id: string) => void
   clearProgram: () => void
+  resetProgramProgress: (id: string) => void
   addLog: (log: WorkoutLog) => void
   deleteLog: (id: string) => void
   addBodyWeight: (entry: BodyWeightEntry) => void
@@ -189,6 +195,13 @@ export const useStore = create<AppState>()(
       setThemeMode: (themeMode) => set({ themeMode }),
       startProgram: (id) => set({ activeProgramId: id }),
       clearProgram: () => set({ activeProgramId: null }),
+      // Restart a program from Week 1 / Day 1: anchor progress to now (logs stay,
+      // so global history/stats are untouched) and drop any in-progress session.
+      resetProgramProgress: (id) =>
+        set((s) => ({
+          programAnchors: { ...s.programAnchors, [id]: new Date().toISOString() },
+          activeWorkout: s.activeWorkout?.programId === id ? null : s.activeWorkout,
+        })),
       addLog: (log) => set((s) => ({ logs: [log, ...s.logs] })),
       deleteLog: (id) => set((s) => ({ logs: s.logs.filter((l) => l.id !== id) })),
       addBodyWeight: (entry) =>
@@ -418,6 +431,7 @@ export const useStore = create<AppState>()(
         setExerciseOverrides({})
         set({
           activeProgramId: null,
+          programAnchors: {},
           logs: [],
           bodyWeight: [],
           customPrograms: [],
@@ -453,6 +467,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     themeColor: s.themeColor,
     themeMode: s.themeMode,
     activeProgramId: s.activeProgramId,
+    programAnchors: s.programAnchors,
     logs: s.logs,
     bodyWeight: s.bodyWeight,
     customPrograms: s.customPrograms,

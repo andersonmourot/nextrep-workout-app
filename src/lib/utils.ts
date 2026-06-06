@@ -78,6 +78,49 @@ export function nextDayIndex(program: Program, logs: WorkoutLog[]): number {
   return count % program.days.length
 }
 
+/**
+ * Completed workouts for a program in chronological (oldest-first) order. Logs
+ * are stored newest-first, so we reverse. When a reset anchor (ISO) is given,
+ * only logs on/after it count toward progress (the program restarts there).
+ */
+export function programLogsChrono(
+  program: Program,
+  logs: WorkoutLog[],
+  since?: string,
+): WorkoutLog[] {
+  return logs
+    .filter((l) => l.programId === program.id && (!since || l.date >= since))
+    .slice()
+    .reverse()
+}
+
+export interface ProgramRun {
+  /** Number of training days in one week of the program. */
+  daysLen: number
+  /** How many program days have been completed in this run. */
+  completedCount: number
+  /** Total weeks to show (program length, or further if the user kept going). */
+  totalWeeks: number
+  /** 0-based week index containing the next day to complete. */
+  currentWeekIndex: number
+  /** 0-based day index (within the week) that is up next. */
+  nextDayIndex: number
+}
+
+/** Progress through a program derived from its completed workout logs. */
+export function programRun(
+  program: Program,
+  logs: WorkoutLog[],
+  since?: string,
+): ProgramRun {
+  const daysLen = Math.max(1, program.days.length)
+  const completedCount = programLogsChrono(program, logs, since).length
+  const currentWeekIndex = Math.floor(completedCount / daysLen)
+  const nextDayIndex = completedCount % daysLen
+  const totalWeeks = Math.max(program.durationWeeks || 1, currentWeekIndex + 1)
+  return { daysLen, completedCount, totalWeeks, currentWeekIndex, nextDayIndex }
+}
+
 /** Number of consecutive days (ending today or yesterday) with at least one workout. */
 export function computeStreak(logs: WorkoutLog[]): number {
   if (logs.length === 0) return 0

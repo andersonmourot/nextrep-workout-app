@@ -7,18 +7,20 @@ import {
   computeStreak,
   formatDate,
   greeting,
-  nextDayIndex,
+  programRun,
   workoutsThisWeek,
 } from '../lib/utils'
 
 export function Dashboard() {
-  const { name, activeProgramId, logs, unit, activeWorkout, startWorkout } = useStore()
+  const { name, activeProgramId, programAnchors, logs, unit, activeWorkout, startWorkout } =
+    useStore()
   const program = useProgram(activeProgramId ?? undefined)
   const navigate = useNavigate()
 
   const streak = computeStreak(logs)
   const weekCount = workoutsThisWeek(logs)
-  const dayIdx = program ? nextDayIndex(program, logs) : 0
+  const run = program ? programRun(program, logs, programAnchors[program.id]) : undefined
+  const dayIdx = run?.nextDayIndex ?? 0
   const nextDay = program ? program.days[dayIdx] : undefined
   const weekTarget = program?.daysPerWeek ?? 4
   const recent = logs.slice(0, 3)
@@ -41,7 +43,9 @@ export function Dashboard() {
           >
             <div className="flex items-center justify-between">
               <span className="label-eyebrow">Today · {program.name}</span>
-              <span className="chip">Day {dayIdx + 1}</span>
+              <span className="chip">
+                Week {(run?.currentWeekIndex ?? 0) + 1} · Day {dayIdx + 1}
+              </span>
             </div>
             <h2 className="heading mt-2 text-2xl font-bold text-zinc-50">{nextDay.name}</h2>
             <p className="text-sm text-zinc-400">{nextDay.focus}</p>

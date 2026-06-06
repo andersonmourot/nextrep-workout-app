@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Check,
+  ChevronLeft,
   ChevronRight,
   Clock,
   Copy,
   Dumbbell,
   Pencil,
   Play,
+  RotateCcw,
   Star,
   Target,
   Trash2,
@@ -16,7 +18,7 @@ import {
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
-import { cn, uid } from '../lib/utils'
+import { cn, programLogsChrono, programRun, uid } from '../lib/utils'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
 import type { Program } from '../types'
@@ -27,12 +29,37 @@ export function ProgramDetail() {
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
   const { activeProgramId, startProgram, deleteProgram, addProgram, startWorkout } = useStore()
+  const resetProgramProgress = useStore((s) => s.resetProgramProgress)
+  const logs = useStore((s) => s.logs)
+  const unit = useStore((s) => s.unit)
+  const programAnchors = useStore((s) => s.programAnchors)
   const favoriteProgramIds = useStore((s) => s.favoriteProgramIds)
   const toggleFavoriteProgram = useStore((s) => s.toggleFavoriteProgram)
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  // null = follow the current week automatically; a number = a week the user
+  // navigated to manually.
+  const [weekOverride, setWeekOverride] = useState<number | null>(null)
+
+  const anchor = program ? programAnchors[program.id] : undefined
+  const run = useMemo(
+    () => (program ? programRun(program, logs, anchor) : null),
+    [program, logs, anchor],
+  )
+  const chrono = useMemo(
+    () => (program ? programLogsChrono(program, logs, anchor) : []),
+    [program, logs, anchor],
+  )
+  // The week shown defaults to the one holding the next workout; the user can
+  // page back/forward to review past or upcoming weeks.
+  const totalWeeks = run?.totalWeeks ?? 1
+  const selectedWeek = Math.min(
+    Math.max(1, weekOverride ?? (run?.currentWeekIndex ?? 0) + 1),
+    totalWeeks,
+  )
 
   async function duplicate(p: Program) {
     const token = getToken()
@@ -157,109 +184,210 @@ export function ProgramDetail() {
           </p>
         )}
 
-        {isCustom && (
-          <div className="mt-2 flex gap-2">
+        {(isCustom || isActive) && (
+          <div className="mt-2 flex flex-wrap gap-2">
             {canEdit && (
-              <Link to={`/programs/${program.id}/edit`} className="btn-ghost flex-1">
+              <Link
+                to={`/programs/${program.id}/edit`}
+                className="btn-ghost min-w-[120px] flex-1"
+              >
                 <Pencil className="h-4 w-4" /> Edit
               </Link>
             )}
-            <button
-              onClick={() => void duplicate(program)}
-              disabled={duplicating}
-              className="btn-ghost flex-1 disabled:opacity-60"
-              title="Make an independent copy you fully own"
-            >
-              <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
-            </button>
-            {confirmDelete ? (
-              <div className="flex flex-1 items-center justify-center gap-2">
-                <button
-                  onClick={() => {
-                    deleteProgram(program.id)
-                    navigate('/programs')
-                  }}
-                  aria-label="Confirm delete"
-                  className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
-                >
-                  <Check className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  aria-label="Cancel"
-                  className="btn-ghost flex-1"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
+            {isCustom && (
               <button
-                onClick={() => setConfirmDelete(true)}
-                className="btn-ghost flex-1 text-red-300 hover:text-red-200"
+                onClick={() => void duplicate(program)}
+                disabled={duplicating}
+                className="btn-ghost min-w-[120px] flex-1 disabled:opacity-60"
+                title="Make an independent copy you fully own"
               >
-                <Trash2 className="h-4 w-4" /> Delete
+                <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
               </button>
             )}
+            {isActive &&
+              (confirmReset ? (
+                <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      resetProgramProgress(program.id)
+                      setConfirmReset(false)
+                      setWeekOverride(null)
+                    }}
+                    aria-label="Confirm reset"
+                    className="btn flex-1 border border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmReset(false)}
+                    aria-label="Cancel reset"
+                    className="btn-ghost flex-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmReset(true)}
+                  className="btn-ghost min-w-[120px] flex-1 text-amber-300 hover:text-amber-200"
+                  title="Restart this program at Week 1, Day 1 (keeps your workout history)"
+                >
+                  <RotateCcw className="h-4 w-4" /> Reset
+                </button>
+              ))}
+            {isCustom &&
+              (confirmDelete ? (
+                <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
+                  <button
+                    onClick={() => {
+                      deleteProgram(program.id)
+                      navigate('/programs')
+                    }}
+                    aria-label="Confirm delete"
+                    className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    aria-label="Cancel"
+                    className="btn-ghost flex-1"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="btn-ghost min-w-[120px] flex-1 text-red-300 hover:text-red-200"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete
+                </button>
+              ))}
           </div>
+        )}
+        {isActive && confirmReset && (
+          <p className="mt-2 text-center text-xs text-zinc-500">
+            Restart this program at Week 1, Day 1. Your logged workouts and stats are kept.
+          </p>
         )}
       </div>
 
       <section className="space-y-3">
-        <h2 className="heading text-sm font-semibold tracking-wider text-zinc-300">
-          The Split · {program.days.length} Days
-        </h2>
-        {program.days.map((day, i) => (
-          <div key={day.id} className="card overflow-hidden">
-            <div className="flex items-center justify-between px-4 pt-4">
-              <div>
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Day {i + 1}
-                </span>
-                <h3 className="heading text-lg font-bold text-zinc-50">{day.name}</h3>
-                <p className="text-xs text-zinc-400">{day.focus}</p>
-              </div>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="heading text-sm font-semibold tracking-wider text-zinc-300">
+            The Split · {program.days.length} Days
+          </h2>
+          {totalWeeks > 1 && (
+            <div className="flex items-center gap-1">
               <button
-                onClick={() => {
-                  startWorkout(program.id, day.id)
-                  navigate('/programs')
-                }}
-                className="btn-outline px-3 py-2 text-xs"
+                onClick={() => setWeekOverride(Math.max(1, selectedWeek - 1))}
+                disabled={selectedWeek <= 1}
+                aria-label="Previous week"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
               >
-                <Play className="h-3.5 w-3.5" /> Start
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="min-w-[78px] text-center text-xs font-semibold text-zinc-300">
+                Week {selectedWeek} / {totalWeeks}
+              </span>
+              <button
+                onClick={() => setWeekOverride(Math.min(totalWeeks, selectedWeek + 1))}
+                disabled={selectedWeek >= totalWeeks}
+                aria-label="Next week"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
-              {day.exercises.map((pe, j) => {
-                const ex = getExercise(pe.exerciseId)
-                const meta = (
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-100">
-                      {exerciseLabel(pe)}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {pe.sets} × {pe.reps} · {pe.restSec}s rest
-                    </p>
-                  </div>
-                )
-                return (
-                  <li key={`${pe.exerciseId}-${j}`}>
-                    {ex ? (
-                      <Link
-                        to={`/exercises/${pe.exerciseId}`}
-                        className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"
-                      >
-                        {meta}
-                        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
-                      </Link>
-                    ) : (
-                      <div className="px-4 py-3">{meta}</div>
+          )}
+        </div>
+        {program.days.map((day, i) => {
+          const globalIdx = (selectedWeek - 1) * program.days.length + i
+          const completedCount = run?.completedCount ?? 0
+          const completed = globalIdx < completedCount
+          const isNext = isActive && globalIdx === completedCount
+          const log = completed ? chrono[globalIdx] : undefined
+          return (
+            <div
+              key={day.id}
+              className="card overflow-hidden"
+              style={
+                isNext
+                  ? {
+                      borderColor: program.accent,
+                      boxShadow: `0 0 0 1.5px ${program.accent}, 0 0 18px ${program.accent}66`,
+                    }
+                  : undefined
+              }
+            >
+              <div className="flex items-center justify-between px-4 pt-4">
+                <div>
+                  <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    Day {i + 1}
+                    {completed && (
+                      <span className="inline-flex items-center gap-0.5 text-emerald-400">
+                        <Check className="h-3 w-3" /> Done
+                      </span>
                     )}
-                  </li>
-                )
-              })}
-            </ul>
-          </div>
-        ))}
+                    {isNext && <span style={{ color: program.accent }}>Up next</span>}
+                  </span>
+                  <h3 className="heading text-lg font-bold text-zinc-50">{day.name}</h3>
+                  <p className="text-xs text-zinc-400">{day.focus}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    startWorkout(program.id, day.id)
+                    navigate('/programs')
+                  }}
+                  className="btn-outline px-3 py-2 text-xs"
+                >
+                  <Play className="h-3.5 w-3.5" /> Start
+                </button>
+              </div>
+              <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
+                {day.exercises.map((pe, j) => {
+                  const ex = getExercise(pe.exerciseId)
+                  const logged = log?.exercises[j]
+                  const doneSummary =
+                    logged && logged.sets.length > 0
+                      ? `${logged.sets.map((s) => `${s.weight}×${s.reps}`).join(' · ')} ${unit}`
+                      : null
+                  const meta = (
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-100">
+                        {exerciseLabel(pe)}
+                      </p>
+                      <p
+                        className={cn(
+                          'text-xs',
+                          doneSummary ? 'text-emerald-400/80' : 'text-zinc-500',
+                        )}
+                      >
+                        {doneSummary ?? `${pe.sets} × ${pe.reps} · ${pe.restSec}s rest`}
+                      </p>
+                    </div>
+                  )
+                  return (
+                    <li key={`${pe.exerciseId}-${j}`}>
+                      {ex ? (
+                        <Link
+                          to={`/exercises/${pe.exerciseId}`}
+                          className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"
+                        >
+                          {meta}
+                          <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
+                        </Link>
+                      ) : (
+                        <div className="px-4 py-3">{meta}</div>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })}
       </section>
     </div>
   )

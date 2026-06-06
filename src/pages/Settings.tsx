@@ -35,6 +35,7 @@ export function Settings() {
   const logout = useAuth((s) => s.logout)
   const account = useAuth((s) => s.user)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [confirmLogout, setConfirmLogout] = useState(false)
   const program = useProgram(activeProgramId ?? undefined)
 
   return (
@@ -189,15 +190,26 @@ export function Settings() {
 
           <ChangePassword />
 
-          <button
-            onClick={() => {
-              logout()
-              navigate('/login', { replace: true })
-            }}
-            className="btn-ghost w-full"
-          >
-            <LogOut className="h-4 w-4" /> Log out
-          </button>
+          {confirmLogout ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  logout()
+                  navigate('/login', { replace: true })
+                }}
+                className="btn flex-1 bg-red-500/90 text-white hover:bg-red-500"
+              >
+                <LogOut className="h-4 w-4" /> Confirm Log out
+              </button>
+              <button onClick={() => setConfirmLogout(false)} className="btn-ghost flex-1">
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setConfirmLogout(true)} className="btn-ghost w-full">
+              <LogOut className="h-4 w-4" /> Log out
+            </button>
+          )}
         </section>
       )}
 

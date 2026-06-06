@@ -35,7 +35,7 @@ export function ForgotPassword() {
             <Dumbbell className="h-6 w-6" />
           </span>
           <h1 className="heading text-3xl font-bold tracking-[0.18em] text-zinc-100">
-            SMEL<span className="text-gold">LIS</span>
+            Next<span className="text-gold">Rep</span>
           </h1>
           <p className="mt-2 text-sm text-zinc-400">Reset your password.</p>
         </div>

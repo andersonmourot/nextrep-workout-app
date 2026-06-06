@@ -3,6 +3,7 @@ import { ArrowRight, Calendar, Dumbbell, Flame, Play, TrendingUp } from 'lucide-
 import { useProgram, useStore } from '../store'
 import { exerciseLabel } from '../data/exercises'
 import { ProgressRing } from '../components/ProgressRing'
+import { accentVars } from '../lib/theme'
 import {
   computeStreak,
   formatDate,
@@ -46,6 +47,7 @@ export function Dashboard() {
               navigate(`/programs/${program.id}`)
             }
           }}
+          style={accentVars(program.accent)}
           className="card cursor-pointer overflow-hidden text-left transition hover:border-white/10"
         >
           <div
@@ -80,6 +82,7 @@ export function Dashboard() {
               navigate(`/programs/${program.id}`)
             }
           }}
+          style={accentVars(program.accent)}
           className="card cursor-pointer overflow-hidden text-left transition hover:border-white/10"
         >
           <div

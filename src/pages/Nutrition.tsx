@@ -192,13 +192,13 @@ export function Nutrition() {
         </div>
       </section>
 
-      {/* Photos — up to 3 per day, at the bottom of the day's inputs. */}
+      <Goals />
+
+      {/* Photos — up to 3 per day, kept at the very bottom of the day's inputs. */}
       <DayPhotos
         photos={entry.photos ?? []}
         onChange={(photos) => setNutritionEntry({ ...entry, photos, date })}
       />
-
-      <Goals />
     </div>
   )
 }

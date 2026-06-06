@@ -8,6 +8,7 @@ import {
   Clock,
   Copy,
   Dumbbell,
+  MoreHorizontal,
   Pencil,
   Play,
   RotateCcw,
@@ -40,6 +41,7 @@ export function ProgramDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [confirmReset, setConfirmReset] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
+  const [showActions, setShowActions] = useState(false)
   // null = follow the current week automatically; a number = a week the user
   // navigated to manually.
   const [weekOverride, setWeekOverride] = useState<number | null>(null)
@@ -185,86 +187,96 @@ export function ProgramDetail() {
         )}
 
         {(isCustom || isActive) && (
-          <div className="mt-2 flex flex-wrap gap-2">
-            {canEdit && (
-              <Link
-                to={`/programs/${program.id}/edit`}
-                className="btn-ghost min-w-[120px] flex-1"
-              >
-                <Pencil className="h-4 w-4" /> Edit
-              </Link>
-            )}
-            {isCustom && (
-              <button
-                onClick={() => void duplicate(program)}
-                disabled={duplicating}
-                className="btn-ghost min-w-[120px] flex-1 disabled:opacity-60"
-                title="Make an independent copy you fully own"
-              >
-                <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
-              </button>
-            )}
-            {isActive &&
-              (confirmReset ? (
-                <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
-                  <button
-                    onClick={() => {
-                      resetProgramProgress(program.id)
-                      setConfirmReset(false)
-                      setWeekOverride(null)
-                    }}
-                    aria-label="Confirm reset"
-                    className="btn flex-1 border border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmReset(false)}
-                    aria-label="Cancel reset"
-                    className="btn-ghost flex-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setConfirmReset(true)}
-                  className="btn-ghost min-w-[120px] flex-1 text-amber-300 hover:text-amber-200"
-                  title="Restart this program at Week 1, Day 1 (keeps your workout history)"
+          showActions ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {canEdit && (
+                <Link
+                  to={`/programs/${program.id}/edit`}
+                  className="btn-ghost min-w-[120px] flex-1"
                 >
-                  <RotateCcw className="h-4 w-4" /> Reset
-                </button>
-              ))}
-            {isCustom &&
-              (confirmDelete ? (
-                <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
-                  <button
-                    onClick={() => {
-                      deleteProgram(program.id)
-                      navigate('/programs')
-                    }}
-                    aria-label="Confirm delete"
-                    className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(false)}
-                    aria-label="Cancel"
-                    className="btn-ghost flex-1"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ) : (
+                  <Pencil className="h-4 w-4" /> Edit
+                </Link>
+              )}
+              {isCustom && (
                 <button
-                  onClick={() => setConfirmDelete(true)}
-                  className="btn-ghost min-w-[120px] flex-1 text-red-300 hover:text-red-200"
+                  onClick={() => void duplicate(program)}
+                  disabled={duplicating}
+                  className="btn-ghost min-w-[120px] flex-1 disabled:opacity-60"
+                  title="Make an independent copy you fully own"
                 >
-                  <Trash2 className="h-4 w-4" /> Delete
+                  <Copy className="h-4 w-4" /> {duplicating ? 'Duplicating…' : 'Duplicate'}
                 </button>
-              ))}
-          </div>
+              )}
+              {isActive &&
+                (confirmReset ? (
+                  <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
+                    <button
+                      onClick={() => {
+                        resetProgramProgress(program.id)
+                        setConfirmReset(false)
+                        setWeekOverride(null)
+                      }}
+                      aria-label="Confirm reset"
+                      className="btn flex-1 border border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmReset(false)}
+                      aria-label="Cancel reset"
+                      className="btn-ghost flex-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmReset(true)}
+                    className="btn-ghost min-w-[120px] flex-1 text-amber-300 hover:text-amber-200"
+                    title="Restart this program at Week 1, Day 1 (keeps your workout history)"
+                  >
+                    <RotateCcw className="h-4 w-4" /> Reset
+                  </button>
+                ))}
+              {isCustom &&
+                (confirmDelete ? (
+                  <div className="flex min-w-[120px] flex-1 items-center justify-center gap-2">
+                    <button
+                      onClick={() => {
+                        deleteProgram(program.id)
+                        navigate('/programs')
+                      }}
+                      aria-label="Confirm delete"
+                      className="btn flex-1 border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      aria-label="Cancel"
+                      className="btn-ghost flex-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDelete(true)}
+                    className="btn-ghost min-w-[120px] flex-1 text-red-300 hover:text-red-200"
+                  >
+                    <Trash2 className="h-4 w-4" /> Delete
+                  </button>
+                ))}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowActions(true)}
+              className="btn-ghost mt-2 w-full"
+              aria-label="More actions"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          )
         )}
         {isActive && confirmReset && (
           <p className="mt-2 text-center text-xs text-zinc-500">
@@ -322,7 +334,10 @@ export function ProgramDetail() {
               }
             >
               <div className="flex items-center justify-between px-4 pt-4">
-                <div>
+                <button
+                  onClick={() => navigate(`/programs/${program.id}/day/${globalIdx}`)}
+                  className="min-w-0 text-left"
+                >
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     Day {i + 1}
                     {completed && (
@@ -334,7 +349,7 @@ export function ProgramDetail() {
                   </span>
                   <h3 className="heading text-lg font-bold text-zinc-50">{day.name}</h3>
                   <p className="text-xs text-zinc-400">{day.focus}</p>
-                </div>
+                </button>
                 <button
                   onClick={() => {
                     startWorkout(program.id, day.id)

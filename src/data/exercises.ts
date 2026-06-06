@@ -59,6 +59,21 @@ export const EXERCISES: Exercise[] = [
     tips: ['Lead with the chest, not the chin.', 'Add weight once you can do 10+ clean reps.'],
   },
   {
+    id: 'weighted-pull-up',
+    name: 'Weighted Pull-Up',
+    primaryMuscle: 'Back',
+    secondaryMuscles: ['Biceps', 'Forearms'],
+    equipment: 'Barbell',
+    difficulty: 'Intermediate',
+    instructions: [
+      'Attach weight using a dip belt, weighted vest, or dumbbell between your feet.',
+      'Hang from the bar with an overhand, shoulder-width grip.',
+      'Pull your chest toward the bar by driving elbows down.',
+      'Lower under control to a full hang.',
+    ],
+    tips: ['Lead with the chest, not the chin.', 'Increase weight in small increments.'],
+  },
+  {
     id: 'barbell-row',
     name: 'Barbell Row',
     primaryMuscle: 'Back',

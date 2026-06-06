@@ -159,9 +159,9 @@ export function ProgramEditor() {
     }
     setSaving(false)
 
-    // After creating or editing, go to the full Programs list (replace so Back
-    // returns to the list, not the editor).
-    navigate('/programs', { replace: true })
+    // After editing, go back to that program's detail page; after creating a
+    // new program, go to the main list. Replace so Back doesn't re-open the editor.
+    navigate(isEdit ? `/programs/${program.id}` : '/programs', { replace: true })
   }
 
   if (isEdit && !existing) {

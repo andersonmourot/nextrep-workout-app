@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Programs } from './pages/Programs'
 import { ProgramDetail } from './pages/ProgramDetail'
 import { ProgramEditor } from './pages/ProgramEditor'
+import { DayReview } from './pages/DayReview'
 import { Exercises } from './pages/Exercises'
 import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/programs/new" element={<ProgramEditor />} />
           <Route path="/programs/:programId" element={<ProgramDetail />} />
           <Route path="/programs/:programId/edit" element={<ProgramEditor />} />
+          <Route path="/programs/:programId/day/:dayIndex" element={<DayReview />} />
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/exercises/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/progress" element={<Progress />} />

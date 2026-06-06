@@ -1,3 +1,5 @@
+import type { CSSProperties } from 'react'
+
 export type ThemeMode = 'dark' | 'light'
 
 export const DEFAULT_THEME_COLOR = '#355e3b'
@@ -43,4 +45,16 @@ export function applyTheme(color: string, mode: ThemeMode): void {
   root.style.setProperty('--accent-400', mix(base, [255, 255, 255], 0.22).join(' '))
   root.style.setProperty('--accent-600', mix(base, [0, 0, 0], 0.22).join(' '))
   root.classList.toggle('light', mode === 'light')
+}
+
+/** Inline-style object that overrides the accent CSS variables for a subtree,
+ *  so all `gold` / accent Tailwind utilities inside it render in the given color
+ *  (e.g. a program's own accent on its detail page) instead of the app theme. */
+export function accentVars(color: string): CSSProperties {
+  const base = hexToRgb(color || DEFAULT_THEME_COLOR)
+  return {
+    '--accent': base.join(' '),
+    '--accent-400': mix(base, [255, 255, 255], 0.22).join(' '),
+    '--accent-600': mix(base, [0, 0, 0], 0.22).join(' '),
+  } as CSSProperties
 }

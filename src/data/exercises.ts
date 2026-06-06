@@ -102,6 +102,20 @@ export const EXERCISES: Exercise[] = [
     tips: ['Avoid leaning back excessively.', 'Squeeze the lats at the bottom.'],
   },
   {
+    id: 'close-grip-lat-pulldown',
+    name: 'Close Grip Lat Pulldown',
+    primaryMuscle: 'Back',
+    secondaryMuscles: ['Biceps'],
+    equipment: 'Cable',
+    difficulty: 'Beginner',
+    instructions: [
+      'Attach a close-grip (V-bar) handle and grip with palms facing each other.',
+      'Pull to your upper chest, driving elbows down and back.',
+      'Control the bar back to a full stretch.',
+    ],
+    tips: ['Avoid leaning back excessively.', 'Squeeze the lats at the bottom.'],
+  },
+  {
     id: 'seated-cable-row',
     name: 'Seated Cable Row',
     primaryMuscle: 'Back',
@@ -209,6 +223,20 @@ export const EXERCISES: Exercise[] = [
     instructions: [
       'Lie down holding the bar over your forehead.',
       'Lower the bar behind your head by bending the elbows.',
+      'Extend back to lockout.',
+    ],
+    tips: ['Keep upper arms angled back slightly.', 'Control the eccentric.'],
+  },
+  {
+    id: 'dumbbell-skullcrusher',
+    name: 'Dumbbell Skullcrusher',
+    primaryMuscle: 'Triceps',
+    secondaryMuscles: [],
+    equipment: 'Dumbbell',
+    difficulty: 'Intermediate',
+    instructions: [
+      'Lie down holding a dumbbell in each hand over your forehead.',
+      'Lower the dumbbells behind your head by bending the elbows.',
       'Extend back to lockout.',
     ],
     tips: ['Keep upper arms angled back slightly.', 'Control the eccentric.'],

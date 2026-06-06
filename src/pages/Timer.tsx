@@ -28,6 +28,16 @@ function parseTime(input: string): number | null {
   return Number.isNaN(n) ? null : n
 }
 
+/** Auto-format typed digits into mm:ss so the colon is inserted for you. iOS's
+ *  numeric keypad has no ":" key, so users type digits and we mask them: 1-2
+ *  digits stay as bare seconds, 3-4 digits become m:ss / mm:ss. Pasting a value
+ *  with a colon works too since we strip non-digits first. */
+function maskTime(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, -2)}:${digits.slice(-2)}`
+}
+
 /** Short beep using the Web Audio API (no asset needed). */
 function beep(freq = 880) {
   try {
@@ -209,7 +219,7 @@ function Countdown() {
         <div className="flex w-full items-center gap-2">
           <input
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => setInput(maskTime(e.target.value))}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !running && countdown === null) start()
             }}

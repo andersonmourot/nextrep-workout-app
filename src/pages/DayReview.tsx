@@ -117,9 +117,16 @@ export function DayReview() {
 
   return (
     <div className="animate-fade-in space-y-5">
-      {/* Back arrow — icon only */}
+      {/* Back arrow — icon only. Pop the history entry we came from (the program
+          detail) instead of pushing a fresh one, otherwise tapping Back on the
+          detail page would land back here and create a loop. Fall back to the
+          program detail when there's no in-app history (e.g. a deep link). */}
       <button
-        onClick={() => navigate(`/programs/${program.id}`)}
+        onClick={() => {
+          const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+          if (idx > 0) navigate(-1)
+          else navigate(`/programs/${program.id}`)
+        }}
         className="grid h-9 w-9 place-items-center rounded-lg bg-ink-850 text-zinc-400 hover:text-zinc-100"
         aria-label="Back to program"
       >

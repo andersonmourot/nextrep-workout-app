@@ -5,6 +5,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   Copy,
   Dumbbell,
@@ -20,6 +21,7 @@ import {
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
 import { cn, programLogsChrono, programRun, uid } from '../lib/utils'
+import { accentVars } from '../lib/theme'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
 import type { Program } from '../types'
@@ -102,7 +104,7 @@ export function ProgramDetail() {
   const canEdit = isCustom && (isOwner || !!program.collaborative)
 
   return (
-    <div className="animate-fade-in space-y-6">
+    <div className="animate-fade-in space-y-6" style={accentVars(program.accent)}>
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
@@ -188,6 +190,7 @@ export function ProgramDetail() {
 
         {(isCustom || isActive) && (
           showActions ? (
+            <>
             <div className="mt-2 flex flex-wrap gap-2">
               {canEdit && (
                 <Link
@@ -268,6 +271,18 @@ export function ProgramDetail() {
                   </button>
                 ))}
             </div>
+            <button
+              onClick={() => {
+                setShowActions(false)
+                setConfirmDelete(false)
+                setConfirmReset(false)
+              }}
+              className="btn-ghost mt-2 w-full"
+              aria-label="Collapse actions"
+            >
+              <ChevronUp className="h-5 w-5" />
+            </button>
+            </>
           ) : (
             <button
               onClick={() => setShowActions(true)}
@@ -333,11 +348,21 @@ export function ProgramDetail() {
                   : undefined
               }
             >
-              <div className="flex items-center justify-between px-4 pt-4">
-                <button
-                  onClick={() => navigate(`/programs/${program.id}/day/${globalIdx}`)}
-                  className="min-w-0 text-left"
-                >
+              {/* Entire top section is one clickable target that opens the day
+                  review, except the Start button which stops propagation. */}
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/programs/${program.id}/day/${globalIdx}`)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    navigate(`/programs/${program.id}/day/${globalIdx}`)
+                  }
+                }}
+                className="flex cursor-pointer items-start justify-between gap-2 px-4 pb-4 pt-4 hover:bg-white/[0.02]"
+              >
+                <div className="min-w-0 text-left">
                   <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     Day {i + 1}
                     {completed && (
@@ -349,18 +374,19 @@ export function ProgramDetail() {
                   </span>
                   <h3 className="heading text-lg font-bold text-zinc-50">{day.name}</h3>
                   <p className="text-xs text-zinc-400">{day.focus}</p>
-                </button>
+                </div>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     startWorkout(program.id, day.id)
                     navigate('/programs')
                   }}
-                  className="btn-outline px-3 py-2 text-xs"
+                  className="btn-outline shrink-0 px-3 py-2 text-xs"
                 >
                   <Play className="h-3.5 w-3.5" /> Start
                 </button>
               </div>
-              <ul className="mt-3 divide-y divide-white/5 border-t border-white/5">
+              <ul className="divide-y divide-white/5 border-t border-white/5">
                 {day.exercises.map((pe, j) => {
                   const ex = getExercise(pe.exerciseId)
                   const logged = log?.exercises[j]

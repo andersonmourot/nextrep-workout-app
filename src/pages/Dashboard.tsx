@@ -32,9 +32,21 @@ export function Dashboard() {
         <h1 className="heading text-3xl font-bold text-zinc-50">{name}</h1>
       </div>
 
-      {/* Today's workout */}
+      {/* Today's workout — the whole card opens the program detail; the Start
+          button stops propagation so it keeps its own action. */}
       {program && nextDay ? (
-        <section className="card overflow-hidden">
+        <section
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate(`/programs/${program.id}`)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              navigate(`/programs/${program.id}`)
+            }
+          }}
+          className="card cursor-pointer overflow-hidden text-left transition hover:border-white/10"
+        >
           <div
             className="px-5 pb-5 pt-4"
             style={{
@@ -63,25 +75,29 @@ export function Dashboard() {
 
             <div className="mt-4 flex gap-2">
               {activeWorkout ? (
-                <button onClick={() => navigate('/programs')} className="btn-gold flex-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate('/programs')
+                  }}
+                  className="btn-gold w-full"
+                >
                   <Play className="h-4 w-4" />
                   Resume Workout
                 </button>
               ) : (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation()
                     startWorkout(program.id, nextDay.id)
                     navigate('/programs')
                   }}
-                  className="btn-gold flex-1"
+                  className="btn-gold w-full"
                 >
                   <Play className="h-4 w-4" />
                   Start Workout
                 </button>
               )}
-              <Link to={`/programs/${program.id}`} className="btn-ghost">
-                Details
-              </Link>
             </div>
           </div>
         </section>

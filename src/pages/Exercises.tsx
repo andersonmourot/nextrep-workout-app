@@ -97,7 +97,7 @@ export function Exercises() {
 
 export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const [q, setQ] = useState('')
-  const [muscle, setMuscle] = useState<Muscle | 'All'>('All')
+  const [muscle, setMuscle] = useState<Muscle | 'All' | 'Custom'>('All')
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<Exercise | null>(null)
   const [managing, setManaging] = useState(false)
@@ -123,11 +123,18 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
     [customExercises, overrides, hiddenExerciseIds],
   )
 
+  const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
+
   const list = useMemo(() => {
     const query = q.trim().toLowerCase()
     return all
       .filter((e) => {
-        const matchMuscle = muscle === 'All' || e.primaryMuscle === muscle
+        const matchMuscle =
+          muscle === 'All'
+            ? true
+            : muscle === 'Custom'
+              ? customIds.has(e.id)
+              : e.primaryMuscle === muscle
         const matchQuery =
           !query ||
           e.name.toLowerCase().includes(query) ||
@@ -136,7 +143,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
         return matchMuscle && matchQuery
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-  }, [all, q, muscle])
+  }, [all, q, muscle, customIds])
 
   function toggleManaging() {
     setManaging((m) => !m)
@@ -144,8 +151,6 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
     setShowHidden(false)
     setShowTrash(false)
   }
-
-  const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
 
   // Default exercises the user has hidden (moved to the "Hidden" list).
   const hiddenList = useMemo(
@@ -309,7 +314,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
       </div>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        {MUSCLES.map((m) => (
+        {(['All', 'Custom', ...MUSCLES.slice(1)] as Array<Muscle | 'All' | 'Custom'>).map((m) => (
           <button
             key={m}
             onClick={() => setMuscle(m)}

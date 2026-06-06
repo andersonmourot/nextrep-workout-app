@@ -273,17 +273,26 @@ export function Programs() {
                       {p.category} · {p.level}
                     </span>
                     {isCustom && (
-                      <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                      >
                         Custom
                       </span>
                     )}
                     {isActive && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                      >
                         <CheckCircle2 className="h-3 w-3" /> Active
                       </span>
                     )}
                     {isFavorite && !isActive && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+                        style={{ backgroundColor: `${p.accent}26`, color: p.accent }}
+                      >
                         <Star className="h-3 w-3 fill-current" /> Favorite
                       </span>
                     )}

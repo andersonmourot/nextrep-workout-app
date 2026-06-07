@@ -155,6 +155,7 @@ export interface BodyWeightEntry {
   id: string
   date: string // ISO (date only)
   weight: number
+  createdAt?: string // full ISO timestamp of when it was logged
 }
 
 /** One day's logged nutrition totals (keyed by date). */

@@ -108,7 +108,11 @@ export function Workout() {
     if (!program || !day) return
     const loggedExercises = day.exercises.map((p, i) => ({
       exerciseId: p.exerciseId,
-      sets: (sets[i] ?? []).filter((s) => s.completed),
+      // Save sets the user marked done, plus any where they entered a weight
+      // but forgot to tap "done" — record those as done too so nothing is lost.
+      sets: (sets[i] ?? [])
+        .filter((s) => s.completed || s.weight > 0)
+        .map((s) => ({ ...s, completed: true })),
     }))
     const totalVolume = loggedExercises.reduce(
       (sum, le) => sum + le.sets.reduce((a, s) => a + s.weight * s.reps, 0),

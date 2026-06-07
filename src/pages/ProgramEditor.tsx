@@ -1,7 +1,16 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ChevronLeft, ChevronRight, Copy, GripVertical, Plus, Trash2 } from 'lucide-react'
-import { findExerciseByName, getExercise } from '../data/exercises'
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Copy,
+  Plus,
+  Trash2,
+} from 'lucide-react'
+import { EXERCISES, findExerciseByName, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
@@ -58,6 +67,7 @@ export function ProgramEditor() {
     Record<string, { fromWeek: number; day: ProgramDay }[]>
   >(existing?.weekOverrides ?? {})
   const [weekRaw, setWeek] = useState(1)
+  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({})
   const [applyConfirm, setApplyConfirm] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -494,10 +504,25 @@ export function ProgramEditor() {
           </div>
         )}
 
-        {viewDays.map((day, dayIdx) => (
+        {viewDays.map((day, dayIdx) => {
+          const collapsed = !!collapsedDays[day.id]
+          return (
           <div key={day.id} className="card p-4">
             <div className="flex items-start gap-2">
-              <GripVertical className="mt-2 h-4 w-4 shrink-0 text-zinc-600" />
+              <button
+                type="button"
+                onClick={() =>
+                  setCollapsedDays((c) => ({ ...c, [day.id]: !c[day.id] }))
+                }
+                className="mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-zinc-400 hover:text-zinc-100"
+                aria-label={collapsed ? 'Expand day' : 'Collapse day'}
+              >
+                {collapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </button>
               <div className="grid flex-1 grid-cols-2 gap-2">
                 <input
                   value={day.name}
@@ -522,17 +547,17 @@ export function ProgramEditor() {
               </button>
             </div>
 
+            {!collapsed && (
             <div className="mt-3 space-y-2">
               {day.exercises.map((pe, exIdx) => {
                 const ex = getExercise(pe.exerciseId)
                 return (
                   <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
                     <div className="flex items-center gap-2">
-                      <input
+                      <ExerciseNameInput
                         value={pe.name ?? ex?.name ?? ''}
-                        onChange={(e) => setExerciseName(dayIdx, exIdx, e.target.value, pe)}
+                        onType={(typed) => setExerciseName(dayIdx, exIdx, typed, pe)}
                         placeholder="Type an exercise name"
-                        className="input flex-1"
                       />
                       <button
                         onClick={() => removeExercise(dayIdx, exIdx)}
@@ -573,8 +598,10 @@ export function ProgramEditor() {
                 <Plus className="h-3.5 w-3.5" /> Add exercise
               </button>
             </div>
+            )}
           </div>
-        ))}
+          )
+        })}
 
         {week === 1 ? (
           <button onClick={addDay} className="btn-outline w-full border-dashed">
@@ -664,5 +691,81 @@ function TextField({
         className="input px-2 py-2 text-center text-base"
       />
     </label>
+  )
+}
+
+/**
+ * Exercise-name field with a live autocomplete dropdown. Suggestions are drawn
+ * from the built-in library plus the user's custom exercises (the same set
+ * shown on the Exercises page), filtered as the user types and capped at five.
+ */
+function ExerciseNameInput({
+  value,
+  onType,
+  placeholder,
+}: {
+  value: string
+  onType: (typed: string) => void
+  placeholder: string
+}) {
+  const customExercises = useStore((s) => s.customExercises)
+  const [open, setOpen] = useState(false)
+
+  const names = useMemo(() => {
+    const seen = new Set<string>()
+    const out: string[] = []
+    for (const n of [...EXERCISES.map((e) => e.name), ...customExercises.map((e) => e.name)]) {
+      const key = n.toLowerCase()
+      if (!seen.has(key)) {
+        seen.add(key)
+        out.push(n)
+      }
+    }
+    return out
+  }, [customExercises])
+
+  const suggestions = useMemo(() => {
+    const q = value.trim().toLowerCase()
+    if (!q) return []
+    return names
+      .filter((n) => n.toLowerCase().includes(q) && n.toLowerCase() !== q)
+      .slice(0, 5)
+  }, [names, value])
+
+  return (
+    <div className="relative flex-1">
+      <input
+        value={value}
+        onChange={(e) => {
+          onType(e.target.value)
+          setOpen(true)
+        }}
+        onFocus={() => setOpen(true)}
+        // Delay close so a click on a suggestion still registers.
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder={placeholder}
+        className="input w-full"
+      />
+      {open && suggestions.length > 0 && (
+        <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-white/10 bg-ink-850 py-1 shadow-xl">
+          {suggestions.map((n) => (
+            <li key={n}>
+              <button
+                type="button"
+                // mousedown fires before the input's blur, so the value sticks.
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  onType(n)
+                  setOpen(false)
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
+              >
+                {n}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

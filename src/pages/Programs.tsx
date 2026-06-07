@@ -203,13 +203,15 @@ export function Programs() {
               <Trash2 className="h-4 w-4" /> {trashedPrograms.length}
             </button>
           )}
-          <Link
-            to="/programs/history"
-            aria-label="Program history"
-            className="btn-ghost px-3 py-2 text-sm"
-          >
-            <History className="h-4 w-4" />
-          </Link>
+          {managing && (
+            <Link
+              to="/programs/history"
+              aria-label="Program history"
+              className="btn-ghost px-3 py-2 text-sm"
+            >
+              <History className="h-4 w-4" />
+            </Link>
+          )}
           <Link to="/programs/exercises" aria-label="Exercises" className="btn-ghost px-3 py-2 text-sm">
             <Dumbbell className="h-4 w-4" />
           </Link>
@@ -235,7 +237,7 @@ export function Programs() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search programs"
+          placeholder="Search"
           className="w-full rounded-xl border border-white/10 bg-ink-850 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-gold/60 focus:outline-none"
         />
       </div>

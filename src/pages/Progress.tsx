@@ -6,6 +6,7 @@ import {
   computeStreak,
   formatDate,
   formatDateLong,
+  formatDateTime,
   formatDuration,
   todayISO,
   totalVolume,
@@ -23,7 +24,12 @@ export function Progress() {
   function logWeight() {
     const w = parseFloat(weight)
     if (!w || w <= 0) return
-    const entry: BodyWeightEntry = { id: uid(), date: todayISO(), weight: w }
+    const entry: BodyWeightEntry = {
+      id: uid(),
+      date: todayISO(),
+      weight: w,
+      createdAt: new Date().toISOString(),
+    }
     addBodyWeight(entry)
     setWeight('')
   }
@@ -183,7 +189,9 @@ export function BodyWeightRow({
 }) {
   return (
     <li className="flex items-center justify-between rounded-lg bg-ink-900 px-3 py-2 text-sm">
-      <span className="text-zinc-400">{formatDateLong(entry.date)}</span>
+      <span className="text-zinc-400">
+        {entry.createdAt ? formatDateTime(entry.createdAt) : formatDateLong(entry.date)}
+      </span>
       <span className="flex items-center gap-3">
         <span className="font-semibold text-zinc-100">
           {entry.weight} {unit}

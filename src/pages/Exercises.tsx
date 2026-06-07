@@ -318,7 +318,7 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search exercises, muscles, equipment"
+          placeholder="Search"
           className="input pl-9"
         />
       </div>

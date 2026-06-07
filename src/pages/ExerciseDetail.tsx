@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lightbulb, Pencil } from 'lucide-react'
+import { ArrowLeft, Lightbulb, Pencil, Trash2 } from 'lucide-react'
 import { EXERCISE_MAP } from '../data/exercises'
 import { useStore } from '../store'
 import { ExerciseModal } from './Exercises'
@@ -9,9 +9,11 @@ export function ExerciseDetail() {
   const { exerciseId } = useParams()
   const navigate = useNavigate()
   const [editing, setEditing] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   // Read store slices so the page re-renders after an edit/override.
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
+  const deleteExercise = useStore((s) => s.deleteExercise)
   const ex = exerciseId
     ? customExercises.find((e) => e.id === exerciseId) ??
       overrides[exerciseId] ??
@@ -40,12 +42,40 @@ export function ExerciseDetail() {
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
-        <button
-          onClick={() => setEditing(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-ink-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 hover:border-white/30"
-        >
-          <Pencil className="h-4 w-4" /> Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-ink-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 hover:border-white/30"
+          >
+            <Pencil className="h-4 w-4" /> Edit
+          </button>
+          {confirmDelete ? (
+            <>
+              <button
+                onClick={() => {
+                  deleteExercise(ex.id)
+                  navigate('/exercises')
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-semibold text-red-300 hover:border-red-500/60"
+              >
+                <Trash2 className="h-4 w-4" /> Confirm
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="rounded-lg border border-white/15 bg-ink-800 px-3 py-1.5 text-sm font-semibold text-zinc-300 hover:border-white/30"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-ink-800 px-3 py-1.5 text-sm font-semibold text-zinc-200 hover:border-red-500/50 hover:text-red-300"
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </button>
+          )}
+        </div>
       </div>
 
       <div>

@@ -17,13 +17,15 @@ export function Layout() {
   const showWorkout =
     !!activeWorkout && activeWorkout.programId === activeProgramId && pathname === '/programs'
 
-  // App-shell layout: a flex column that fills #root (which in turn fills the
-  // screen via CSS height chain: html → body → #root → this div). On iOS
-  // standalone the chain uses -webkit-fill-available to reach the true screen
-  // bottom. Using flow layout (h-full) instead of position:fixed avoids known
-  // WebKit bugs where fixed containers don't fill the full screen in PWA mode.
+  // App-shell layout: the shell is pinned to the viewport with `position: fixed;
+  // inset: 0` (via `fixed inset-0`) so it always covers the full screen edge to
+  // edge. Relying on `height: 100dvh`/`100%` left a gap on iOS standalone (the
+  // body background showed through below the bottom nav). Inside, it's a flex
+  // column where only <main> scrolls and the bottom nav is an in-flow element at
+  // the bottom — so the nav sits flush at the true bottom and the keyboard simply
+  // covers it while typing.
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       {showWorkout ? (
         <main id="app-scroll" className="flex-1 overflow-y-auto pt-[env(safe-area-inset-top)]">
           <Workout />

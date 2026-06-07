@@ -53,20 +53,36 @@
     --zinc-700: 180 180 186;
   }
 
-  html,
+  html {
+    height: 100%;
+    /* html background paints to the true screen edges on every platform, so
+       even if the app-shell container is slightly short the user sees a
+       seamless dark surface rather than a gap of a different color. */
+    background: rgb(var(--ink-950));
+  }
   body,
   #root {
     height: 100%;
+    overflow: hidden;
   }
 
-  /* iOS standalone (PWA) computes `height: 100%` shorter than the screen, which
-     leaves a gap of background below the bottom nav. The dynamic viewport unit
-     fills the true screen height so the app shell reaches the very bottom. */
+  /* Prefer dvh when available (handles disappearing browser chrome on
+     mobile). Applied to body/#root (not html — keep html at 100%). */
   @supports (height: 100dvh) {
-    html,
     body,
     #root {
       height: 100dvh;
+    }
+  }
+
+  /* iOS standalone (PWA): neither 100%, 100dvh, nor position:fixed;inset:0
+     reliably fill the true screen. -webkit-fill-available is the only value
+     that consistently equals the real screen height in standalone mode.
+     The @supports guard scopes this to Safari/WebKit only. */
+  @supports (-webkit-touch-callout: none) {
+    body,
+    #root {
+      height: -webkit-fill-available;
     }
   }
 

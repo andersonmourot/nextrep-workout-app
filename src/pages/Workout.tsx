@@ -121,6 +121,7 @@ export function Workout() {
       programName: program.name,
       dayId: day.id,
       dayName: day.name,
+      week: activeWorkout?.week,
       durationSec: elapsed,
       exercises: loggedExercises,
       totalVolume,

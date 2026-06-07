@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
-import { cn, programLogsChrono, programRun, resolveProgramDay, uid } from '../lib/utils'
+import { cn, programLogSlots, programRun, resolveProgramDay, uid } from '../lib/utils'
 import { accentVars } from '../lib/theme'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
@@ -54,8 +54,8 @@ export function ProgramDetail() {
     () => (program ? programRun(program, logs, anchor) : null),
     [program, logs, anchor],
   )
-  const chrono = useMemo(
-    () => (program ? programLogsChrono(program, logs, anchor) : []),
+  const slots = useMemo(
+    () => (program ? programLogSlots(program, logs, anchor) : []),
     [program, logs, anchor],
   )
   // The week shown defaults to the one holding the next workout; the user can
@@ -379,10 +379,13 @@ export function ProgramDetail() {
           // Show the plan resolved for the week being viewed (per-week edits).
           const day = resolveProgramDay(program, i, selectedWeek) ?? baseDay
           const globalIdx = (selectedWeek - 1) * program.days.length + i
-          const completedCount = run?.completedCount ?? 0
-          const completed = globalIdx < completedCount
-          const isNext = isActive && globalIdx === completedCount
-          const log = completed ? chrono[globalIdx] : undefined
+          const log = slots[globalIdx]
+          const completed = !!log
+          // The next day up is the first unlogged slot (handles out-of-order logging).
+          const nextGlobalIdx = run
+            ? run.currentWeekIndex * program.days.length + run.nextDayIndex
+            : 0
+          const isNext = isActive && !run?.isComplete && globalIdx === nextGlobalIdx
           return (
             <div
               key={baseDay.id}

@@ -138,6 +138,13 @@ export interface WorkoutLog {
   programName: string
   dayId: string
   dayName: string
+  /**
+   * 1-based week this log belongs to within the program run. Binds the log to a
+   * specific week+day slot so logging a later week's day before earlier days
+   * doesn't drop the data into an earlier week's slot. Legacy logs (created
+   * before per-slot binding) omit this and fall back to chronological placement.
+   */
+  week?: number
   durationSec: number
   exercises: LoggedExercise[]
   totalVolume: number

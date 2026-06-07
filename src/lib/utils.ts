@@ -94,6 +94,50 @@ export function programLogsChrono(
     .reverse()
 }
 
+/**
+ * The 0-based slot index for a log within its program run, derived from its
+ * explicit `week` + day position: (week - 1) * daysLen + dayLocalIdx. Returns
+ * `undefined` for legacy logs that lack a `week` (or whose day no longer exists).
+ */
+export function logSlotIndex(program: Program, log: WorkoutLog): number | undefined {
+  if (!log.week || log.week < 1) return undefined
+  const daysLen = Math.max(1, program.days.length)
+  const dayLocalIdx = program.days.findIndex((d) => d.id === log.dayId)
+  if (dayLocalIdx < 0) return undefined
+  return (log.week - 1) * daysLen + dayLocalIdx
+}
+
+/**
+ * Place a program's logs into their day slots. Logs with an explicit week+day
+ * land in that exact slot, so logging a later week's day before earlier days
+ * keeps the data on the correct week. Legacy logs without a week fill the
+ * earliest remaining slots in chronological order (back-compat). The returned
+ * array is sparse — empty slots are `undefined`.
+ */
+export function programLogSlots(
+  program: Program,
+  logs: WorkoutLog[],
+  since?: string,
+): (WorkoutLog | undefined)[] {
+  const chrono = programLogsChrono(program, logs, since)
+  const slots: (WorkoutLog | undefined)[] = []
+  const legacy: WorkoutLog[] = []
+  for (const l of chrono) {
+    const idx = logSlotIndex(program, l)
+    if (idx === undefined || slots[idx] !== undefined) {
+      legacy.push(l)
+      continue
+    }
+    slots[idx] = l
+  }
+  let cursor = 0
+  for (const l of legacy) {
+    while (slots[cursor] !== undefined) cursor += 1
+    slots[cursor] = l
+  }
+  return slots
+}
+
 export interface ProgramRun {
   /** Number of training days in one week of the program. */
   daysLen: number
@@ -116,17 +160,24 @@ export function programRun(
   since?: string,
 ): ProgramRun {
   const daysLen = Math.max(1, program.days.length)
-  const completedCount = programLogsChrono(program, logs, since).length
   const totalWeeks = Math.max(1, program.durationWeeks || 1)
   const totalDays = totalWeeks * daysLen
+  // Map logs to their week+day slots so progress reflects which days are filled
+  // (not just how many logs exist), and "up next" is the first unlogged day even
+  // when days were logged out of order.
+  const slots = programLogSlots(program, logs, since)
+  let completedCount = 0
+  let nextSlot = totalDays
+  for (let i = 0; i < totalDays; i += 1) {
+    if (slots[i]) {
+      completedCount += 1
+    } else if (nextSlot === totalDays) {
+      nextSlot = i
+    }
+  }
   const isComplete = completedCount >= totalDays
-  // Cap progress at the program's scheduled length so a finished program shows
-  // as complete instead of continuing to spawn new weeks.
-  const capped = Math.min(completedCount, totalDays)
-  const currentWeekIndex = isComplete
-    ? totalWeeks - 1
-    : Math.floor(capped / daysLen)
-  const nextDayIndex = isComplete ? 0 : capped % daysLen
+  const currentWeekIndex = isComplete ? totalWeeks - 1 : Math.floor(nextSlot / daysLen)
+  const nextDayIndex = isComplete ? 0 : nextSlot % daysLen
   return { daysLen, completedCount, totalWeeks, currentWeekIndex, nextDayIndex, isComplete }
 }
 

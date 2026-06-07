@@ -162,8 +162,10 @@ function CompletedDetail({
       </div>
 
       {entry.logs.map((log, i) => {
-        const weekNum = Math.floor(i / daysLen) + 1
-        const dayNum = (i % daysLen) + 1
+        // Prefer the log's bound week; fall back to its position for legacy data.
+        const dayLocalIdx = entry.program.days.findIndex((d) => d.id === log.dayId)
+        const weekNum = log.week ?? Math.floor(i / daysLen) + 1
+        const dayNum = (dayLocalIdx >= 0 ? dayLocalIdx : i % daysLen) + 1
         return (
           <div key={log.id} className="card p-5">
             <div className="flex items-baseline justify-between gap-2">

@@ -6,7 +6,7 @@ import { useIsCustomProgram, useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
 import type { PlannedExercise, Program, ProgramDay, SetLog, WorkoutLog } from '../types'
-import { cn, programLogsChrono, resolveProgramDay, uid, withDayOverride } from '../lib/utils'
+import { cn, programLogSlots, resolveProgramDay, uid, withDayOverride } from '../lib/utils'
 
 function buildSets(d: ProgramDay): SetLog[][] {
   return d.exercises.map((pe) =>
@@ -44,11 +44,14 @@ export function DayReview() {
   const day = program ? resolveProgramDay(program, dayLocalIdx, weekNum) : undefined
 
   const anchor = program ? programAnchors[program.id] : undefined
-  const chrono = useMemo(
-    () => (program ? programLogsChrono(program, logs, anchor) : []),
+  // Resolve the log bound to this exact week+day slot (not by chronological
+  // position), so viewing/editing a later week's day never reads or overwrites
+  // an earlier week's logged data.
+  const slots = useMemo(
+    () => (program ? programLogSlots(program, logs, anchor) : []),
     [program, logs, anchor],
   )
-  const existingLog: WorkoutLog | undefined = chrono[globalIdx]
+  const existingLog: WorkoutLog | undefined = slots[globalIdx]
 
   // Local set state — pre-filled from an existing log or from the day template.
   const [sets, setSets] = useState<SetLog[][]>(() => {
@@ -130,6 +133,7 @@ export function DayReview() {
       programName: program.name,
       dayId: day.id,
       dayName: day.name,
+      week: weekNum,
       durationSec: existingLog?.durationSec ?? 0,
       exercises: loggedExercises,
       totalVolume,

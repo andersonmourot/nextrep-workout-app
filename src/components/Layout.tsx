@@ -17,12 +17,15 @@ export function Layout() {
   const showWorkout =
     !!activeWorkout && activeWorkout.programId === activeProgramId && pathname === '/programs'
 
-  // App-shell layout: a full-height flex column where only <main> scrolls and the
-  // bottom nav is an in-flow element pinned to the bottom. This avoids iOS quirks
-  // with `position: fixed` bars (floating high on short pages, jumping above the
-  // keyboard) and lets the keyboard naturally cover the nav while typing.
+  // App-shell layout: the shell is pinned to the viewport with `position: fixed;
+  // inset: 0` (via `fixed inset-0`) so it always covers the full screen edge to
+  // edge. Relying on `height: 100dvh`/`100%` left a gap on iOS standalone (the
+  // body background showed through below the bottom nav). Inside, it's a flex
+  // column where only <main> scrolls and the bottom nav is an in-flow element at
+  // the bottom — so the nav sits flush at the true bottom and the keyboard simply
+  // covers it while typing.
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
       {showWorkout ? (
         <main id="app-scroll" className="flex-1 overflow-y-auto pt-[env(safe-area-inset-top)]">
           <Workout />

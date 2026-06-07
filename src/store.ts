@@ -21,7 +21,7 @@ import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiExercisesBatch, apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
-import { programLogsChrono, programRun, resolveProgramDay, uid } from './lib/utils'
+import { programLogSlots, programRun, resolveProgramDay, uid } from './lib/utils'
 
 export interface SavedTimer {
   id: string
@@ -222,14 +222,21 @@ export const useStore = create<AppState>()(
             : undefined
           if (!program) return { logs }
           const anchor = s.programAnchors[program.id]
-          const chrono = programLogsChrono(program, logs, anchor)
           const run = programRun(program, logs, anchor)
           const totalDays = Math.max(1, program.durationWeeks) * run.daysLen
-          if (chrono.length < totalDays) return { logs }
-          const runStartId = chrono[0]?.id ?? 'run'
+          // Archive only once every scheduled week+day slot is filled (not merely
+          // when the log count reaches the total), so out-of-order logging can't
+          // archive a run while a day is still empty.
+          const slots = programLogSlots(program, logs, anchor)
+          const runLogs: WorkoutLog[] = []
+          for (let i = 0; i < totalDays; i += 1) {
+            const slot = slots[i]
+            if (slot) runLogs.push(slot)
+          }
+          if (runLogs.length < totalDays) return { logs }
+          const runStartId = runLogs[0]?.id ?? 'run'
           const archiveId = `${program.id}-${runStartId}`
           if (s.completedPrograms.some((c) => c.id === archiveId)) return { logs }
-          const runLogs = chrono.slice(0, totalDays)
           const entry: CompletedProgram = {
             id: archiveId,
             programId: program.id,

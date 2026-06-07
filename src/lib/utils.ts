@@ -261,9 +261,21 @@ export function startOfWeek(d = new Date()): Date {
   return date
 }
 
-export function workoutsThisWeek(logs: WorkoutLog[]): number {
+/**
+ * Distinct calendar days in the current week (Mon-start) that have at least one
+ * workout. Optionally scoped to a single program so the Home "days/week" ring
+ * reflects the active program's progress rather than every log ever recorded.
+ */
+export function workoutsThisWeek(logs: WorkoutLog[], programId?: string): number {
   const start = startOfWeek().getTime()
-  return logs.filter((l) => new Date(l.date).getTime() >= start).length
+  const days = new Set<string>()
+  for (const l of logs) {
+    if (programId !== undefined && l.programId !== programId) continue
+    if (parseStoredDate(l.date).getTime() >= start) {
+      days.add(localDateKey(parseStoredDate(l.date)))
+    }
+  }
+  return days.size
 }
 
 export function totalVolume(logs: WorkoutLog[]): number {

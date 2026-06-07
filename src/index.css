@@ -53,21 +53,24 @@
     --zinc-700: 180 180 186;
   }
 
-  html,
+  html {
+    height: 100%;
+    /* Paint the app background to the true screen edges so any momentary
+       mismatch reads as a seamless dark surface, never a contrasting gap. */
+    background: rgb(var(--ink-950));
+  }
+
+  /* The app shell's height is driven by a JS-measured pixel value
+     (`--app-height` = window.innerHeight, set in main.tsx). This sidesteps the
+     iOS standalone first-paint bug where 100%/100dvh/position:fixed all report
+     a screen height that's too short on launch (the bottom nav then floats high
+     until a touch forces a reflow). The fallback `100%` is used for the very
+     first paint and on non-JS contexts. */
   body,
   #root {
     height: 100%;
-  }
-
-  /* iOS standalone (PWA) computes `height: 100%` shorter than the screen, which
-     leaves a gap of background below the bottom nav. The dynamic viewport unit
-     fills the true screen height so the app shell reaches the very bottom. */
-  @supports (height: 100dvh) {
-    html,
-    body,
-    #root {
-      height: 100dvh;
-    }
+    height: var(--app-height, 100%);
+    overflow: hidden;
   }
 
   body {

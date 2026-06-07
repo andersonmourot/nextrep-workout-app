@@ -21,6 +21,29 @@ if (isStandalone) {
     )
 }
 
+// iOS standalone (PWA) reports a too-short screen height on the first paint, so
+// `height: 100%`/`100dvh`/`position:fixed` all leave the bottom nav floating
+// high until a touch forces a reflow. We instead drive the shell height from a
+// JS-measured pixel value and re-measure whenever the viewport actually changes
+// (and a few times right after load, since iOS settles the real height a beat
+// after launch). `window.innerHeight` is the full screen in standalone and does
+// NOT shrink when the keyboard opens, so the keyboard keeps covering the nav as
+// before instead of squashing the layout.
+function setAppHeight() {
+  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`)
+}
+setAppHeight()
+window.addEventListener('resize', setAppHeight)
+window.addEventListener('orientationchange', setAppHeight)
+window.addEventListener('pageshow', setAppHeight)
+window.addEventListener('load', () => {
+  setAppHeight()
+  // iOS may not have finalized the viewport on `load`; re-measure as it settles.
+  setTimeout(setAppHeight, 100)
+  setTimeout(setAppHeight, 300)
+  setTimeout(setAppHeight, 600)
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

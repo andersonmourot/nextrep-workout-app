@@ -265,13 +265,21 @@ export function startOfWeek(d = new Date()): Date {
  * Distinct calendar days in the current week (Mon-start) that have at least one
  * workout. Optionally scoped to a single program so the Home "days/week" ring
  * reflects the active program's progress rather than every log ever recorded.
+ * When a reset anchor (ISO) is given, only logs on/after it count, so resetting
+ * a program zeroes the ring even for workouts logged earlier in the same week.
  */
-export function workoutsThisWeek(logs: WorkoutLog[], programId?: string): number {
-  const start = startOfWeek().getTime()
+export function workoutsThisWeek(
+  logs: WorkoutLog[],
+  programId?: string,
+  since?: string,
+): number {
+  const anchor = since ? parseStoredDate(since).getTime() : 0
+  const cutoff = Math.max(startOfWeek().getTime(), anchor)
   const days = new Set<string>()
   for (const l of logs) {
     if (programId !== undefined && l.programId !== programId) continue
-    if (parseStoredDate(l.date).getTime() >= start) {
+    const t = parseStoredDate(l.date).getTime()
+    if (t >= cutoff) {
       days.add(localDateKey(parseStoredDate(l.date)))
     }
   }

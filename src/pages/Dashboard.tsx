@@ -19,7 +19,11 @@ export function Dashboard() {
   const navigate = useNavigate()
 
   const streak = computeStreak(logs)
-  const weekCount = workoutsThisWeek(logs, activeProgramId ?? undefined)
+  const weekCount = workoutsThisWeek(
+    logs,
+    activeProgramId ?? undefined,
+    activeProgramId ? programAnchors[activeProgramId] : undefined,
+  )
   const run = program ? programRun(program, logs, programAnchors[program.id]) : undefined
   const dayIdx = run?.nextDayIndex ?? 0
   const programComplete = !!run?.isComplete

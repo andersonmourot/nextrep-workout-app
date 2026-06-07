@@ -17,12 +17,10 @@ export function Layout() {
   const showWorkout =
     !!activeWorkout && activeWorkout.programId === activeProgramId && pathname === '/programs'
 
-  // App-shell layout: a flex column that fills #root, whose height is the
-  // JS-measured real screen height (--app-height, see main.tsx + index.css).
-  // This avoids the iOS standalone first-paint bug that left the bottom nav
-  // floating high. Inside, only <main> scrolls and the bottom nav is an in-flow
-  // element at the bottom, so it sits flush at the true bottom and the keyboard
-  // simply covers it while typing.
+  // App-shell layout: a flex column that fills #root, whose height is
+  // screen.height in standalone via --app-height (see main.tsx + index.css).
+  // Flow-based (h-full) instead of position:fixed avoids the iOS bug where
+  // fixed elements size to a too-short viewport on first paint.
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {showWorkout ? (

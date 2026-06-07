@@ -55,22 +55,19 @@
 
   html {
     height: 100%;
-    /* Paint the app background to the true screen edges so any momentary
-       mismatch reads as a seamless dark surface, never a contrasting gap. */
+    /* Paint the true screen edges dark so any sub-pixel mismatch is invisible. */
     background: rgb(var(--ink-950));
   }
 
-  /* The app shell's height is driven by a JS-measured pixel value
-     (`--app-height` = window.innerHeight, set in main.tsx). This sidesteps the
-     iOS standalone first-paint bug where 100%/100dvh/position:fixed all report
-     a screen height that's too short on launch (the bottom nav then floats high
-     until a touch forces a reflow). The fallback `100%` is used for the very
-     first paint and on non-JS contexts. */
+  /* Shell height: in standalone mode JS sets --app-height = screen.height (the
+     true full-screen height that iOS reports correctly even on first paint).
+     Without it, innerHeight / 100% / 100dvh all start 59 px short (= the top
+     safe-area) and only correct after a touch gesture.  In a browser tab
+     --app-height is unset so we fall back to 100%.  */
   body,
   #root {
     height: 100%;
     height: var(--app-height, 100%);
-    overflow: hidden;
   }
 
   body {

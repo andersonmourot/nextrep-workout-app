@@ -21,28 +21,21 @@ if (isStandalone) {
     )
 }
 
-// iOS standalone (PWA) reports a too-short screen height on the first paint, so
-// `height: 100%`/`100dvh`/`position:fixed` all leave the bottom nav floating
-// high until a touch forces a reflow. We instead drive the shell height from a
-// JS-measured pixel value and re-measure whenever the viewport actually changes
-// (and a few times right after load, since iOS settles the real height a beat
-// after launch). `window.innerHeight` is the full screen in standalone and does
-// NOT shrink when the keyboard opens, so the keyboard keeps covering the nav as
-// before instead of squashing the layout.
-function setAppHeight() {
-  document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`)
+// iOS standalone bug: on first paint innerHeight = screen.height − safeAreaTop
+// (793 instead of 852 on the user's device). CSS 100%/100dvh and position:fixed
+// all read this wrong value, leaving a 59 px gap below the bottom nav.
+// screen.height is the true full-screen CSS-pixel height and is ALWAYS correct
+// (confirmed via on-device diagnostics). Setting it as a CSS var lets the shell
+// fill the real screen from the very first paint.
+if (isStandalone) {
+  document.documentElement.style.setProperty('--app-height', `${screen.height}px`)
+  // Re-set on orientation change (screen.height swaps with width).
+  window.addEventListener('orientationchange', () => {
+    setTimeout(() => {
+      document.documentElement.style.setProperty('--app-height', `${screen.height}px`)
+    }, 150)
+  })
 }
-setAppHeight()
-window.addEventListener('resize', setAppHeight)
-window.addEventListener('orientationchange', setAppHeight)
-window.addEventListener('pageshow', setAppHeight)
-window.addEventListener('load', () => {
-  setAppHeight()
-  // iOS may not have finalized the viewport on `load`; re-measure as it settles.
-  setTimeout(setAppHeight, 100)
-  setTimeout(setAppHeight, 300)
-  setTimeout(setAppHeight, 600)
-})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

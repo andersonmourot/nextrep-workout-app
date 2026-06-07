@@ -11,7 +11,7 @@ import {
   totalVolume,
   uid,
 } from '../lib/utils'
-import type { BodyWeightEntry } from '../types'
+import type { BodyWeightEntry, WorkoutLog } from '../types'
 
 export function Progress() {
   const { logs, bodyWeight, unit, addBodyWeight, deleteBodyWeight, deleteLog } = useStore()
@@ -71,82 +71,132 @@ export function Progress() {
         </div>
 
         {bodyWeight.length > 0 && (
-          <ul className="mt-4 space-y-1.5">
-            {[...bodyWeight]
-              .reverse()
-              .slice(0, 5)
-              .map((e) => (
-                <li
-                  key={e.id}
-                  className="flex items-center justify-between rounded-lg bg-ink-900 px-3 py-2 text-sm"
+          <div className="mt-4">
+            {bodyWeight.length > 5 && (
+              <div className="mb-1.5 flex items-center justify-end">
+                <Link
+                  to="/progress/weight"
+                  className="text-xs font-semibold text-gold transition hover:opacity-80"
                 >
-                  <span className="text-zinc-400">{formatDateLong(e.date)}</span>
-                  <span className="flex items-center gap-3">
-                    <span className="font-semibold text-zinc-100">
-                      {e.weight} {unit}
-                    </span>
-                    <button
-                      onClick={() => deleteBodyWeight(e.id)}
-                      className="text-zinc-600 hover:text-red-400"
-                      aria-label="Delete entry"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </span>
-                </li>
-              ))}
-          </ul>
+                  Show More
+                </Link>
+              </div>
+            )}
+            <ul className="space-y-1.5">
+              {[...bodyWeight]
+                .reverse()
+                .slice(0, 5)
+                .map((e) => (
+                  <BodyWeightRow
+                    key={e.id}
+                    entry={e}
+                    unit={unit}
+                    onDelete={deleteBodyWeight}
+                  />
+                ))}
+            </ul>
+          </div>
         )}
       </section>
 
       {/* History */}
       <section>
-        <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
-          Workout History
-        </h2>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="heading text-sm font-semibold tracking-wider text-zinc-300">
+            Workout History
+          </h2>
+          {logs.length > 5 && (
+            <Link
+              to="/progress/history"
+              className="text-xs font-semibold text-gold transition hover:opacity-80"
+            >
+              Show More
+            </Link>
+          )}
+        </div>
         {logs.length === 0 ? (
           <div className="card p-6 text-center text-sm text-zinc-400">
             No workouts logged yet. Finish a session to see it here.
           </div>
         ) : (
           <ul className="space-y-2">
-            {logs.map((log) => {
-              const setCount = log.exercises.reduce((a, e) => a + e.sets.length, 0)
-              return (
-                <li key={log.id} className="card p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <Link
-                      to={`/programs/${log.programId}`}
-                      className="min-w-0 flex-1 transition hover:opacity-80"
-                    >
-                      <p className="text-sm font-semibold text-zinc-100">{log.dayName}</p>
-                      <p className="text-xs text-zinc-500">
-                        {log.programName} · {formatDate(log.date)}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
-                        <span>{formatDuration(log.durationSec)}</span>
-                        <span>{setCount} sets</span>
-                        <span className="inline-flex items-center gap-1 text-gold">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          {Math.round(log.totalVolume).toLocaleString()} {unit}
-                        </span>
-                      </div>
-                    </Link>
-                    <button
-                      onClick={() => deleteLog(log.id)}
-                      className="shrink-0 text-zinc-600 hover:text-red-400"
-                      aria-label="Delete workout"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              )
-            })}
+            {logs.slice(0, 5).map((log) => (
+              <WorkoutHistoryItem key={log.id} log={log} unit={unit} onDelete={deleteLog} />
+            ))}
           </ul>
         )}
       </section>
     </div>
+  )
+}
+
+export function WorkoutHistoryItem({
+  log,
+  unit,
+  onDelete,
+}: {
+  log: WorkoutLog
+  unit: string
+  onDelete: (id: string) => void
+}) {
+  const setCount = log.exercises.reduce((a, e) => a + e.sets.length, 0)
+  return (
+    <li className="card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <Link
+          to={`/programs/${log.programId}`}
+          className="min-w-0 flex-1 transition hover:opacity-80"
+        >
+          <p className="text-sm font-semibold text-zinc-100">{log.dayName}</p>
+          <p className="text-xs text-zinc-500">
+            {log.programName} · {formatDate(log.date)}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
+            <span>{formatDuration(log.durationSec)}</span>
+            <span>{setCount} sets</span>
+            <span className="inline-flex items-center gap-1 text-gold">
+              <TrendingUp className="h-3.5 w-3.5" />
+              {Math.round(log.totalVolume).toLocaleString()} {unit}
+            </span>
+          </div>
+        </Link>
+        <button
+          onClick={() => onDelete(log.id)}
+          className="shrink-0 text-zinc-600 hover:text-red-400"
+          aria-label="Delete workout"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+    </li>
+  )
+}
+
+export function BodyWeightRow({
+  entry,
+  unit,
+  onDelete,
+}: {
+  entry: BodyWeightEntry
+  unit: string
+  onDelete: (id: string) => void
+}) {
+  return (
+    <li className="flex items-center justify-between rounded-lg bg-ink-900 px-3 py-2 text-sm">
+      <span className="text-zinc-400">{formatDateLong(entry.date)}</span>
+      <span className="flex items-center gap-3">
+        <span className="font-semibold text-zinc-100">
+          {entry.weight} {unit}
+        </span>
+        <button
+          onClick={() => onDelete(entry.id)}
+          className="text-zinc-600 hover:text-red-400"
+          aria-label="Delete entry"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </span>
+    </li>
   )
 }
 

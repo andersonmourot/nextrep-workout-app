@@ -11,6 +11,7 @@ import { Exercises } from './pages/Exercises'
 import { ExercisesLibrary } from './pages/ExercisesLibrary'
 import { ExerciseDetail } from './pages/ExerciseDetail'
 import { Progress } from './pages/Progress'
+import { BodyWeightHistory, WorkoutHistory } from './pages/ProgressHistory'
 import { Nutrition } from './pages/Nutrition'
 import { MaxTracker } from './pages/MaxTracker'
 import { MaxTrackerDetail } from './pages/MaxTrackerDetail'
@@ -65,6 +66,8 @@ export default function App() {
           <Route path="/exercises" element={<Exercises />} />
           <Route path="/exercises/:exerciseId" element={<ExerciseDetail />} />
           <Route path="/progress" element={<Progress />} />
+          <Route path="/progress/history" element={<WorkoutHistory />} />
+          <Route path="/progress/weight" element={<BodyWeightHistory />} />
           <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/max" element={<MaxTracker />} />
           <Route path="/max/:id" element={<MaxTrackerDetail />} />

@@ -179,7 +179,7 @@ export function DayReview() {
             ...prev,
             exercises: [
               ...prev.exercises,
-              { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '8-12', restSec: 90 },
+              { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '10', restSec: 90 },
             ],
           }
         : prev,

@@ -36,7 +36,7 @@ const ACCENTS = ['#e9b949', '#b91c1c', '#3b82f6', '#22c55e', '#a855f7', '#f97316
 
 function blankExercise(): PlannedExercise {
   // Start blank so the name box is empty until the user types an exercise.
-  return { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '8-12', restSec: 90 }
+  return { exerciseId: `custom-${uid()}`, name: '', sets: 3, reps: '10', restSec: 90 }
 }
 
 function blankDay(n: number): ProgramDay {

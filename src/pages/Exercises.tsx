@@ -114,16 +114,26 @@ export function ExercisesPage({ showBack = false }: { showBack?: boolean }) {
   const purgeTrashedExercise = useStore((s) => s.purgeTrashedExercise)
 
   // Custom exercises first, then the built-in library (with per-user edits
-  // applied and hidden ones removed).
+  // applied and hidden ones removed).  Custom exercises whose name matches a
+  // built-in default are dropped so they don't appear twice (once tagged
+  // "Custom", once as a default).
+  const builtinNames = useMemo(
+    () => new Set(EXERCISES.map((e) => e.name.toLowerCase())),
+    [],
+  )
   const all = useMemo(
     () =>
-      [...customExercises, ...EXERCISES.map((e) => overrides[e.id] ?? e)].filter(
-        (e) => !hiddenExerciseIds.includes(e.id),
-      ),
-    [customExercises, overrides, hiddenExerciseIds],
+      [
+        ...customExercises.filter((c) => !builtinNames.has(c.name.toLowerCase())),
+        ...EXERCISES.map((e) => overrides[e.id] ?? e),
+      ].filter((e) => !hiddenExerciseIds.includes(e.id)),
+    [customExercises, overrides, hiddenExerciseIds, builtinNames],
   )
 
-  const customIds = useMemo(() => new Set(customExercises.map((e) => e.id)), [customExercises])
+  const customIds = useMemo(
+    () => new Set(customExercises.filter((c) => !builtinNames.has(c.name.toLowerCase())).map((e) => e.id)),
+    [customExercises, builtinNames],
+  )
 
   const list = useMemo(() => {
     const query = q.trim().toLowerCase()

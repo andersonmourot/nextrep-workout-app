@@ -52,6 +52,9 @@ def _ensure_columns() -> None:
     if "last_login" not in cols:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN last_login DATETIME"))
+    if "last_active" not in cols:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_active DATETIME"))
     if "reset_token_hash" not in cols:
         with engine.begin() as conn:
             conn.execute(text("ALTER TABLE users ADD COLUMN reset_token_hash VARCHAR"))
@@ -240,6 +243,9 @@ class AdminUser(BaseModel):
     email: str
     created_at: str
     last_login: str
+    # Last time the user used the app at all (any authenticated request), which
+    # the admin page shows instead of the login-only timestamp.
+    last_active: str
 
 
 class SharedPrograms(BaseModel):
@@ -505,6 +511,17 @@ def current_user(
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=401, detail="Account not found")
+    # Track "last active" on any authenticated request so the admin Users page
+    # reflects real app usage, not just logins. Throttle writes to once every
+    # few minutes per user to avoid a DB write on every request.
+    now = datetime.now(timezone.utc)
+    la = user.last_active
+    if la is not None and la.tzinfo is None:
+        la = la.replace(tzinfo=timezone.utc)
+    if la is None or (now - la) > timedelta(minutes=5):
+        user.last_active = now
+        db.add(user)
+        db.commit()
     return user
 
 
@@ -621,6 +638,13 @@ def admin_users(
             email=u.email,
             created_at=(u.created_at.isoformat() if u.created_at else ""),
             last_login=(u.last_login.isoformat() if u.last_login else ""),
+            # Fall back to last_login for accounts that predate activity
+            # tracking, so the column isn't blank until their next request.
+            last_active=(
+                (u.last_active or u.last_login).isoformat()
+                if (u.last_active or u.last_login)
+                else ""
+            ),
         )
         for u in rows
         if not _is_seed_account(u.email)

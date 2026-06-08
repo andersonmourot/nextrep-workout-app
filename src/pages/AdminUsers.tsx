@@ -42,7 +42,7 @@ function UserCard({ u }: { u: AdminUser }) {
       </div>
       <p className="truncate text-sm text-zinc-400">{u.email}</p>
       <p className="mt-1 text-xs text-zinc-500">
-        Last login: {u.last_login ? formatDateTime(u.last_login) : 'Never'}
+        Last active: {u.last_active ? formatDateTime(u.last_active) : 'Never'}
       </p>
 
       {msg && (

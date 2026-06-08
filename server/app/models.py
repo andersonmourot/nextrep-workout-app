@@ -22,6 +22,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
     # Updated on every successful login; null until the user logs in again.
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Updated (throttled) on any authenticated request, so the admin Users page
+    # can show when a user last *used* the app, not just when they logged in.
+    last_active: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # Password-reset: SHA-256 of the emailed token + its expiry (both null when
     # there is no outstanding reset request).
     reset_token_hash: Mapped[str | None] = mapped_column(String, nullable=True)

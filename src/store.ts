@@ -176,6 +176,7 @@ interface AppState {
   toggleFavoriteUser: (id: string) => void
   toggleFavoriteProgram: (id: string) => void
   startWorkout: (programId: string, dayId: string, week?: number) => void
+  reconcileActiveWorkout: () => void
   setActiveWorkoutSets: (sets: SetLog[][]) => void
   setActiveWorkoutRest: (restEndsAt: number | null, restTotal: number) => void
   endWorkout: () => void
@@ -428,10 +429,59 @@ export const useStore = create<AppState>()(
               week,
               startedAt: Date.now(),
               sets,
+              exerciseIds: day.exercises.map((pe) => pe.exerciseId),
               restEndsAt: null,
               restTotal: 0,
             },
           }
+        }),
+      // Re-sync the live session to the current program/day plan so edits made on
+      // the program page (add/remove/reorder exercises, change set counts) show up
+      // in the running workout. Already-entered weights/reps and completed sets are
+      // preserved by matching exercises on their id (positionally among duplicates)
+      // and keeping existing set rows; only added rows are seeded from the plan.
+      reconcileActiveWorkout: () =>
+        set((s) => {
+          const aw = s.activeWorkout
+          if (!aw) return {}
+          const program =
+            s.customPrograms.find((p) => p.id === aw.programId) ?? getProgram(aw.programId)
+          if (!program) return {}
+          const dayLocalIdx = program.days.findIndex((d) => d.id === aw.dayId)
+          if (dayLocalIdx < 0) return {}
+          const day = resolveProgramDay(program, dayLocalIdx, aw.week ?? 1)
+          if (!day) return {}
+
+          // Queue of existing set-arrays grouped by exercise id, in original order,
+          // so duplicate exercises map positionally rather than all to the first.
+          const oldIds = aw.exerciseIds ?? day.exercises.map((pe) => pe.exerciseId)
+          const queue = new Map<string, SetLog[][]>()
+          oldIds.forEach((id, i) => {
+            const arr = queue.get(id) ?? []
+            arr.push(aw.sets[i] ?? [])
+            queue.set(id, arr)
+          })
+
+          const nextSets: SetLog[][] = day.exercises.map((pe) => {
+            const existing = queue.get(pe.exerciseId)?.shift()
+            const base = existing ?? []
+            const planned = pe.sets
+            const rows = base.slice(0, planned)
+            while (rows.length < planned) {
+              rows.push({ weight: 0, reps: parseReps(pe.reps), completed: false })
+            }
+            return rows
+          })
+          const nextIds = day.exercises.map((pe) => pe.exerciseId)
+
+          // No structural change → skip the write to avoid a render loop.
+          const same =
+            nextIds.length === oldIds.length &&
+            nextIds.every((id, i) => id === oldIds[i]) &&
+            nextSets.every((rows, i) => rows.length === (aw.sets[i]?.length ?? -1))
+          if (same) return {}
+
+          return { activeWorkout: { ...aw, sets: nextSets, exerciseIds: nextIds } }
         }),
       setActiveWorkoutSets: (sets) =>
         set((s) => (s.activeWorkout ? { activeWorkout: { ...s.activeWorkout, sets } } : {})),

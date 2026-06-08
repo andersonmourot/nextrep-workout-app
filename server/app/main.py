@@ -75,13 +75,17 @@ ADMIN_EMAILS = {
 }
 
 # Test/seed accounts created during development are hidden from the admin Users
-# directory. Anything on the reserved example.com domain (RFC 2606, never a real
-# user) is hidden automatically; HIDDEN_EMAILS may add specific extra addresses.
+# directory and from user search. Anything on the reserved example.com domain
+# (RFC 2606, never a real user) or on a QA-only domain is hidden automatically;
+# HIDDEN_EMAILS may add specific extra addresses.
 HIDDEN_EMAILS = {
     e.strip().lower()
     for e in os.environ.get("HIDDEN_EMAILS", "").split(",")
     if e.strip()
 }
+
+# Domains only ever used for Devin/QA test accounts — never real users.
+HIDDEN_EMAIL_DOMAINS = ("@example.com", "@nextrepqa.app")
 
 
 # ---- Password-reset email (Resend) config ----
@@ -155,7 +159,22 @@ def _is_admin(user: "User") -> bool:
 def _is_seed_account(email: str) -> bool:
     """Whether an account is a Devin-made test/seed account (hidden from admin)."""
     e = email.lower().strip()
-    return e.endswith("@example.com") or e in HIDDEN_EMAILS
+    return e.endswith(HIDDEN_EMAIL_DOMAINS) or e in HIDDEN_EMAILS
+
+
+def _iso_utc(dt: datetime | None) -> str:
+    """Serialize a stored timestamp as a UTC-aware ISO string.
+
+    Timestamps are written as UTC but the DateTime column drops the tzinfo, so a
+    plain ``.isoformat()`` yields no offset and browsers parse it as *local*
+    time (showing the wrong time of day). Stamp naive values as UTC so the
+    emitted string carries ``+00:00`` and clients convert to local correctly.
+    """
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 
 app = FastAPI(title="NextRep Backend")
@@ -636,15 +655,11 @@ def admin_users(
             id=u.id,
             name=u.name,
             email=u.email,
-            created_at=(u.created_at.isoformat() if u.created_at else ""),
-            last_login=(u.last_login.isoformat() if u.last_login else ""),
+            created_at=_iso_utc(u.created_at),
+            last_login=_iso_utc(u.last_login),
             # Fall back to last_login for accounts that predate activity
             # tracking, so the column isn't blank until their next request.
-            last_active=(
-                (u.last_active or u.last_login).isoformat()
-                if (u.last_active or u.last_login)
-                else ""
-            ),
+            last_active=_iso_utc(u.last_active or u.last_login),
         )
         for u in rows
         if not _is_seed_account(u.email)

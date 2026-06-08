@@ -19,11 +19,17 @@ function localDateKey(d: Date): string {
 /**
  * Parse a stored date string into a Date. Date-only strings (YYYY-MM-DD) are
  * interpreted in the local timezone so the calendar day doesn't shift for users
- * behind UTC; full ISO timestamps are parsed as-is.
+ * behind UTC. Full datetime strings that carry no timezone designator are
+ * treated as UTC (server timestamps are UTC), so the time of day renders
+ * correctly in the viewer's local zone instead of being read as local.
  */
 function parseStoredDate(iso: string): Date {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  // A "T"-separated datetime with no trailing Z/±HH:MM offset → assume UTC.
+  if (/T\d{2}:\d{2}/.test(iso) && !/(Z|[+-]\d{2}:?\d{2})$/.test(iso)) {
+    return new Date(`${iso}Z`)
+  }
   return new Date(iso)
 }
 

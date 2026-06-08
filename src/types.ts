@@ -122,6 +122,13 @@ export interface ActiveWorkout {
   week?: number
   startedAt: number // epoch ms; elapsed is derived from this
   sets: SetLog[][]
+  /**
+   * Exercise ids aligned 1:1 with `sets`, captured at start. Lets a live session
+   * re-sync when the program/day is edited mid-workout (add/remove/reorder) while
+   * preserving already-entered weights/reps and completed sets. Optional for
+   * backward-compat with sessions saved before this field existed.
+   */
+  exerciseIds?: string[]
   restEndsAt: number | null // epoch ms when the current rest ends, or null
   restTotal: number // seconds, for the rest progress bar
 }

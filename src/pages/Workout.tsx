@@ -24,7 +24,20 @@ export function Workout() {
   const startProgram = useStore((s) => s.startProgram)
   const setActiveWorkoutSets = useStore((s) => s.setActiveWorkoutSets)
   const setActiveWorkoutRest = useStore((s) => s.setActiveWorkoutRest)
+  const reconcileActiveWorkout = useStore((s) => s.reconcileActiveWorkout)
   const endWorkout = useStore((s) => s.endWorkout)
+
+  // Keep the live session in sync with the program plan: if the day is edited
+  // (exercises added/removed/reordered, set counts changed) while the workout is
+  // active, merge those changes in — preserving entered weights/reps and done
+  // sets. The signature changes whenever the plan's shape changes.
+  const planSignature = day
+    ? day.exercises.map((pe) => `${pe.exerciseId}:${pe.sets}`).join('|')
+    : ''
+  useEffect(() => {
+    if (activeWorkout && day) reconcileActiveWorkout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planSignature])
 
   const [finished, setFinished] = useState<WorkoutLog | null>(null)
   // A clock tick stored in state (set from effects) so the render stays pure;

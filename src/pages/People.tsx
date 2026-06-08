@@ -192,11 +192,13 @@ export function People() {
 function SharedContent({
   userId,
   ownerName,
+  ownerColor,
   programCount,
   exerciseCount,
 }: {
   userId: string
   ownerName: string
+  ownerColor: string
   programCount: number
   exerciseCount: number
 }) {
@@ -332,9 +334,10 @@ function SharedContent({
                       onClick={() => void addProgramToMine(p)}
                       disabled={isAdded}
                       className={cn(
-                        'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',
-                        isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'btn-gold',
+                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60',
+                        isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'text-white',
                       )}
+                      style={isAdded ? undefined : { backgroundColor: ownerColor }}
                     >
                       {isAdded ? (
                         <>
@@ -377,9 +380,10 @@ function SharedContent({
                     onClick={() => void addExerciseToMine(e)}
                     disabled={isAdded}
                     className={cn(
-                      'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-60',
-                      isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'btn-gold',
+                      'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60',
+                      isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'text-white',
                     )}
+                    style={isAdded ? undefined : { backgroundColor: ownerColor }}
                   >
                     {isAdded ? (
                       <>
@@ -470,6 +474,7 @@ function SearchResultCard({
         <SharedContent
           userId={user.id}
           ownerName={user.name}
+          ownerColor={user.color}
           programCount={user.program_count}
           exerciseCount={user.exercise_count}
         />
@@ -566,6 +571,7 @@ function FollowingCard({
         <SharedContent
           userId={user.id}
           ownerName={user.name}
+          ownerColor={user.color}
           programCount={user.program_count}
           exerciseCount={user.exercise_count}
         />

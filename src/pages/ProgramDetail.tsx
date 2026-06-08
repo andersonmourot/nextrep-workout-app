@@ -515,11 +515,11 @@ export function ProgramDetail() {
 
       {pendingStart && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/70 p-6"
           onClick={() => setPendingStart(null)}
         >
           <div
-            className="card w-full max-w-sm p-5 text-center"
+            className="card mt-[15vh] w-full max-w-sm p-5 text-center"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="heading text-lg font-bold text-zinc-50">Switch active program?</h3>
@@ -534,7 +534,7 @@ export function ProgramDetail() {
                 onClick={() => doStartDay(pendingStart.dayId, pendingStart.week)}
                 className="btn-gold flex-1"
               >
-                <Play className="h-4 w-4" /> Switch & Start
+                <Play className="h-4 w-4" /> Switch
               </button>
               <button onClick={() => setPendingStart(null)} className="btn-ghost flex-1">
                 Cancel

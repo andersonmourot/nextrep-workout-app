@@ -32,6 +32,8 @@ export function ProgramDetail() {
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
   const { activeProgramId, startProgram, deleteProgram, addProgram, startWorkout } = useStore()
+  const activeWorkout = useStore((s) => s.activeWorkout)
+  const activeProgram = useProgram(activeProgramId ?? undefined)
   const resetProgramProgress = useStore((s) => s.resetProgramProgress)
   const logs = useStore((s) => s.logs)
   const unit = useStore((s) => s.unit)
@@ -45,6 +47,9 @@ export function ProgramDetail() {
   const [confirmComplete, setConfirmComplete] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
   const [showActions, setShowActions] = useState(false)
+  // Set when Start is pressed on a day while a *different* active program has
+  // saved progress: holds the day to start once the user confirms the switch.
+  const [pendingStart, setPendingStart] = useState<{ dayId: string; week: number } | null>(null)
   // null = follow the current week automatically; a number = a week the user
   // navigated to manually.
   const [weekOverride, setWeekOverride] = useState<number | null>(null)
@@ -107,6 +112,33 @@ export function ProgramDetail() {
   // collaborative. Non-owners of a non-collaborative program are view-only.
   const isOwner = !program.ownerId || program.ownerId === currentUserId
   const canEdit = isCustom && (isOwner || !!program.collaborative)
+
+  // True when a *different* program is active and has saved progress (logged
+  // workouts or an in-progress session). Starting a day here would switch the
+  // active program, so we warn first.
+  const switchingActiveWithData =
+    !!activeProgramId &&
+    activeProgramId !== program.id &&
+    (logs.some((l) => l.programId === activeProgramId) ||
+      activeWorkout?.programId === activeProgramId)
+
+  function doStartDay(dayId: string, week: number) {
+    if (!program) return
+    // Set this program active so its workout actually surfaces (the workout
+    // overlay only shows while its program is the active one), then start.
+    if (activeProgramId !== program.id) startProgram(program.id)
+    startWorkout(program.id, dayId, week)
+    setPendingStart(null)
+    navigate('/programs')
+  }
+
+  function handleStartDay(dayId: string, week: number) {
+    if (switchingActiveWithData) {
+      setPendingStart({ dayId, week })
+      return
+    }
+    doStartDay(dayId, week)
+  }
 
   return (
     <div className="animate-fade-in space-y-6" style={accentVars(program.accent)}>
@@ -429,8 +461,7 @@ export function ProgramDetail() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    startWorkout(program.id, baseDay.id, selectedWeek)
-                    navigate('/programs')
+                    handleStartDay(baseDay.id, selectedWeek)
                   }}
                   className="btn-outline shrink-0 px-3 py-2 text-xs"
                 >
@@ -481,6 +512,37 @@ export function ProgramDetail() {
           )
         })}
       </section>
+
+      {pendingStart && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+          onClick={() => setPendingStart(null)}
+        >
+          <div
+            className="card w-full max-w-sm p-5 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="heading text-lg font-bold text-zinc-50">Switch active program?</h3>
+            <p className="mt-2 text-sm text-zinc-400">
+              You already have an active program
+              {activeProgram?.name ? ` (“${activeProgram.name}”)` : ''} with saved progress.
+              Starting this day will make “{program.name}” your active program. Your logged
+              workouts and history are kept.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => doStartDay(pendingStart.dayId, pendingStart.week)}
+                className="btn-gold flex-1"
+              >
+                <Play className="h-4 w-4" /> Switch & Start
+              </button>
+              <button onClick={() => setPendingStart(null)} className="btn-ghost flex-1">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -22,7 +22,8 @@ import {
 } from '../api'
 import { getToken, useAuth } from '../auth'
 import { MAX_FAVORITES, useStore } from '../store'
-import type { Exercise, Program } from '../types'
+import { getExercise } from '../data/exercises'
+import type { Exercise, PlannedExercise, Program, ProgramDay } from '../types'
 import { cn } from '../lib/utils'
 
 export function People() {
@@ -241,8 +242,48 @@ function SharedContent({
     const token = getToken()
     if (!token) return
     const res = await apiAddProgram<Program>(token, p.id)
-    const program = res.ok && res.data ? res.data.program : { ...p, coach: p.coach || ownerName }
-    addProgram({ ...program, coach: program.coach || ownerName })
+    const base = res.ok && res.data ? res.data.program : { ...p, coach: p.coach || ownerName }
+
+    // Make the program self-contained on this account: backfill any missing
+    // custom-exercise names and import the creator's referenced shared custom
+    // exercises, so nothing shows up as the raw "custom-..." id.
+    const ownerExById = new Map(exercises.map((e) => [e.id, e]))
+    const referenced = new Set<string>()
+    const fixDay = (day: ProgramDay) => {
+      day.exercises = (day.exercises ?? []).map((pe: PlannedExercise) => {
+        if (pe.exerciseId?.startsWith('custom-')) referenced.add(pe.exerciseId)
+        if (pe.name?.trim() || getExercise(pe.exerciseId)) return pe
+        const nm = ownerExById.get(pe.exerciseId)?.name
+        return nm ? { ...pe, name: nm } : pe
+      })
+    }
+
+    const program: Program = {
+      ...base,
+      coach: base.coach || ownerName,
+      days: (base.days ?? []).map((d) => ({ ...d, exercises: [...(d.exercises ?? [])] })),
+    }
+    program.days.forEach(fixDay)
+    if (program.weekOverrides) {
+      const next: NonNullable<Program['weekOverrides']> = {}
+      for (const [k, list] of Object.entries(program.weekOverrides)) {
+        next[k] = list.map((o) => {
+          const day = { ...o.day, exercises: [...(o.day.exercises ?? [])] }
+          fixDay(day)
+          return { ...o, day }
+        })
+      }
+      program.weekOverrides = next
+    }
+
+    for (const id of referenced) {
+      const def = ownerExById.get(id)
+      if (def && !customExercises.some((c) => c.id === id)) {
+        addCustomExercise({ ...def, shared: false, ownerName: def.ownerName || ownerName })
+      }
+    }
+
+    addProgram(program)
     setAddedPrograms((prev) => new Set(prev).add(p.id))
   }
 

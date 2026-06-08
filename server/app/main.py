@@ -324,6 +324,63 @@ def _enrich(program: dict, sp: SharedProgram) -> dict:
     return out
 
 
+def _owner_custom_ex_names(owner: User) -> dict:
+    """Map {exercise_id: name} for ALL of the owner's custom exercises (shared or
+    not). Used to make shared programs self-contained so a follower who lacks the
+    creator's custom-exercise library still sees the right name."""
+    try:
+        blob = json.loads(owner.data or "{}")
+    except json.JSONDecodeError:
+        return {}
+    exs = blob.get("customExercises")
+    out: dict = {}
+    if isinstance(exs, list):
+        for e in exs:
+            if isinstance(e, dict) and e.get("id") and e.get("name"):
+                out[e["id"]] = e["name"]
+    return out
+
+
+def _fill_exercise_names(program: dict, names: dict) -> dict:
+    """Ensure each planned exercise carries a display name. Only fills names that
+    are missing; built-in exercise ids still resolve on the client. This stops
+    followers from seeing the raw 'custom-...' id for the creator's exercises."""
+    if not names:
+        return program
+
+    def fix_day(day: object) -> None:
+        if not isinstance(day, dict):
+            return
+        for pe in day.get("exercises") or []:
+            if not isinstance(pe, dict):
+                continue
+            if not str(pe.get("name") or "").strip():
+                nm = names.get(pe.get("exerciseId"))
+                if nm:
+                    pe["name"] = nm
+
+    for d in program.get("days") or []:
+        fix_day(d)
+    overrides = program.get("weekOverrides")
+    if isinstance(overrides, dict):
+        for lst in overrides.values():
+            if isinstance(lst, list):
+                for o in lst:
+                    if isinstance(o, dict):
+                        fix_day(o.get("day"))
+    return program
+
+
+def _program_out(db: Session, sp: SharedProgram) -> dict:
+    """Serialize a shared program for the client, filling in any missing
+    custom-exercise display names from the owner's library."""
+    program = json.loads(sp.data)
+    owner = db.get(User, sp.owner_id)
+    if owner is not None:
+        _fill_exercise_names(program, _owner_custom_ex_names(owner))
+    return program
+
+
 def _ensure_member(db: Session, program_id: str, user_id: str) -> None:
     exists = (
         db.query(ProgramMember)
@@ -366,7 +423,7 @@ def _publish_owned_programs(db: Session, owner: User) -> list[dict]:
     # them keep working), but must not show up in the owner's search listing.
     blob_ids = {p.get("id") for p in blob_progs}
     owned = db.query(SharedProgram).filter(SharedProgram.owner_id == owner.id).all()
-    return [json.loads(sp.data) for sp in owned if sp.id in blob_ids]
+    return [_program_out(db, sp) for sp in owned if sp.id in blob_ids]
 
 
 def _enrich_exercise(exercise: dict, se: SharedExercise) -> dict:
@@ -606,6 +663,21 @@ def put_data(
     db: Session = Depends(get_db),
 ):
     user.data = json.dumps(body.data)
+    # Keep the searchable account name in sync with the in-app display name so a
+    # rename shows up in search and on the user's shared programs/exercises.
+    # Skip the client's default placeholder ("Athlete") so legacy blobs that
+    # never stored a name can't clobber a real signup name.
+    new_name = body.data.get("name")
+    if isinstance(new_name, str):
+        new_name = new_name.strip()[:80]
+        if new_name and new_name != "Athlete" and new_name != user.name:
+            user.name = new_name
+            db.query(SharedProgram).filter(SharedProgram.owner_id == user.id).update(
+                {SharedProgram.owner_name: new_name}, synchronize_session=False
+            )
+            db.query(SharedExercise).filter(SharedExercise.owner_id == user.id).update(
+                {SharedExercise.owner_name: new_name}, synchronize_session=False
+            )
     db.add(user)
     db.commit()
     return {"ok": True}
@@ -627,9 +699,11 @@ def search_users(
         .filter(User.id != user.id)
         .filter(User.name.ilike(like))
         .order_by(User.name)
-        .limit(25)
+        .limit(50)
         .all()
     )
+    # Hide Devin-made test/seed accounts so only real accounts are searchable.
+    rows = [u for u in rows if not _is_seed_account(u.email)][:25]
     following_ids = {
         f.following_id for f in db.query(Follow).filter(Follow.follower_id == user.id).all()
     }
@@ -796,7 +870,7 @@ def get_program(
     sp = db.get(SharedProgram, program_id)
     if sp is None:
         raise HTTPException(status_code=404, detail="Program not found.")
-    return {"program": json.loads(sp.data)}
+    return {"program": _program_out(db, sp)}
 
 
 @app.post("/api/programs/batch")
@@ -809,7 +883,7 @@ def programs_batch(
     for pid in body.ids[:200]:
         sp = db.get(SharedProgram, pid)
         if sp is not None:
-            out.append(json.loads(sp.data))
+            out.append(_program_out(db, sp))
     return {"programs": out}
 
 
@@ -824,7 +898,7 @@ def add_program_member(
         raise HTTPException(status_code=404, detail="Program not found.")
     _ensure_member(db, program_id, user.id)
     db.commit()
-    return {"program": json.loads(sp.data)}
+    return {"program": _program_out(db, sp)}
 
 
 @app.delete("/api/programs/{program_id}/member")

@@ -129,7 +129,12 @@ export function ProgramEditor() {
   function setExerciseName(dayIdx: number, exIdx: number, typed: string, prev: PlannedExercise) {
     const match = findExerciseByName(typed)
     if (match) {
-      updateExercise(dayIdx, exIdx, { exerciseId: match.id, name: undefined })
+      // Built-ins resolve by id on every device, so leave name undefined (lets
+      // overrides apply). For custom exercises, store the name so the program
+      // stays self-contained when shared — followers who lack the creator's
+      // custom library still see the real name, not the raw "custom-..." id.
+      const keepName = match.id.startsWith('custom-') ? match.name : undefined
+      updateExercise(dayIdx, exIdx, { exerciseId: match.id, name: keepName })
       return
     }
     const id = prev.exerciseId.startsWith('custom-') ? prev.exerciseId : `custom-${uid()}`

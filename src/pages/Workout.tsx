@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Check, Info, Minus, Plus, SkipForward, Timer, X } from 'lucide-react'
+import { Check, Info, SkipForward, Timer, X } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
@@ -220,14 +220,13 @@ export function Workout() {
                       <span className="grid h-7 w-7 place-items-center rounded-md bg-ink-800 text-sm font-bold text-zinc-300">
                         {j + 1}
                       </span>
-                      <Stepper
+                      <NumberField
                         value={s.weight}
-                        step={5}
+                        decimal
                         onChange={(v) => updateSet(exIdx, j, { weight: v })}
                       />
-                      <Stepper
+                      <NumberField
                         value={s.reps}
-                        step={1}
                         onChange={(v) => updateSet(exIdx, j, { reps: v })}
                       />
                       <div className="flex justify-end">
@@ -300,39 +299,49 @@ export function Workout() {
   )
 }
 
-function Stepper({
+/**
+ * Numeric entry for weight/reps in an active workout. Backed by local text so the
+ * box can be cleared to blank (a stored 0 shows as an empty box with a "0"
+ * placeholder rather than a literal 0 the user can't erase). No spinner arrows.
+ */
+function NumberField({
   value,
-  step,
   onChange,
+  decimal = false,
 }: {
   value: number
-  step: number
   onChange: (v: number) => void
+  decimal?: boolean
 }) {
+  const [text, setText] = useState(value ? String(value) : '')
+  const focused = useRef(false)
+  // Sync from the store when the value changes externally and we're not editing.
+  useEffect(() => {
+    if (!focused.current) setText(value ? String(value) : '')
+  }, [value])
+
   return (
-    <div className="flex items-center overflow-hidden rounded-lg border border-white/10 bg-ink-850">
-      <button
-        onClick={() => onChange(Math.max(0, +(value - step).toFixed(2)))}
-        className="grid h-9 w-8 place-items-center text-zinc-400 hover:bg-ink-700 hover:text-zinc-100"
-        aria-label="decrease"
-      >
-        <Minus className="h-4 w-4" />
-      </button>
-      <input
-        type="number"
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)))}
-        className="w-full min-w-0 bg-transparent text-center text-sm font-semibold text-zinc-100 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-      />
-      <button
-        onClick={() => onChange(+(value + step).toFixed(2))}
-        className="grid h-9 w-8 place-items-center text-zinc-400 hover:bg-ink-700 hover:text-zinc-100"
-        aria-label="increase"
-      >
-        <Plus className="h-4 w-4" />
-      </button>
-    </div>
+    <input
+      type="text"
+      inputMode={decimal ? 'decimal' : 'numeric'}
+      value={text}
+      placeholder="0"
+      onFocus={() => {
+        focused.current = true
+      }}
+      onBlur={() => {
+        focused.current = false
+        setText(value ? String(value) : '')
+      }}
+      onChange={(e) => {
+        const raw = e.target.value
+        const pattern = decimal ? /^\d*\.?\d*$/ : /^\d*$/
+        if (!pattern.test(raw)) return
+        setText(raw)
+        onChange(raw === '' || raw === '.' ? 0 : Math.max(0, Number(raw)))
+      }}
+      className="w-full min-w-0 rounded-lg border border-white/10 bg-ink-850 px-2 py-2 text-center text-sm font-semibold text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-gold/50"
+    />
   )
 }
 

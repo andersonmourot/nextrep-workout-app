@@ -270,7 +270,7 @@ export function DayReview() {
             style={{ color: program.accent }}
             aria-label="Edit this day"
           >
-            <Pencil className="h-3.5 w-3.5" /> Edit this day
+            <Pencil className="h-3.5 w-3.5" /> Edit
           </button>
         )}
       </div>
@@ -343,6 +343,9 @@ export function DayReview() {
                     onChange={(v) => updateDraftExercise(exIdx, { restSec: v })}
                   />
                 </div>
+                {isAdmin && (
+                  <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} className="mt-2" />
+                )}
               </div>
             )
           })}

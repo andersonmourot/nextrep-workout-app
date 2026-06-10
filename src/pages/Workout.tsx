@@ -14,14 +14,11 @@ import {
   type SupersetGroup,
 } from '../lib/utils'
 import { playBell, primeBell } from '../lib/sound'
-import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
+import { ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { ExerciseSubheader } from '../components/ExerciseSubheader'
-import { useAuth } from '../auth'
 
 export function Workout() {
   const navigate = useNavigate()
-  const account = useAuth((s) => s.user)
-  const isAdmin = !!account?.is_admin
   const activeWorkout = useStore((s) => s.activeWorkout)
   const program = useProgram(activeWorkout?.programId)
   // Resolve the day for the week being trained so per-week edits apply.
@@ -250,11 +247,7 @@ export function Workout() {
                 {pe.notes && (
                   <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
                 )}
-                {isAdmin ? (
-                  <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} />
-                ) : (
-                  <ExerciseNote exerciseId={pe.exerciseId} />
-                )}
+                <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} />
 
                 {/* Sets table */}
                 <div className="mt-4">
@@ -326,11 +319,7 @@ export function Workout() {
                       {pe.notes && (
                         <p className="mt-1 rounded-lg bg-gold/10 px-3 py-1.5 text-xs text-gold">{pe.notes}</p>
                       )}
-                      {isAdmin ? (
-                        <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} className="mt-2" />
-                      ) : (
-                        <ExerciseNote exerciseId={pe.exerciseId} />
-                      )}
+                      <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} className="mt-2" />
                     </div>
                   )
                 })}

@@ -76,8 +76,6 @@ export function ProgramEditor() {
 
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
-  // Superset building is an admin-gated preview for now.
-  const isAdmin = useAuth((s) => s.user?.is_admin) ?? false
   // You're the owner of a brand-new program, or of one with no recorded owner
   // (legacy), or one you created. Only the owner may toggle collaboration.
   const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
@@ -177,7 +175,7 @@ export function ProgramEditor() {
     commitDay(dayIdx, { ...d, exercises })
   }
 
-  // Join an exercise with the one below it into a superset (admin-gated). If
+  // Join an exercise with the one below it into a superset. If
   // either side is already in a group they merge; the group's sets are synced so
   // every member runs the same number of rounds.
   function linkWithNext(dayIdx: number, exIdx: number) {
@@ -612,15 +610,7 @@ export function ProgramEditor() {
 
             {!collapsed && (
             <div className="mt-3 space-y-2">
-              {(isAdmin
-                ? supersetGroups(day.exercises)
-                : day.exercises.map((_, i) => ({
-                    indices: [i],
-                    isSuperset: false,
-                    groupId: undefined,
-                    label: undefined,
-                  }))
-              ).map((group) => {
+              {supersetGroups(day.exercises).map((group) => {
                 // ---- Standalone exercise ----
                 if (!group.isSuperset) {
                   const exIdx = group.indices[0]
@@ -681,7 +671,7 @@ export function ProgramEditor() {
                           onChange={(v) => updateExercise(dayIdx, exIdx, { restSec: v })}
                         />
                       </div>
-                      {isAdmin && exIdx < day.exercises.length - 1 && (
+                      {exIdx < day.exercises.length - 1 && (
                         <button
                           onClick={() => linkWithNext(dayIdx, exIdx)}
                           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gold/40 py-1.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/10"

@@ -15,7 +15,6 @@ import {
 } from '../lib/utils'
 import { playBell, primeBell } from '../lib/sound'
 import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
-import { useAuth } from '../auth'
 
 export function Workout() {
   const navigate = useNavigate()
@@ -38,25 +37,13 @@ export function Workout() {
   const startRest = useStore((s) => s.startRest)
   const reconcileActiveWorkout = useStore((s) => s.reconcileActiveWorkout)
   const endWorkout = useStore((s) => s.endWorkout)
-  // Supersets are an admin-gated preview for now: only admins see grouped,
-  // round-by-round rendering. Everyone else sees the standard one-exercise-at-a-
-  // time layout (their programs have no groupId, so this is also a no-op).
-  const isAdmin = useAuth((s) => s.user?.is_admin) ?? false
-
-  // Group consecutive exercises that share a groupId into supersets. When not an
-  // admin, force every exercise to its own singleton group (grouping disabled).
-  const groups = useMemo<SupersetGroup[]>(() => {
-    const exs = day?.exercises ?? []
-    if (!isAdmin) return exs.map((_, i) => ({ indices: [i], isSuperset: false }))
-    return supersetGroups(exs)
-  }, [day, isAdmin])
+  // Group consecutive exercises that share a groupId into supersets/trisets/
+  // giant sets, rendered round-by-round. Standalone exercises are their own
+  // singleton group, so this is a no-op for days without any grouping.
+  const groups = useMemo<SupersetGroup[]>(() => supersetGroups(day?.exercises ?? []), [day])
   // Indices that end a round (the last member of each group) — only these fire
   // the rest timer/bell. For singletons that's the exercise itself.
-  const lastInGroup = useMemo(() => {
-    const exs = day?.exercises ?? []
-    if (!isAdmin) return new Set(exs.map((_, i) => i))
-    return lastInGroupIndices(exs)
-  }, [day, isAdmin])
+  const lastInGroup = useMemo(() => lastInGroupIndices(day?.exercises ?? []), [day])
 
   // Keep the live session in sync with the program plan: if the day is edited
   // (exercises added/removed/reordered, set counts changed) while the workout is

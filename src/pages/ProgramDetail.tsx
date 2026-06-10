@@ -144,7 +144,7 @@ export function ProgramDetail() {
   return (
     <div className="animate-fade-in space-y-6" style={accentVars(program.accent)}>
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => navigate('/programs')}
         className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"
       >
         <ArrowLeft className="h-4 w-4" /> Back

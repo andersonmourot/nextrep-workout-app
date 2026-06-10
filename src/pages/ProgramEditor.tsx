@@ -163,6 +163,16 @@ export function ProgramEditor() {
     commitDay(dayIdx, { ...d, exercises: d.exercises.filter((_, j) => j !== exIdx) })
   }
 
+  // Reorder an exercise within its day (keeps all its sets/reps/rest/name).
+  function moveExercise(dayIdx: number, exIdx: number, dir: -1 | 1) {
+    const d = viewDays[dayIdx]
+    const target = exIdx + dir
+    if (target < 0 || target >= d.exercises.length) return
+    const exercises = [...d.exercises]
+    ;[exercises[exIdx], exercises[target]] = [exercises[target], exercises[exIdx]]
+    commitDay(dayIdx, { ...d, exercises })
+  }
+
   // Structural changes (number of training days) only apply to the base plan
   // (Week 1) so every week keeps the same day slots.
   function addDay() {
@@ -568,6 +578,22 @@ export function ProgramEditor() {
                         onType={(typed) => setExerciseName(dayIdx, exIdx, typed, pe)}
                         placeholder="Type an exercise name"
                       />
+                      <button
+                        onClick={() => moveExercise(dayIdx, exIdx, -1)}
+                        disabled={exIdx === 0}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                        aria-label="Move exercise up"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => moveExercise(dayIdx, exIdx, 1)}
+                        disabled={exIdx === day.exercises.length - 1}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                        aria-label="Move exercise down"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => removeExercise(dayIdx, exIdx)}
                         disabled={day.exercises.length === 1}

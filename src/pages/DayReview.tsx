@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronUp, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { exerciseLabel, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
@@ -197,6 +197,18 @@ export function DayReview() {
     )
   }
 
+  // Reorder an exercise within the day (keeps its sets/reps/rest/name).
+  function moveDraftExercise(idx: number, dir: -1 | 1) {
+    setDraft((prev) => {
+      if (!prev) return prev
+      const target = idx + dir
+      if (target < 0 || target >= prev.exercises.length) return prev
+      const exercises = [...prev.exercises]
+      ;[exercises[idx], exercises[target]] = [exercises[target], exercises[idx]]
+      return { ...prev, exercises }
+    })
+  }
+
   async function saveEdit() {
     if (!program || !day || !draft) return
     if (draft.exercises.length === 0) {
@@ -282,6 +294,22 @@ export function DayReview() {
                     placeholder="Type an exercise name"
                     className="input flex-1"
                   />
+                  <button
+                    onClick={() => moveDraftExercise(exIdx, -1)}
+                    disabled={exIdx === 0}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                    aria-label="Move exercise up"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => moveDraftExercise(exIdx, 1)}
+                    disabled={exIdx === draft.exercises.length - 1}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                    aria-label="Move exercise down"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => removeDraftExercise(exIdx)}
                     disabled={draft.exercises.length === 1}

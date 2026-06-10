@@ -206,14 +206,6 @@ export function ProgramDetail() {
           <Meta icon={<Target className="h-4 w-4" />} label="Days" value={program.days.length} />
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-1.5">
-          {program.tags.map((t) => (
-            <span key={t} className="chip">
-              {t}
-            </span>
-          ))}
-        </div>
-
         <button
           onClick={() => startProgram(program.id)}
           disabled={isActive}

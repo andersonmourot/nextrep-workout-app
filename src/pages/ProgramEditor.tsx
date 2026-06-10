@@ -61,7 +61,6 @@ export function ProgramEditor() {
   const [accent, setAccent] = useState(existing?.accent ?? ACCENTS[0])
   const [summary, setSummary] = useState(existing?.summary ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
-  const [tags, setTags] = useState((existing?.tags ?? []).join(', '))
   const [collaborative, setCollaborative] = useState(existing?.collaborative ?? false)
   const [days, setDays] = useState<ProgramDay[]>(existing?.days ?? [blankDay(1)])
   const [overrides, setOverrides] = useState<
@@ -269,10 +268,6 @@ export function ProgramEditor() {
       description:
         description.trim() ||
         `A custom ${level.toLowerCase()} ${category.toLowerCase()} program with ${days.length} training days.`,
-      tags: tags
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean),
       days: days.map((d) => ({ ...d, name: d.name.trim() || 'Day', focus: d.focus.trim() })),
       weekOverrides: Object.keys(overrides).length ? overrides : undefined,
       ownerId: existing?.ownerId ?? currentUserId,
@@ -436,14 +431,6 @@ export function ProgramEditor() {
           />
         </Field>
 
-        <Field label="Tags (comma separated)">
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="Hypertrophy, Split, Gym"
-            className="input"
-          />
-        </Field>
 
         <Field label="Collaborative">
           <div className="flex gap-2">

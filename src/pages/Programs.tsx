@@ -65,7 +65,19 @@ export function Programs() {
     const q = query.trim().toLowerCase()
     if (!q) return byCat
     return byCat.filter((p) =>
-      [p.name, p.summary, p.coach, p.category, p.level, ...(p.tags ?? [])]
+      [
+        p.name,
+        p.summary,
+        p.coach,
+        p.category,
+        p.level,
+        // Make programs findable by their schedule, e.g. "4", "4 day",
+        // "4 days per week".
+        `${p.daysPerWeek} day`,
+        `${p.daysPerWeek} days`,
+        `${p.daysPerWeek} days per week`,
+        `${p.daysPerWeek} days/week`,
+      ]
         .filter(Boolean)
         .some((s) => s.toLowerCase().includes(q)),
     )

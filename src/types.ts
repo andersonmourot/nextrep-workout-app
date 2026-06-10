@@ -91,7 +91,7 @@ export interface Program {
   accent: string
   summary: string
   description: string
-  tags: string[]
+  tags?: string[]
   days: ProgramDay[]
   /**
    * Per-week-onward overrides of a day's plan, keyed by the base day's id. Each

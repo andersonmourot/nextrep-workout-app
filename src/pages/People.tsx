@@ -458,7 +458,7 @@ function SharedContent({
               className="card w-full max-w-sm p-5"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="heading text-lg font-bold text-zinc-50">Add “{chooseProgram.name}”</h3>
+              <h3 className="heading text-lg font-bold text-zinc-50">Add {chooseProgram.name}</h3>
               <p className="mt-1 text-sm text-zinc-400">
                 Choose how you want to add {ownerName}’s program.
               </p>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Pause, Play, RotateCcw, Trash2 } from 'lucide-react'
+import { Minus, Pause, Play, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore, DEFAULT_INTERVAL_SETTINGS, type IntervalSettings } from '../store'
 import { cn, uid } from '../lib/utils'
@@ -350,18 +350,50 @@ function Stopwatch() {
 const INTERVAL_FORMATS = ['EMOM', 'AMRAP', 'TABATA'] as const
 type IntervalFormat = (typeof INTERVAL_FORMATS)[number]
 
-/** Resolve work/rest/rounds for a format + settings pair (null if no format). */
+/** Active phase of a running interval: working, the in-round rest, or the
+ *  longer rest inserted between sets. */
+type IntervalPhase = 'work' | 'rest' | 'setrest'
+
+interface IntervalConfig {
+  work: number
+  rest: number
+  rounds: number
+  /** How many times the whole round sequence repeats (>=1). */
+  sets: number
+  /** Rest inserted after each set finishes, except the last (0 = none). */
+  setRest: number
+}
+
+/** Resolve work/rest/rounds/sets for a format + settings pair (null if none). */
 function intervalConfig(
   fmt: IntervalFormat | null,
   sett: IntervalSettings,
-): { work: number; rest: number; rounds: number } | null {
+): IntervalConfig | null {
   return fmt === 'EMOM'
-    ? { work: sett.emomInterval, rest: 0, rounds: sett.emomRounds }
+    ? {
+        work: sett.emomInterval,
+        rest: 0,
+        rounds: sett.emomRounds,
+        sets: Math.max(1, sett.emomSets),
+        setRest: Math.max(0, sett.emomSetRest),
+      }
     : fmt === 'TABATA'
-      ? { work: sett.tabataWork, rest: sett.tabataRest, rounds: sett.tabataRounds }
+      ? {
+          work: sett.tabataWork,
+          rest: sett.tabataRest,
+          rounds: sett.tabataRounds,
+          sets: Math.max(1, sett.tabataSets),
+          setRest: Math.max(0, sett.tabataSetRest),
+        }
       : fmt === 'AMRAP'
-        ? { work: Math.max(1, sett.amrapCap), rest: 0, rounds: 1 }
+        ? { work: Math.max(1, sett.amrapCap), rest: 0, rounds: 1, sets: 1, setRest: 0 }
         : null
+}
+
+/** Total runtime of a configured interval session, in seconds. */
+function intervalTotalSeconds(c: IntervalConfig): number {
+  const perSet = c.rounds * (c.work + c.rest)
+  return perSet * c.sets + c.setRest * Math.max(0, c.sets - 1)
 }
 
 /** Short tick cue for the final 3 seconds of a phase. */
@@ -433,8 +465,58 @@ function NumIn({
   )
 }
 
+/** Compact +/- stepper for whole-number values (e.g. number of sets). */
+function Stepper({
+  value,
+  onChange,
+  min = 0,
+  max,
+  disabled,
+}: {
+  value: number
+  onChange: (v: number) => void
+  min?: number
+  max?: number
+  disabled?: boolean
+}) {
+  const clamp = (v: number) => Math.min(max ?? Infinity, Math.max(min, v))
+  return (
+    <div
+      className={cn(
+        'flex items-center overflow-hidden rounded-xl border border-white/10 bg-ink-900',
+        disabled && 'opacity-50',
+      )}
+    >
+      <button
+        type="button"
+        disabled={disabled || value <= min}
+        onClick={() => onChange(clamp(value - 1))}
+        className="grid h-10 w-11 place-items-center bg-ink-800 text-zinc-200 hover:text-white disabled:opacity-40"
+        aria-label="Decrease"
+      >
+        <Minus className="h-4 w-4" />
+      </button>
+      <span className="flex-1 text-center text-base font-bold tabular-nums text-zinc-50">
+        {value}
+      </span>
+      <button
+        type="button"
+        disabled={disabled || (max !== undefined && value >= max)}
+        onClick={() => onChange(clamp(value + 1))}
+        className="grid h-10 w-11 place-items-center bg-ink-800 text-zinc-200 hover:text-white disabled:opacity-40"
+        aria-label="Increase"
+      >
+        <Plus className="h-4 w-4" />
+      </button>
+    </div>
+  )
+}
+
 function Interval() {
-  const settings = useStore((s) => s.intervalSettings)
+  const rawSettings = useStore((s) => s.intervalSettings)
+  // Merge with defaults so timers persisted before "sets" existed still get the
+  // new fields (older saved state won't include emomSets/tabataSets/etc).
+  const settings: IntervalSettings = { ...DEFAULT_INTERVAL_SETTINGS, ...rawSettings }
   const setIntervalSettings = useStore((s) => s.setIntervalSettings)
 
   const storedFormat = useStore((s) => s.intervalFormat)
@@ -450,7 +532,8 @@ function Interval() {
 
   const [running, setRunning] = useState(false)
   const [round, setRound] = useState(1)
-  const [phase, setPhase] = useState<'work' | 'rest'>('work')
+  const [set, setSet] = useState(1)
+  const [phase, setPhase] = useState<IntervalPhase>('work')
   const [remaining, setRemaining] = useState(
     initialCfg ? initialCfg.work : DEFAULT_INTERVAL_SETTINGS.tabataWork,
   )
@@ -467,9 +550,12 @@ function Interval() {
 
   // Runtime mirrors in refs so the single timer callback can run the whole
   // state machine without stale closures.
-  const cfgRef = useRef(initialCfg ?? { work: 20, rest: 10, rounds: 8 })
+  const cfgRef = useRef<IntervalConfig>(
+    initialCfg ?? { work: 20, rest: 10, rounds: 8, sets: 1, setRest: 0 },
+  )
   const roundRef = useRef(1)
-  const phaseRef = useRef<'work' | 'rest'>('work')
+  const setNumRef = useRef(1)
+  const phaseRef = useRef<IntervalPhase>('work')
   const remainingRef = useRef(initialCfg ? initialCfg.work : 20)
 
   const cfg = intervalConfig(format, settings)
@@ -482,10 +568,12 @@ function Interval() {
     setFinished(false)
     setCountdown(null)
     roundRef.current = 1
+    setNumRef.current = 1
     phaseRef.current = 'work'
     if (c) {
       remainingRef.current = c.work
       setRound(1)
+      setSet(1)
       setPhase('work')
       setRemaining(c.work)
     }
@@ -535,21 +623,27 @@ function Interval() {
         tickCue(remainingRef.current)
         return
       }
-      const { work, rest, rounds } = cfgRef.current
-      if (phaseRef.current === 'work' && rest > 0) {
+      const { work, rest, rounds, sets, setRest } = cfgRef.current
+      // A finished set-rest starts the next set's first work round.
+      if (phaseRef.current === 'setrest') {
+        setNumRef.current += 1
+        roundRef.current = 1
+        phaseRef.current = 'work'
+        remainingRef.current = work
+        setSet(setNumRef.current)
+        setRound(1)
+        setPhase('work')
+        setRemaining(work)
+        beep(660)
+      } else if (phaseRef.current === 'work' && rest > 0) {
+        // End of a work round that has an in-round rest.
         phaseRef.current = 'rest'
         remainingRef.current = rest
         setPhase('rest')
         setRemaining(rest)
         beep(880)
-      } else if (roundRef.current >= rounds) {
-        window.clearInterval(t)
-        setRunning(false)
-        setFinished(true)
-        remainingRef.current = 0
-        setRemaining(0)
-        playSound(useStore.getState().timerSound)
-      } else {
+      } else if (roundRef.current < rounds) {
+        // Still rounds left in this set — advance to the next round.
         const wasRest = phaseRef.current === 'rest'
         roundRef.current += 1
         phaseRef.current = 'work'
@@ -559,6 +653,34 @@ function Interval() {
         setRemaining(work)
         if (wasRest) playSound('bell')
         else beep(660)
+      } else if (setNumRef.current < sets) {
+        // Last round of the set done, more sets to go: rest between sets
+        // (or roll straight into the next set if no set-rest is configured).
+        if (setRest > 0) {
+          phaseRef.current = 'setrest'
+          remainingRef.current = setRest
+          setPhase('setrest')
+          setRemaining(setRest)
+          playSound('bell')
+        } else {
+          setNumRef.current += 1
+          roundRef.current = 1
+          phaseRef.current = 'work'
+          remainingRef.current = work
+          setSet(setNumRef.current)
+          setRound(1)
+          setPhase('work')
+          setRemaining(work)
+          beep(660)
+        }
+      } else {
+        // Last round of the last set — the whole session is complete.
+        window.clearInterval(t)
+        setRunning(false)
+        setFinished(true)
+        remainingRef.current = 0
+        setRemaining(0)
+        playSound(useStore.getState().timerSound)
       }
     }, 1000)
     return () => window.clearInterval(t)
@@ -569,9 +691,11 @@ function Interval() {
     setCountdown(null)
     const c = cfgRef.current
     roundRef.current = 1
+    setNumRef.current = 1
     phaseRef.current = 'work'
     remainingRef.current = c.work
     setRound(1)
+    setSet(1)
     setPhase('work')
     setRemaining(c.work)
   }
@@ -593,16 +717,24 @@ function Interval() {
     resetRuntime()
   }
 
-  const phaseTotal = phase === 'work' ? cfg?.work ?? 1 : cfg?.rest ?? 1
+  const phaseTotal =
+    phase === 'work' ? cfg?.work ?? 1 : phase === 'setrest' ? cfg?.setRest ?? 1 : cfg?.rest ?? 1
   const ringValue = phaseTotal ? remaining / phaseTotal : 0
 
+  const totalRounds = cfg?.rounds ?? 1
+  const totalSets = cfg?.sets ?? 1
+  // "Sets" only applies to multi-round formats — AMRAP is a single time cap.
+  const hasSets = totalSets > 1 && format !== 'AMRAP'
+  const phaseLabel = phase === 'setrest' ? 'Set rest' : phase
+
+  const setsSuffix = (n: number) => (n > 1 ? ` · ${n} sets` : '')
   const desc =
     format === 'EMOM'
-      ? `${settings.emomInterval}s × ${settings.emomRounds} rounds`
+      ? `${settings.emomInterval}s × ${settings.emomRounds} rounds${setsSuffix(settings.emomSets)}`
       : format === 'AMRAP'
         ? `${fmt(settings.amrapCap)} time cap`
         : format === 'TABATA'
-          ? `${settings.tabataWork}s work / ${settings.tabataRest}s rest × ${settings.tabataRounds}`
+          ? `${settings.tabataWork}s work / ${settings.tabataRest}s rest × ${settings.tabataRounds}${setsSuffix(settings.tabataSets)}`
           : ''
 
   const subtitle = !format
@@ -611,12 +743,54 @@ function Interval() {
       ? 'Get ready!'
       : format === 'AMRAP'
         ? 'Time cap'
-        : `Round ${round}/${cfg?.rounds ?? 1}`
+        : phase === 'setrest'
+          ? `Rest before set ${Math.min(set + 1, totalSets)}/${totalSets}`
+          : `Round ${round}/${totalRounds}`
+
+  // Higher-level "what's left" preview for multi-set sessions, shown while
+  // running. Set-focused (not round-level) to match the setup preview.
+  const upNext: { text: string; kind: 'work' | 'rest' | 'set' }[] = []
+  if (hasSets && running) {
+    if (phase === 'setrest') {
+      for (let k = set + 1; k <= totalSets; k++) {
+        upNext.push({ text: `Set ${k}`, kind: 'set' })
+        if (k < totalSets && (cfg?.setRest ?? 0) > 0)
+          upNext.push({ text: `rest ${cfg?.setRest}s`, kind: 'rest' })
+      }
+    } else {
+      upNext.push({ text: `Finish Set ${set}`, kind: 'work' })
+      for (let k = set + 1; k <= totalSets; k++) {
+        if ((cfg?.setRest ?? 0) > 0) upNext.push({ text: `rest ${cfg?.setRest}s`, kind: 'rest' })
+        upNext.push({ text: `Set ${k}`, kind: 'set' })
+      }
+    }
+  }
 
   const upd = (patch: Partial<IntervalSettings>) => {
     const next = { ...settings, ...patch }
     setIntervalSettings(next)
     if (!running) applyConfig(format, next)
+  }
+
+  // Sets controls read/write the per-format keys (EMOM vs TABATA).
+  const setsValue = format === 'EMOM' ? settings.emomSets : settings.tabataSets
+  const setRestValue = format === 'EMOM' ? settings.emomSetRest : settings.tabataSetRest
+  const updSets = (n: number) =>
+    upd(format === 'EMOM' ? { emomSets: n } : { tabataSets: n })
+  const updSetRest = (n: number) =>
+    upd(format === 'EMOM' ? { emomSetRest: n } : { tabataSetRest: n })
+
+  // Full session preview for the setup screen (one chip per set + set rests).
+  const sessionChips: { text: string; kind: 'work' | 'rest' | 'set' }[] = []
+  if (cfg && cfg.sets > 1 && format !== 'AMRAP') {
+    const roundText =
+      cfg.rest > 0 ? `${cfg.rounds} × ${cfg.work}/${cfg.rest}` : `${cfg.rounds} × ${cfg.work}s`
+    for (let k = 1; k <= cfg.sets; k++) {
+      sessionChips.push({ text: `Set ${k}`, kind: 'set' })
+      sessionChips.push({ text: roundText, kind: 'work' })
+      if (k < cfg.sets && cfg.setRest > 0)
+        sessionChips.push({ text: `rest ${cfg.setRest}s`, kind: 'rest' })
+    }
   }
 
   return (
@@ -630,7 +804,7 @@ function Interval() {
                 phase === 'work' ? 'text-gold' : 'text-zinc-400',
               )}
             >
-              {finished ? 'Done' : !format ? 'Interval' : countdown !== null ? 'Ready' : phase}
+              {finished ? 'Done' : !format ? 'Interval' : countdown !== null ? 'Ready' : phaseLabel}
             </span>
             <span className="heading text-5xl font-bold tabular-nums text-zinc-50">
               {countdown !== null ? countdown : fmt(remaining)}
@@ -638,6 +812,12 @@ function Interval() {
             <span className="text-xs text-zinc-500">{subtitle}</span>
           </div>
         </ProgressRing>
+
+        {hasSets && (countdown !== null || running || finished) && (
+          <span className="rounded-full border border-gold/40 bg-gold/15 px-3 py-1 text-xs font-bold text-gold">
+            Set {Math.min(set, totalSets)} of {totalSets}
+          </span>
+        )}
 
         {format && <p className="text-xs text-zinc-400">{desc}</p>}
         {finished && <p className="text-sm font-semibold text-gold">Workout complete!</p>}
@@ -665,6 +845,31 @@ function Interval() {
           </button>
         </div>
       </div>
+
+      {upNext.length > 0 && (
+        <div className="card space-y-2 p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-zinc-500">Up next</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {upNext.map((c, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5">
+                {i > 0 && <span className="text-zinc-600">→</span>}
+                <span
+                  className={cn(
+                    'rounded-lg border px-2.5 py-1 text-xs font-semibold',
+                    c.kind === 'work'
+                      ? 'border-gold/45 bg-gold/15 text-gold'
+                      : c.kind === 'set'
+                        ? 'border-white/15 bg-ink-800 text-zinc-300'
+                        : 'border-white/10 bg-ink-900 text-zinc-400',
+                  )}
+                >
+                  {c.text}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {format && (
         <div className="card space-y-3 p-4">
@@ -762,6 +967,66 @@ function Interval() {
                 />
               </label>
             </div>
+          )}
+
+          {(format === 'EMOM' || format === 'TABATA') && (
+            <>
+              <div className="border-t border-white/5 pt-3">
+                <p className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-400">Sets</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-zinc-400">Sets</span>
+                    <Stepper
+                      value={setsValue}
+                      min={1}
+                      max={99}
+                      disabled={running || countdown !== null}
+                      onChange={updSets}
+                    />
+                  </label>
+                  <NumIn
+                    label="Rest between sets (sec)"
+                    value={setRestValue}
+                    min={0}
+                    disabled={running || countdown !== null || setsValue <= 1}
+                    onChange={(v) => {
+                      if (v !== null) updSetRest(v)
+                    }}
+                  />
+                </div>
+              </div>
+
+              {cfg && setsValue > 1 && (
+                <div className="rounded-xl border border-dashed border-white/12 bg-ink-850 p-3">
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-zinc-500">
+                    Session preview
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {sessionChips.map((c, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5">
+                        {i > 0 && <span className="text-zinc-600">→</span>}
+                        <span
+                          className={cn(
+                            'rounded-lg border px-2.5 py-1 text-xs font-semibold',
+                            c.kind === 'work'
+                              ? 'border-gold/45 bg-gold/15 text-gold'
+                              : c.kind === 'set'
+                                ? 'border-white/15 bg-ink-800 text-zinc-300'
+                                : 'border-white/10 bg-ink-900 text-zinc-400',
+                          )}
+                        >
+                          {c.text}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2.5 text-xs text-zinc-400">
+                    Total <b className="text-zinc-100">{fmt(intervalTotalSeconds(cfg))}</b> ·{' '}
+                    {cfg.rounds * cfg.sets} work rounds · {cfg.sets} sets
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

@@ -40,10 +40,14 @@ export interface SavedTimer {
 export interface IntervalSettings {
   emomInterval: number
   emomRounds: number
+  emomSets: number
+  emomSetRest: number
   amrapCap: number
   tabataWork: number
   tabataRest: number
   tabataRounds: number
+  tabataSets: number
+  tabataSetRest: number
   forTimeCap: number
 }
 
@@ -58,10 +62,14 @@ export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
 export const DEFAULT_INTERVAL_SETTINGS: IntervalSettings = {
   emomInterval: 60,
   emomRounds: 10,
+  emomSets: 1,
+  emomSetRest: 60,
   amrapCap: 600,
   tabataWork: 20,
   tabataRest: 10,
   tabataRounds: 8,
+  tabataSets: 1,
+  tabataSetRest: 60,
   forTimeCap: 1200,
 }
 

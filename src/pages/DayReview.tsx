@@ -336,7 +336,7 @@ export function DayReview() {
                     onChange={(v) => updateDraftExercise(exIdx, { reps: v })}
                   />
                   <EditNumField
-                    label="Rest s"
+                    label="Rest"
                     value={pe.restSec}
                     onChange={(v) => updateDraftExercise(exIdx, { restSec: v })}
                   />

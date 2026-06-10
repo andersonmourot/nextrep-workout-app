@@ -642,7 +642,7 @@ export function ProgramEditor() {
                           onChange={(v) => updateExercise(dayIdx, exIdx, { reps: v })}
                         />
                         <NumField
-                          label="Rest s"
+                          label="Rest"
                           value={pe.restSec}
                           onChange={(v) => updateExercise(dayIdx, exIdx, { restSec: v })}
                         />
@@ -739,7 +739,7 @@ export function ProgramEditor() {
                         onChange={(v) => updateGroup(dayIdx, members, { sets: v })}
                       />
                       <NumField
-                        label="Rest s (per round)"
+                        label="Rest (per round)"
                         value={day.exercises[last].restSec}
                         onChange={(v) => updateGroup(dayIdx, members, { restSec: v })}
                       />

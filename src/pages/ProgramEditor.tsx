@@ -7,8 +7,10 @@ import {
   ChevronRight,
   ChevronUp,
   Copy,
+  Link2,
   Plus,
   Trash2,
+  Unlink,
 } from 'lucide-react'
 import { EXERCISES, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
@@ -21,7 +23,7 @@ import type {
   ProgramCategory,
   ProgramDay,
 } from '../types'
-import { cn, uid } from '../lib/utils'
+import { cn, supersetGroups, uid } from '../lib/utils'
 
 const CATEGORIES: ProgramCategory[] = [
   'Bodybuilding',
@@ -74,6 +76,8 @@ export function ProgramEditor() {
 
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
+  // Superset building is an admin-gated preview for now.
+  const isAdmin = useAuth((s) => s.user?.is_admin) ?? false
   // You're the owner of a brand-new program, or of one with no recorded owner
   // (legacy), or one you created. Only the owner may toggle collaboration.
   const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
@@ -171,6 +175,46 @@ export function ProgramEditor() {
     const exercises = [...d.exercises]
     ;[exercises[exIdx], exercises[target]] = [exercises[target], exercises[exIdx]]
     commitDay(dayIdx, { ...d, exercises })
+  }
+
+  // Join an exercise with the one below it into a superset (admin-gated). If
+  // either side is already in a group they merge; the group's sets are synced so
+  // every member runs the same number of rounds.
+  function linkWithNext(dayIdx: number, exIdx: number) {
+    const d = viewDays[dayIdx]
+    const exs = d.exercises
+    if (exIdx >= exs.length - 1) return
+    const gid = exs[exIdx].groupId ?? exs[exIdx + 1].groupId ?? uid()
+    const oldNextGid = exs[exIdx + 1].groupId
+    const joined = exs.map((e, i) => {
+      if (i === exIdx || i === exIdx + 1) return { ...e, groupId: gid }
+      if (oldNextGid && e.groupId === oldNextGid) return { ...e, groupId: gid }
+      return e
+    })
+    const groupSets = joined[exIdx].sets
+    const synced = joined.map((e) => (e.groupId === gid ? { ...e, sets: groupSets } : e))
+    commitDay(dayIdx, { ...d, exercises: synced })
+  }
+
+  // Break a superset back into standalone exercises.
+  function unlinkGroup(dayIdx: number, groupId: string) {
+    const d = viewDays[dayIdx]
+    commitDay(dayIdx, {
+      ...d,
+      exercises: d.exercises.map((e) =>
+        e.groupId === groupId ? { ...e, groupId: undefined } : e,
+      ),
+    })
+  }
+
+  // Apply a patch (e.g. shared sets or rest) to every exercise in a group.
+  function updateGroup(dayIdx: number, indices: number[], patch: Partial<PlannedExercise>) {
+    const d = viewDays[dayIdx]
+    const set = new Set(indices)
+    commitDay(dayIdx, {
+      ...d,
+      exercises: d.exercises.map((e, i) => (set.has(i) ? { ...e, ...patch } : e)),
+    })
   }
 
   // Structural changes (number of training days) only apply to the base plan
@@ -568,63 +612,180 @@ export function ProgramEditor() {
 
             {!collapsed && (
             <div className="mt-3 space-y-2">
-              {day.exercises.map((pe, exIdx) => {
-                const ex = resolvePlannedExercise(pe)
-                return (
-                  <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
-                    <div className="flex items-center gap-2">
-                      <ExerciseNameInput
-                        value={pe.name ?? ex?.name ?? ''}
-                        onType={(typed) => setExerciseName(dayIdx, exIdx, typed, pe)}
-                        placeholder="Type an exercise name"
-                      />
-                      <div className="flex shrink-0 flex-col overflow-hidden rounded-lg bg-ink-800">
+              {(isAdmin
+                ? supersetGroups(day.exercises)
+                : day.exercises.map((_, i) => ({
+                    indices: [i],
+                    isSuperset: false,
+                    groupId: undefined,
+                    label: undefined,
+                  }))
+              ).map((group) => {
+                // ---- Standalone exercise ----
+                if (!group.isSuperset) {
+                  const exIdx = group.indices[0]
+                  const pe = day.exercises[exIdx]
+                  const ex = resolvePlannedExercise(pe)
+                  return (
+                    <div key={`ex-${exIdx}`} className="rounded-xl border border-white/5 bg-ink-900 p-3">
+                      <div className="flex items-center gap-2">
+                        <ExerciseNameInput
+                          value={pe.name ?? ex?.name ?? ''}
+                          onType={(typed) => setExerciseName(dayIdx, exIdx, typed, pe)}
+                          placeholder="Type an exercise name"
+                        />
+                        <div className="flex shrink-0 flex-col overflow-hidden rounded-lg bg-ink-800">
+                          <button
+                            onClick={() => moveExercise(dayIdx, exIdx, -1)}
+                            disabled={exIdx === 0}
+                            className="grid h-[18px] w-8 place-items-center border-b border-white/5 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                            aria-label="Move exercise up"
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => moveExercise(dayIdx, exIdx, 1)}
+                            disabled={exIdx === day.exercises.length - 1}
+                            className="grid h-[18px] w-8 place-items-center text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                            aria-label="Move exercise down"
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                         <button
-                          onClick={() => moveExercise(dayIdx, exIdx, -1)}
-                          disabled={exIdx === 0}
-                          className="grid h-[18px] w-8 place-items-center border-b border-white/5 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                          aria-label="Move exercise up"
+                          onClick={() => removeExercise(dayIdx, exIdx)}
+                          disabled={day.exercises.length === 1}
+                          className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-red-400 disabled:opacity-40"
+                          aria-label="Remove exercise"
                         >
-                          <ChevronUp className="h-3.5 w-3.5" />
-                        </button>
-                        <button
-                          onClick={() => moveExercise(dayIdx, exIdx, 1)}
-                          disabled={exIdx === day.exercises.length - 1}
-                          className="grid h-[18px] w-8 place-items-center text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                          aria-label="Move exercise down"
-                        >
-                          <ChevronDown className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
+                      <p className="mt-1 px-1 text-[11px] text-zinc-500">
+                        {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
+                      </p>
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <NumField
+                          label="Sets"
+                          value={pe.sets}
+                          onChange={(v) => updateExercise(dayIdx, exIdx, { sets: v })}
+                        />
+                        <TextField
+                          label="Reps"
+                          value={pe.reps}
+                          onChange={(v) => updateExercise(dayIdx, exIdx, { reps: v })}
+                        />
+                        <NumField
+                          label="Rest s"
+                          value={pe.restSec}
+                          onChange={(v) => updateExercise(dayIdx, exIdx, { restSec: v })}
+                        />
+                      </div>
+                      {isAdmin && exIdx < day.exercises.length - 1 && (
+                        <button
+                          onClick={() => linkWithNext(dayIdx, exIdx)}
+                          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gold/40 py-1.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/10"
+                        >
+                          <Link2 className="h-3.5 w-3.5" /> Superset with next
+                        </button>
+                      )}
+                    </div>
+                  )
+                }
+
+                // ---- Superset / triset / giant set ----
+                const members = group.indices
+                const last = members[members.length - 1]
+                return (
+                  <div key={`ss-${group.groupId}`} className="rounded-xl border border-gold/45 bg-gold/[0.05] p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-gold">
+                        Superset {group.label}
+                      </span>
                       <button
-                        onClick={() => removeExercise(dayIdx, exIdx)}
-                        disabled={day.exercises.length === 1}
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-red-400 disabled:opacity-40"
-                        aria-label="Remove exercise"
+                        onClick={() => group.groupId && unlinkGroup(dayIdx, group.groupId)}
+                        className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Unlink className="h-3.5 w-3.5" /> Unlink
                       </button>
                     </div>
-                    <p className="mt-1 px-1 text-[11px] text-zinc-500">
-                      {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
-                    </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
+                    <div className="mt-2 space-y-2">
+                      {members.map((exIdx, pos) => {
+                        const pe = day.exercises[exIdx]
+                        const ex = resolvePlannedExercise(pe)
+                        return (
+                          <div key={`m-${exIdx}`} className="rounded-lg border border-white/5 bg-ink-900 p-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="grid h-8 w-9 shrink-0 place-items-center rounded-md bg-gold/15 text-xs font-bold text-gold">
+                                {group.label}
+                                {pos + 1}
+                              </span>
+                              <ExerciseNameInput
+                                value={pe.name ?? ex?.name ?? ''}
+                                onType={(typed) => setExerciseName(dayIdx, exIdx, typed, pe)}
+                                placeholder="Type an exercise name"
+                              />
+                              <div className="flex shrink-0 flex-col overflow-hidden rounded-lg bg-ink-800">
+                                <button
+                                  onClick={() => moveExercise(dayIdx, exIdx, -1)}
+                                  disabled={pos === 0}
+                                  className="grid h-[18px] w-8 place-items-center border-b border-white/5 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                                  aria-label="Move up in superset"
+                                >
+                                  <ChevronUp className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => moveExercise(dayIdx, exIdx, 1)}
+                                  disabled={pos === members.length - 1}
+                                  className="grid h-[18px] w-8 place-items-center text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                                  aria-label="Move down in superset"
+                                >
+                                  <ChevronDown className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => removeExercise(dayIdx, exIdx)}
+                                disabled={day.exercises.length === 1}
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-red-400 disabled:opacity-40"
+                                aria-label="Remove exercise"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <p className="mt-1 px-1 text-[11px] text-zinc-500">
+                              {ex ? `${ex.primaryMuscle} · ${ex.equipment}` : 'Custom exercise'}
+                            </p>
+                            <div className="mt-2">
+                              <TextField
+                                label="Reps"
+                                value={pe.reps}
+                                onChange={(v) => updateExercise(dayIdx, exIdx, { reps: v })}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
                       <NumField
-                        label="Sets"
-                        value={pe.sets}
-                        onChange={(v) => updateExercise(dayIdx, exIdx, { sets: v })}
-                      />
-                      <TextField
-                        label="Reps"
-                        value={pe.reps}
-                        onChange={(v) => updateExercise(dayIdx, exIdx, { reps: v })}
+                        label="Sets / rounds"
+                        value={day.exercises[members[0]].sets}
+                        onChange={(v) => updateGroup(dayIdx, members, { sets: v })}
                       />
                       <NumField
-                        label="Rest s"
-                        value={pe.restSec}
-                        onChange={(v) => updateExercise(dayIdx, exIdx, { restSec: v })}
+                        label="Rest s (per round)"
+                        value={day.exercises[last].restSec}
+                        onChange={(v) => updateGroup(dayIdx, members, { restSec: v })}
                       />
                     </div>
+                    {last < day.exercises.length - 1 && (
+                      <button
+                        onClick={() => linkWithNext(dayIdx, last)}
+                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gold/40 py-1.5 text-[11px] font-semibold text-gold/90 hover:bg-gold/10"
+                      >
+                        <Link2 className="h-3.5 w-3.5" /> Add next exercise to this superset
+                      </button>
+                    )}
                   </div>
                 )
               })}

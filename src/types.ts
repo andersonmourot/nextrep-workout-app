@@ -63,6 +63,13 @@ export interface PlannedExercise {
   reps: string
   restSec: number
   notes?: string
+  /**
+   * Superset grouping. Consecutive exercises that share the same non-empty
+   * `groupId` form a superset/triset/giant set: they're performed back-to-back
+   * with no rest between, resting only after each round (the last exercise's
+   * `restSec` is used as the round's rest). Undefined = a standalone exercise.
+   */
+  groupId?: string
 }
 
 export interface ProgramDay {

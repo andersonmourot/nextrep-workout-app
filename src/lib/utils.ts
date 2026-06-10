@@ -170,6 +170,57 @@ export function previousWeekWeights(
   return out
 }
 
+export interface SupersetGroup {
+  /** Shared groupId for a superset; undefined for a standalone exercise. */
+  groupId?: string
+  /** Indices into the day's `exercises` array, in order. */
+  indices: number[]
+  /** True when this group has 2+ exercises (a real superset/triset/giant set). */
+  isSuperset: boolean
+  /** Letter shown in the UI for a superset group (A, B, C…). */
+  label?: string
+}
+
+/**
+ * Partition a day's exercises into superset groups. Consecutive exercises that
+ * share the same non-empty `groupId` are one group; everything else is its own
+ * singleton group. Supersets (2+ members) get a sequential letter label.
+ */
+export function supersetGroups(exercises: { groupId?: string }[]): SupersetGroup[] {
+  const groups: SupersetGroup[] = []
+  for (let i = 0; i < exercises.length; i++) {
+    const gid = exercises[i].groupId
+    const last = groups[groups.length - 1]
+    if (gid && last && last.groupId === gid) {
+      last.indices.push(i)
+    } else {
+      groups.push({ groupId: gid, indices: [i], isSuperset: false })
+    }
+  }
+  let letter = 0
+  for (const g of groups) {
+    g.isSuperset = !!g.groupId && g.indices.length > 1
+    if (g.isSuperset) {
+      g.label = String.fromCharCode(65 + letter)
+      letter += 1
+    }
+  }
+  return groups
+}
+
+/**
+ * Set of exercise indices that are the LAST member of their superset group.
+ * In the active workout, only these trigger the round's rest timer (the other
+ * members are performed back-to-back with no rest between).
+ */
+export function lastInGroupIndices(exercises: { groupId?: string }[]): Set<number> {
+  const out = new Set<number>()
+  for (const g of supersetGroups(exercises)) {
+    out.add(g.indices[g.indices.length - 1])
+  }
+  return out
+}
+
 export interface ProgramRun {
   /** Number of training days in one week of the program. */
   daysLen: number

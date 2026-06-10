@@ -191,6 +191,8 @@ interface AppState {
   reconcileActiveWorkout: () => void
   setActiveWorkoutSets: (sets: SetLog[][]) => void
   setActiveWorkoutRest: (restEndsAt: number | null, restTotal: number) => void
+  /** Start a rest of `restSec` seconds from now (computes the end time). */
+  startRest: (restSec: number) => void
   endWorkout: () => void
   setNutritionEntry: (entry: NutritionEntry) => void
   setNutritionGoals: (goals: NutritionGoals) => void
@@ -594,6 +596,18 @@ export const useStore = create<AppState>()(
         set((s) =>
           s.activeWorkout
             ? { activeWorkout: { ...s.activeWorkout, restEndsAt, restTotal } }
+            : {},
+        ),
+      startRest: (restSec) =>
+        set((s) =>
+          s.activeWorkout
+            ? {
+                activeWorkout: {
+                  ...s.activeWorkout,
+                  restEndsAt: Date.now() + restSec * 1000,
+                  restTotal: restSec,
+                },
+              }
             : {},
         ),
       endWorkout: () => set({ activeWorkout: null }),

@@ -4,9 +4,18 @@ import { Check, Info, SkipForward, Timer, X } from 'lucide-react'
 import { exerciseLabel, resolvePlannedExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
-import { cn, formatClock, resolveProgramDay, uid } from '../lib/utils'
+import {
+  cn,
+  formatClock,
+  lastInGroupIndices,
+  resolveProgramDay,
+  supersetGroups,
+  uid,
+  type SupersetGroup,
+} from '../lib/utils'
 import { playBell, primeBell } from '../lib/sound'
 import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
+import { useAuth } from '../auth'
 
 export function Workout() {
   const navigate = useNavigate()
@@ -26,8 +35,28 @@ export function Workout() {
   const startProgram = useStore((s) => s.startProgram)
   const setActiveWorkoutSets = useStore((s) => s.setActiveWorkoutSets)
   const setActiveWorkoutRest = useStore((s) => s.setActiveWorkoutRest)
+  const startRest = useStore((s) => s.startRest)
   const reconcileActiveWorkout = useStore((s) => s.reconcileActiveWorkout)
   const endWorkout = useStore((s) => s.endWorkout)
+  // Supersets are an admin-gated preview for now: only admins see grouped,
+  // round-by-round rendering. Everyone else sees the standard one-exercise-at-a-
+  // time layout (their programs have no groupId, so this is also a no-op).
+  const isAdmin = useAuth((s) => s.user?.is_admin) ?? false
+
+  // Group consecutive exercises that share a groupId into supersets. When not an
+  // admin, force every exercise to its own singleton group (grouping disabled).
+  const groups = useMemo<SupersetGroup[]>(() => {
+    const exs = day?.exercises ?? []
+    if (!isAdmin) return exs.map((_, i) => ({ indices: [i], isSuperset: false }))
+    return supersetGroups(exs)
+  }, [day, isAdmin])
+  // Indices that end a round (the last member of each group) — only these fire
+  // the rest timer/bell. For singletons that's the exercise itself.
+  const lastInGroup = useMemo(() => {
+    const exs = day?.exercises ?? []
+    if (!isAdmin) return new Set(exs.map((_, i) => i))
+    return lastInGroupIndices(exs)
+  }, [day, isAdmin])
 
   // Keep the live session in sync with the program plan: if the day is edited
   // (exercises added/removed/reordered, set counts changed) while the workout is
@@ -117,10 +146,12 @@ export function Workout() {
     const willComplete = !current.completed
     const restSec = day.exercises[exIdx].restSec
     updateSet(exIdx, setIdx, { completed: willComplete })
-    if (willComplete && restSec > 0) {
+    // In a superset, only the last exercise of the round rests — the others are
+    // performed back-to-back with no rest between (no bell either).
+    if (willComplete && restSec > 0 && lastInGroup.has(exIdx)) {
       // Unlock audio within this tap so the bell can ring when rest ends (iOS).
       primeBell()
-      setActiveWorkoutRest(Date.now() + restSec * 1000, restSec)
+      startRest(restSec)
     }
   }
 
@@ -192,84 +223,150 @@ export function Workout() {
       </header>
 
       <main className="container-app space-y-5 py-5">
-        {day.exercises.map((pe, exIdx) => {
-          const ex = resolvePlannedExercise(pe)
-          const exerciseSets = sets[exIdx] ?? []
-          return (
-            <div key={`${pe.exerciseId}-${exIdx}`} className="card p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                    Exercise {exIdx + 1} of {day.exercises.length}
-                  </span>
-                  <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
-                  <p className="mt-0.5 text-sm text-zinc-400">
-                    {pe.sets} sets × {pe.reps} reps
-                  </p>
+        {groups.map((group) => {
+          // ---- Standalone exercise (the usual one-exercise card) ----
+          if (!group.isSuperset) {
+            const exIdx = group.indices[0]
+            const pe = day.exercises[exIdx]
+            const ex = resolvePlannedExercise(pe)
+            const exerciseSets = sets[exIdx] ?? []
+            return (
+              <div key={`${pe.exerciseId}-${exIdx}`} className="card p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                      Exercise {exIdx + 1} of {day.exercises.length}
+                    </span>
+                    <h1 className="heading text-2xl font-bold text-zinc-50">{exerciseLabel(pe)}</h1>
+                    <p className="mt-0.5 text-sm text-zinc-400">
+                      {pe.sets} sets × {pe.reps} reps
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
+                    {ex && (
+                      <Link
+                        to={`/exercises/${ex.id}`}
+                        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                        aria-label="Exercise info"
+                      >
+                        <Info className="h-5 w-5" />
+                      </Link>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
-                  {ex && (
-                    <Link
-                      to={`/exercises/${ex.id}`}
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
-                      aria-label="Exercise info"
-                    >
-                      <Info className="h-5 w-5" />
-                    </Link>
-                  )}
+
+                {pe.notes && (
+                  <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
+                )}
+                <ExerciseNote exerciseId={pe.exerciseId} />
+
+                {/* Sets table */}
+                <div className="mt-4">
+                  <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                    <span>Set</span>
+                    <span>Weight ({unit})</span>
+                    <span>Reps</span>
+                    <span className="text-right">Done</span>
+                  </div>
+                  <div className="space-y-2">
+                    {exerciseSets.map((s, j) => (
+                      <SetRow
+                        key={j}
+                        lead={`${j + 1}`}
+                        set={s}
+                        onWeight={(v) => updateSet(exIdx, j, { weight: v })}
+                        onReps={(v) => updateSet(exIdx, j, { reps: v })}
+                        onToggle={() => toggleComplete(exIdx, j)}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
+            )
+          }
 
-              {pe.notes && (
-                <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
-              )}
-              <ExerciseNote exerciseId={pe.exerciseId} />
+          // ---- Superset / triset / giant set (round-by-round) ----
+          const members = group.indices
+          const rounds = Math.max(1, ...members.map((i) => (sets[i] ?? []).length))
+          return (
+            <div
+              key={`ss-${group.groupId}`}
+              className="rounded-2xl border border-gold/45 bg-gradient-to-b from-gold/[0.07] to-transparent p-4"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gold">
+                  Superset {group.label} · no rest between
+                </span>
+                <span className="text-[11px] text-zinc-500">{rounds} rounds</span>
+              </div>
 
-              {/* Sets table */}
+              {/* Legend: each exercise once, with its info + notes controls */}
+              <div className="mt-3 space-y-2">
+                {members.map((exIdx, pos) => {
+                  const pe = day.exercises[exIdx]
+                  const ex = resolvePlannedExercise(pe)
+                  return (
+                    <div key={`leg-${exIdx}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="grid h-7 w-8 shrink-0 place-items-center rounded-md bg-gold/15 text-xs font-bold text-gold">
+                          {group.label}
+                          {pos + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold text-zinc-100">{exerciseLabel(pe)}</p>
+                          <p className="text-[11px] text-zinc-500">{pe.reps} reps target</p>
+                        </div>
+                        <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
+                        {ex && (
+                          <Link
+                            to={`/exercises/${ex.id}`}
+                            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                            aria-label="Exercise info"
+                          >
+                            <Info className="h-5 w-5" />
+                          </Link>
+                        )}
+                      </div>
+                      {pe.notes && (
+                        <p className="mt-1 rounded-lg bg-gold/10 px-3 py-1.5 text-xs text-gold">{pe.notes}</p>
+                      )}
+                      <ExerciseNote exerciseId={pe.exerciseId} />
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Rounds: log A1 then A2 …, the round's rest fires after the last */}
               <div className="mt-4">
-                <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                  <span>Set</span>
+                <div className="grid grid-cols-[2.5rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  <span></span>
                   <span>Weight ({unit})</span>
                   <span>Reps</span>
                   <span className="text-right">Done</span>
                 </div>
-                <div className="space-y-2">
-                  {exerciseSets.map((s, j) => (
-                    <div
-                      key={j}
-                      className={cn(
-                        'grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 rounded-xl border p-2 transition',
-                        s.completed
-                          ? 'border-gold/40 bg-gold/[0.07]'
-                          : 'border-white/5 bg-ink-900',
-                      )}
-                    >
-                      <span className="grid h-7 w-7 place-items-center rounded-md bg-ink-800 text-sm font-bold text-zinc-300">
-                        {j + 1}
-                      </span>
-                      <NumberField
-                        value={s.weight}
-                        decimal
-                        onChange={(v) => updateSet(exIdx, j, { weight: v })}
-                      />
-                      <NumberField
-                        value={s.reps}
-                        onChange={(v) => updateSet(exIdx, j, { reps: v })}
-                      />
-                      <div className="flex justify-end">
-                        <button
-                          onClick={() => toggleComplete(exIdx, j)}
-                          className={cn(
-                            'grid h-9 w-9 place-items-center rounded-lg border transition active:scale-95',
-                            s.completed
-                              ? 'border-gold bg-gold text-white'
-                              : 'border-white/15 bg-ink-800 text-zinc-500 hover:border-gold/50',
-                          )}
-                          aria-label={s.completed ? 'Mark set incomplete' : 'Mark set complete'}
-                        >
-                          <Check className="h-5 w-5" />
-                        </button>
+                <div className="space-y-3">
+                  {Array.from({ length: rounds }, (_, r) => (
+                    <div key={`round-${r}`}>
+                      <p className="mb-1.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                        Round {r + 1}
+                        <span className="h-px flex-1 bg-white/10" />
+                      </p>
+                      <div className="space-y-2">
+                        {members.map((exIdx, pos) => {
+                          const s = sets[exIdx]?.[r]
+                          if (!s) return null
+                          return (
+                            <SetRow
+                              key={`r${r}-${exIdx}`}
+                              lead={`${group.label}${pos + 1}`}
+                              set={s}
+                              onWeight={(v) => updateSet(exIdx, r, { weight: v })}
+                              onReps={(v) => updateSet(exIdx, r, { reps: v })}
+                              onToggle={() => toggleComplete(exIdx, r)}
+                            />
+                          )
+                        })}
                       </div>
                     </div>
                   ))}
@@ -323,6 +420,61 @@ export function Workout() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * One weight/reps/done row, shared by standalone exercises and superset rounds.
+ * `lead` is the small badge at the start (a set number like "1" for a normal
+ * exercise, or a member tag like "A2" inside a superset round).
+ */
+function SetRow({
+  lead,
+  set,
+  onWeight,
+  onReps,
+  onToggle,
+}: {
+  lead: string
+  set: SetLog
+  onWeight: (v: number) => void
+  onReps: (v: number) => void
+  onToggle: () => void
+}) {
+  const wide = lead.length > 1
+  return (
+    <div
+      className={cn(
+        'grid items-center gap-2 rounded-xl border p-2 transition',
+        wide ? 'grid-cols-[2.5rem_1fr_1fr_3rem]' : 'grid-cols-[2rem_1fr_1fr_3rem]',
+        set.completed ? 'border-gold/40 bg-gold/[0.07]' : 'border-white/5 bg-ink-900',
+      )}
+    >
+      <span
+        className={cn(
+          'grid h-7 place-items-center rounded-md text-sm font-bold',
+          wide ? 'w-10 bg-gold/15 text-xs text-gold' : 'w-7 bg-ink-800 text-zinc-300',
+        )}
+      >
+        {lead}
+      </span>
+      <NumberField value={set.weight} decimal onChange={onWeight} />
+      <NumberField value={set.reps} onChange={onReps} />
+      <div className="flex justify-end">
+        <button
+          onClick={onToggle}
+          className={cn(
+            'grid h-9 w-9 place-items-center rounded-lg border transition active:scale-95',
+            set.completed
+              ? 'border-gold bg-gold text-white'
+              : 'border-white/15 bg-ink-800 text-zinc-500 hover:border-gold/50',
+          )}
+          aria-label={set.completed ? 'Mark set incomplete' : 'Mark set complete'}
+        >
+          <Check className="h-5 w-5" />
+        </button>
+      </div>
     </div>
   )
 }

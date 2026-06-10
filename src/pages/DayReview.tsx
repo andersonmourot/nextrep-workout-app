@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { exerciseLabel, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
+import { ExerciseSubheader } from '../components/ExerciseSubheader'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
@@ -30,6 +31,7 @@ export function DayReview() {
   const program = useProgram(programId)
   const isCustom = useIsCustomProgram(programId)
   const currentUserId = useAuth((s) => s.user?.id)
+  const isAdmin = useAuth((s) => !!s.user?.is_admin)
   const logs = useStore((s) => s.logs)
   const unit = useStore((s) => s.unit)
   const programAnchors = useStore((s) => s.programAnchors)
@@ -404,7 +406,11 @@ export function DayReview() {
               </div>
             </div>
 
-            <ExerciseNote exerciseId={pe.exerciseId} />
+            {isAdmin ? (
+              <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} className="mt-2" />
+            ) : (
+              <ExerciseNote exerciseId={pe.exerciseId} />
+            )}
 
             <div className="mt-4">
               <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">

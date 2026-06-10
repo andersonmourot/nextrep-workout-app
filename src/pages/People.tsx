@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Check,
   ChevronDown,
+  Copy,
   Dumbbell,
   Plus,
+  Rss,
   Search,
   Star,
   Users,
@@ -15,6 +18,7 @@ import {
   apiFollowing,
   apiSearchUsers,
   apiUnfollow,
+  apiUpsertProgram,
   apiUserExercises,
   apiUserPrograms,
   type DiscoverUser,
@@ -24,7 +28,7 @@ import { getToken, useAuth } from '../auth'
 import { MAX_FAVORITES, useStore } from '../store'
 import { getExercise } from '../data/exercises'
 import type { Exercise, PlannedExercise, Program, ProgramDay } from '../types'
-import { cn } from '../lib/utils'
+import { cn, uid } from '../lib/utils'
 
 export function People() {
   const [query, setQuery] = useState('')
@@ -207,11 +211,15 @@ function SharedContent({
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [addedPrograms, setAddedPrograms] = useState<Set<string>>(new Set())
   const [addedExercises, setAddedExercises] = useState<Set<string>>(new Set())
+  // Program awaiting a Duplicate-vs-Follow choice in the popup (null = closed).
+  const [chooseProgram, setChooseProgram] = useState<Program | null>(null)
+  const [choosing, setChoosing] = useState(false)
   const customPrograms = useStore((s) => s.customPrograms)
   const addProgram = useStore((s) => s.addProgram)
   const customExercises = useStore((s) => s.customExercises)
   const addCustomExercise = useStore((s) => s.addCustomExercise)
   const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
 
   useEffect(() => {
     let active = true
@@ -240,11 +248,16 @@ function SharedContent({
     }
   }, [userId, programCount, exerciseCount])
 
-  async function addProgramToMine(p: Program) {
+  // "follow" keeps the program linked to its creator: it stays read-only and the
+  // creator's future edits sync in (via refreshSharedPrograms). "duplicate" makes
+  // an independent copy you fully own and can edit/share, with no link back.
+  async function addProgramToMine(p: Program, mode: 'follow' | 'duplicate') {
     const token = getToken()
     if (!token) return
-    const res = await apiAddProgram<Program>(token, p.id)
-    const base = res.ok && res.data ? res.data.program : { ...p, coach: p.coach || ownerName }
+    // Follow registers membership so the creator's edits propagate; duplicate is a
+    // standalone copy, so we don't join the original's member list.
+    const res = mode === 'follow' ? await apiAddProgram<Program>(token, p.id) : null
+    const base = res && res.ok && res.data ? res.data.program : { ...p, coach: p.coach || ownerName }
 
     // Make the program self-contained on this account: backfill any missing
     // custom-exercise names and import the creator's referenced shared custom
@@ -285,8 +298,35 @@ function SharedContent({
       }
     }
 
-    addProgram(program)
+    if (mode === 'duplicate') {
+      // Independent copy: new id + you as owner, so the original creator's edits
+      // never overwrite it and you can freely edit and re-share it yourself.
+      const copy: Program = {
+        ...program,
+        id: `custom-${uid()}`,
+        ownerId: currentUserId,
+        ownerName: currentUserName ?? program.ownerName,
+        coach: currentUserName || program.coach,
+        collaborative: false,
+        version: Date.now(),
+      }
+      addProgram(copy)
+      await apiUpsertProgram<Program>(token, copy)
+    } else {
+      addProgram(program)
+    }
     setAddedPrograms((prev) => new Set(prev).add(p.id))
+  }
+
+  async function handleChoose(mode: 'follow' | 'duplicate') {
+    if (!chooseProgram) return
+    setChoosing(true)
+    try {
+      await addProgramToMine(chooseProgram, mode)
+    } finally {
+      setChoosing(false)
+      setChooseProgram(null)
+    }
   }
 
   async function addExerciseToMine(e: Exercise) {
@@ -331,7 +371,7 @@ function SharedContent({
                     </span>
                   ) : (
                     <button
-                      onClick={() => void addProgramToMine(p)}
+                      onClick={() => setChooseProgram(p)}
                       disabled={isAdded}
                       className={cn(
                         'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60',
@@ -405,6 +445,64 @@ function SharedContent({
       {!loading && programs.length === 0 && exercises.length === 0 && (
         <p className="text-sm text-zinc-500">This athlete hasn’t shared anything yet.</p>
       )}
+
+      {chooseProgram &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-6"
+            onClick={() => !choosing && setChooseProgram(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="card w-full max-w-sm p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="heading text-lg font-bold text-zinc-50">Add “{chooseProgram.name}”</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                Choose how you want to add {ownerName}’s program.
+              </p>
+              <div className="mt-4 space-y-2.5">
+                <button
+                  onClick={() => void handleChoose('duplicate')}
+                  disabled={choosing}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-ink-850 p-3 text-left transition hover:border-white/30 disabled:opacity-60"
+                >
+                  <Copy className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+                  <span>
+                    <span className="block text-sm font-semibold text-zinc-100">Duplicate</span>
+                    <span className="block text-xs text-zinc-400">
+                      Make your own copy. Fully editable and sharable — changes by the original
+                      creator won’t affect it.
+                    </span>
+                  </span>
+                </button>
+                <button
+                  onClick={() => void handleChoose('follow')}
+                  disabled={choosing}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-ink-850 p-3 text-left transition hover:border-white/30 disabled:opacity-60"
+                >
+                  <Rss className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+                  <span>
+                    <span className="block text-sm font-semibold text-zinc-100">Follow</span>
+                    <span className="block text-xs text-zinc-400">
+                      Save to your Programs and stay in sync. When {ownerName} updates it, your copy
+                      updates too. Only the creator can edit it.
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <button
+                onClick={() => setChooseProgram(null)}
+                disabled={choosing}
+                className="btn-ghost mt-3 w-full disabled:opacity-60"
+              >
+                {choosing ? 'Adding…' : 'Cancel'}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

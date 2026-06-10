@@ -13,6 +13,7 @@ import {
   Pencil,
   Play,
   RotateCcw,
+  Rss,
   Star,
   Target,
   Trash2,
@@ -182,11 +183,19 @@ export function ProgramDetail() {
           <span className="label-eyebrow" style={{ color: program.accent }}>
             {program.category} · {program.level}
           </span>
-          {isCustom && (
-            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
-              Custom
-            </span>
-          )}
+          {isCustom &&
+            (isOwner || program.collaborative ? (
+              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold">
+                Custom
+              </span>
+            ) : (
+              <span
+                className="inline-flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gold"
+                title={`Following ${program.ownerName ?? 'the creator'}'s program — updates sync from them`}
+              >
+                <Rss className="h-3 w-3" /> Following
+              </span>
+            ))}
         </div>
         <h1 className="heading mt-1 text-3xl font-bold text-zinc-50">{program.name}</h1>
         <p className="mt-2 text-sm text-zinc-300">{program.description}</p>

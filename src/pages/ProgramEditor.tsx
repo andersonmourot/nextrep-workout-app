@@ -16,7 +16,7 @@ import { EXERCISES, findExerciseByName, getExercise, resolvePlannedExercise } fr
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
-import { ExerciseSubheader } from '../components/ExerciseSubheader'
+import { ExerciseSubheader, ExerciseCueButton } from '../components/ExerciseSubheader'
 import type {
   Difficulty,
   PlannedExercise,
@@ -619,6 +619,7 @@ export function ProgramEditor() {
                             <ChevronDown className="h-3.5 w-3.5" />
                           </button>
                         </div>
+                        <ExerciseCueButton exerciseId={ex?.id ?? pe.exerciseId} />
                         <button
                           onClick={() => removeExercise(dayIdx, exIdx)}
                           disabled={day.exercises.length === 1}

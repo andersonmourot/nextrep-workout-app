@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, ChevronDown, ChevronUp, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { exerciseLabel, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { ExerciseNotesButton } from '../components/ExerciseNotesButton'
-import { ExerciseSubheader } from '../components/ExerciseSubheader'
+import { ExerciseSubheader, ExerciseCueButton } from '../components/ExerciseSubheader'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
@@ -313,6 +313,7 @@ export function DayReview() {
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                   </div>
+                  <ExerciseCueButton exerciseId={ex?.id ?? pe.exerciseId} />
                   <button
                     onClick={() => removeDraftExercise(exIdx)}
                     disabled={draft.exercises.length === 1}
@@ -393,6 +394,7 @@ export function DayReview() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                <ExerciseCueButton exerciseId={ex?.id ?? pe.exerciseId} />
                 <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
                 {ex && (
                   <Link

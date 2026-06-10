@@ -216,6 +216,11 @@ interface AppState {
   deleteMaxTracker: (id: string) => void
   setExerciseNote: (exerciseId: string, notes: string) => void
   setExerciseSubheader: (exerciseId: string, text: string) => void
+  // Transient UI state: which exercise's cue is currently being edited inline.
+  // Lets the header cue button (empty state) open the inline editor that lives
+  // under the title. Not persisted to the server.
+  editingCueId: string | null
+  setEditingCueId: (exerciseId: string | null) => void
   resetAll: () => void
 }
 
@@ -223,6 +228,7 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       ...DEFAULTS,
+      editingCueId: null,
 
       setName: (name) => set({ name }),
       setUnit: (unit) => set({ unit }),
@@ -682,6 +688,7 @@ export const useStore = create<AppState>()(
           else delete next[exerciseId]
           return { exerciseSubheaders: next }
         }),
+      setEditingCueId: (exerciseId) => set({ editingCueId: exerciseId }),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -786,6 +793,7 @@ function applyState(raw: typeof DEFAULTS): void {
   applyingRemote = true
   try {
     useStore.setState(next)
+    useStore.setState({ editingCueId: null })
     setCustomExercises(next.customExercises ?? [])
     setExerciseOverrides(next.exerciseOverrides ?? {})
   } finally {

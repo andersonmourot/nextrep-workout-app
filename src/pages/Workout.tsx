@@ -15,7 +15,7 @@ import {
 } from '../lib/utils'
 import { playBell, primeBell } from '../lib/sound'
 import { ExerciseNotesButton } from '../components/ExerciseNotesButton'
-import { ExerciseSubheader } from '../components/ExerciseSubheader'
+import { ExerciseSubheader, ExerciseCueButton } from '../components/ExerciseSubheader'
 
 export function Workout() {
   const navigate = useNavigate()
@@ -231,6 +231,7 @@ export function Workout() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <ExerciseCueButton exerciseId={ex?.id ?? pe.exerciseId} />
                     <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
                     {ex && (
                       <Link
@@ -305,6 +306,7 @@ export function Workout() {
                           <p className="truncate font-semibold text-zinc-100">{exerciseLabel(pe)}</p>
                           <p className="text-[11px] text-zinc-500">{pe.reps} reps target</p>
                         </div>
+                        <ExerciseCueButton exerciseId={ex?.id ?? pe.exerciseId} />
                         <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
                         {ex && (
                           <Link

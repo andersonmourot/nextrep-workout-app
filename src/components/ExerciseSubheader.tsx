@@ -1,13 +1,60 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlignLeft, Plus } from 'lucide-react'
+import { useRef } from 'react'
+import { AlignLeft, ListPlus } from 'lucide-react'
 import { useStore } from '../store'
 import { cn } from '../lib/utils'
+
+/**
+ * Small header button that opens the cue editor for an exercise. It only shows
+ * when the exercise has no cue yet — once a cue exists, the cue itself (rendered
+ * by ExerciseSubheader under the title) is the tappable/editable element, so the
+ * button drops off. Sits next to the notes button in the exercise header.
+ */
+export function ExerciseCueButton({
+  exerciseId,
+  className,
+}: {
+  exerciseId: string
+  className?: string
+}) {
+  const text = useStore((s) => s.exerciseSubheaders[exerciseId] ?? '')
+  const setEditingCueId = useStore((s) => s.setEditingCueId)
+  const editing = useStore((s) => s.editingCueId === exerciseId)
+
+  // Once a cue exists it's shown/edited inline under the title, so hide the
+  // button. While actively editing an empty cue, keep it visible (the inline
+  // input is open above the sets).
+  if (text.trim()) return null
+
+  return (
+    <button
+      type="button"
+      onClick={(e: React.MouseEvent) => {
+        e.stopPropagation()
+        setEditingCueId(editing ? null : exerciseId)
+      }}
+      className={cn(
+        'grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 transition hover:text-gold',
+        editing && 'text-gold',
+        className,
+      )}
+      aria-label="Add a cue"
+      title="Add a cue"
+    >
+      <ListPlus className="h-5 w-5" />
+    </button>
+  )
+}
 
 /**
  * Private per-exercise "sub-header" cue, shown inline under the exercise title.
  * Keyed by exerciseId, so it sticks to the exercise in every program the user
  * adds it to. It is per-user and never shared when an exercise/program is
- * shared. Tap to edit inline (Enter/blur saves, Esc cancels).
+ * shared.
+ *
+ * When empty, nothing renders here — the cue is added via ExerciseCueButton in
+ * the header. Once a cue exists it shows as the left-bar line and is click-to-
+ * edit. Editing is coordinated through the store (editingCueId) so the header
+ * button can open this inline editor.
  */
 export function ExerciseSubheader({
   exerciseId,
@@ -18,41 +65,38 @@ export function ExerciseSubheader({
 }) {
   const text = useStore((s) => s.exerciseSubheaders[exerciseId] ?? '')
   const setSubheader = useStore((s) => s.setExerciseSubheader)
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(text)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const editing = useStore((s) => s.editingCueId === exerciseId)
+  const setEditingCueId = useStore((s) => s.setEditingCueId)
+  // The input is uncontrolled (defaultValue + read on commit) so opening the
+  // editor needs no state-sync effect. cancelingRef lets Escape skip the
+  // save that the resulting blur would otherwise trigger.
+  const cancelingRef = useRef(false)
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus()
-  }, [editing])
-
-  function start() {
-    setDraft(text)
-    setEditing(true)
-  }
-
-  function commit() {
-    setSubheader(exerciseId, draft)
-    setEditing(false)
+  function commit(value: string) {
+    if (cancelingRef.current) {
+      cancelingRef.current = false
+      return
+    }
+    setSubheader(exerciseId, value)
+    setEditingCueId(null)
   }
 
   function cancel() {
-    setDraft(text)
-    setEditing(false)
+    cancelingRef.current = true
+    setEditingCueId(null)
   }
 
   if (editing) {
     return (
       <div className={cn('mt-3', className)}>
         <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commit}
+          autoFocus
+          defaultValue={text}
+          onBlur={(e) => commit(e.currentTarget.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              commit()
+              commit(e.currentTarget.value)
             } else if (e.key === 'Escape') {
               e.preventDefault()
               cancel()
@@ -66,26 +110,15 @@ export function ExerciseSubheader({
     )
   }
 
-  if (!text.trim()) {
-    return (
-      <button
-        type="button"
-        onClick={start}
-        className={cn(
-          'mt-3 flex w-full items-center gap-1.5 rounded-lg border border-dashed border-white/10 px-3 py-2 text-left text-xs font-medium text-zinc-500 transition hover:border-gold/40 hover:text-gold',
-          className,
-        )}
-      >
-        <Plus className="h-3.5 w-3.5 shrink-0" />
-        Add a cue
-      </button>
-    )
-  }
+  if (!text.trim()) return null
 
   return (
     <button
       type="button"
-      onClick={start}
+      onClick={(e: React.MouseEvent) => {
+        e.stopPropagation()
+        setEditingCueId(exerciseId)
+      }}
       className={cn(
         'mt-3 flex w-full items-center gap-2 rounded-lg border border-white/5 border-l-[3px] border-l-gold bg-ink-900 px-3 py-2 text-left transition hover:border-l-gold hover:bg-ink-800',
         className,

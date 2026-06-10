@@ -3,7 +3,7 @@ import type { Program } from '../types'
 export const PROGRAMS: Program[] = [
   {
     id: 'classic-physique',
-    name: 'Classic Physique',
+    name: 'The Classic',
     category: 'Bodybuilding',
     level: 'Advanced',
     goal: 'Build muscle & symmetry',
@@ -83,7 +83,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'strength-foundations',
-    name: 'Strength Foundations',
+    name: 'Foundation Builder',
     category: 'Strength',
     level: 'Intermediate',
     goal: 'Get stronger on the basics',
@@ -144,7 +144,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'hiit-shred',
-    name: 'HIIT Shred',
+    name: 'HIIT',
     category: 'HIIT',
     level: 'Intermediate',
     goal: 'Burn fat & build conditioning',
@@ -197,7 +197,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'powerlifting-peak',
-    name: 'Powerlifting Peak',
+    name: 'Powerlifting',
     category: 'Powerlifting',
     level: 'Advanced',
     goal: 'Maximize the big three',
@@ -259,7 +259,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'home-bodyweight',
-    name: 'Home Bodyweight Builder',
+    name: 'Home Fitness Bodyweight',
     category: 'Bodyweight',
     level: 'Beginner',
     goal: 'Train anywhere, no gym',
@@ -318,7 +318,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'functional-athlete',
-    name: 'Functional Athlete',
+    name: 'Functional Building',
     category: 'Functional',
     level: 'Intermediate',
     goal: 'Move better & build power',

@@ -162,7 +162,9 @@ export function Workout() {
         <div className="container-app flex h-14 items-center justify-between">
           <button
             onClick={() => {
-              endWorkout()
+              // Leave the session running so entered weights/reps/done sets are
+              // kept — the user can go edit the day and come back to Resume.
+              // (Finishing the workout is the explicit "complete & log" path.)
               navigate('/programs')
             }}
             className="grid h-9 w-9 place-items-center rounded-lg bg-ink-850 text-zinc-400 hover:text-zinc-100"

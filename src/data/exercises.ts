@@ -605,6 +605,21 @@ export const EXERCISES: Exercise[] = [
     ],
     tips: ['Keep your upper arms pressed into the pad.', 'Avoid using momentum to lift.'],
   },
+  {
+    id: 'cable-fly-low-to-high',
+    name: 'Cable Fly Low to High',
+    primaryMuscle: 'Chest',
+    secondaryMuscles: ['Shoulders'],
+    equipment: 'Cable',
+    difficulty: 'Intermediate',
+    instructions: [
+      'Set both pulleys to the lowest position and grab a handle in each hand, palms facing forward.',
+      'Step forward with a slight forward lean and arms down at your sides.',
+      'Sweep your hands up and together in an arc to about eye level, squeezing the upper chest.',
+      'Lower under control back to the starting position.',
+    ],
+    tips: ['Keep a soft bend in the elbows throughout.', 'Lead with the upper chest, not the front delts.'],
+  },
 ]
 
 export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(

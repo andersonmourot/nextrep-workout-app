@@ -165,7 +165,10 @@ export function Workout() {
               // Leave the session running so entered weights/reps/done sets are
               // kept — the user can go edit the day and come back to Resume.
               // (Finishing the workout is the explicit "complete & log" path.)
-              navigate('/programs')
+              // The live workout renders as an overlay on the "/programs" path,
+              // so navigate to the program detail instead — otherwise we'd stay
+              // on "/programs" and the overlay (this screen) wouldn't dismiss.
+              navigate(`/programs/${program.id}`)
             }}
             className="grid h-9 w-9 place-items-center rounded-lg bg-ink-850 text-zinc-400 hover:text-zinc-100"
             aria-label="Exit workout"

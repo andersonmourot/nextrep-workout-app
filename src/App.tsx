@@ -26,6 +26,7 @@ import { Legal } from './pages/Legal'
 import { useAuth } from './auth'
 import { useStore } from './store'
 import { applyTheme } from './lib/theme'
+import { enableMixedAudio } from './lib/sound'
 
 function RequireAuth() {
   const token = useAuth((s) => s.token)
@@ -41,6 +42,9 @@ export default function App() {
 
   useEffect(() => {
     void useAuth.getState().init()
+    // iOS: make our timer sounds mix with the user's background music
+    // (Spotify/Apple Music) instead of pausing it.
+    enableMixedAudio()
   }, [])
 
   useEffect(() => {

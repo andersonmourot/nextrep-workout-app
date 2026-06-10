@@ -3,6 +3,7 @@ import { Minus, Pause, Play, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { ProgressRing } from '../components/ProgressRing'
 import { useStore, DEFAULT_INTERVAL_SETTINGS, type IntervalSettings } from '../store'
 import { cn, uid } from '../lib/utils'
+import { beep, playSound } from '../lib/sound'
 
 type Mode = 'timer' | 'stopwatch' | 'interval'
 
@@ -38,30 +39,6 @@ function maskTime(raw: string): string {
   return `${digits.slice(0, -2)}:${digits.slice(-2)}`
 }
 
-/** Short beep using the Web Audio API (no asset needed). */
-function beep(freq = 880) {
-  try {
-    const Ctx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctx()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.type = 'sine'
-    osc.frequency.value = freq
-    gain.gain.setValueAtTime(0.001, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
-    osc.start()
-    osc.stop(ctx.currentTime + 0.52)
-    osc.onended = () => ctx.close()
-  } catch {
-    // Audio not available — ignore.
-  }
-}
-
 /** End-of-timer sound choices (free assets bundled under /public/sounds). */
 const SOUND_OPTIONS = [
   { id: 'beep', label: 'Beep' },
@@ -69,16 +46,6 @@ const SOUND_OPTIONS = [
   { id: 'chime', label: 'Chime' },
   { id: 'alarm', label: 'Alarm' },
 ] as const
-
-/** Play one of the bundled end sounds; falls back to a synth beep on error. */
-function playSound(id: string) {
-  try {
-    const audio = new Audio(`${import.meta.env.BASE_URL}sounds/${id}.mp3`)
-    void audio.play().catch(() => beep())
-  } catch {
-    beep()
-  }
-}
 
 export function Timer() {
   const storedMode = useStore((s) => s.timerMode)

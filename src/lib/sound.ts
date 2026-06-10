@@ -1,31 +1,86 @@
 /**
- * Sound helpers for the active workout. The rest-timer bell rings well after the
- * user's tap that started the rest (e.g. 90s later), so on iOS it must be
- * "unlocked" during a real user gesture first — `primeBell()` does that, then
- * `playBell()` can play it later even without an active gesture.
+ * Sound helpers for the workout + interval timers.
+ *
+ * iOS note: by default a web page's audio uses the "playback" session category,
+ * which interrupts (pauses) whatever the user is listening to in another app
+ * (Spotify, Apple Music, etc.). For short alert sounds we instead set the audio
+ * session to "ambient" so our beeps/bell mix on top of background music without
+ * stopping it. `enableMixedAudio()` does that and is a no-op where the
+ * AudioSession API isn't available.
+ *
+ * The rest-timer bell also rings well after the tap that started the rest (e.g.
+ * 90s later), so on iOS it must be "unlocked" during a real user gesture first —
+ * `primeBell()` does that, then `playBell()` can play it later without a gesture.
  */
 
-/** Short synth beep via Web Audio, used as a fallback when the asset can't play. */
-function beep(freq = 880) {
+type NavWithAudioSession = Navigator & { audioSession?: { type: string } }
+
+/**
+ * Set the iOS audio session to "ambient" so our short sounds mix with the user's
+ * background music instead of pausing it. No-op on browsers without the API.
+ * Note: `<audio>` elements are silent under "transient", so we use "ambient".
+ */
+export function enableMixedAudio() {
+  try {
+    const nav = navigator as NavWithAudioSession
+    if (nav.audioSession && nav.audioSession.type !== 'ambient') {
+      nav.audioSession.type = 'ambient'
+    }
+  } catch {
+    // AudioSession API not available — ignore.
+  }
+}
+
+// Reuse a single AudioContext for all synth beeps. Creating a fresh context per
+// beep is wasteful and can re-trigger audio-session negotiation on iOS (another
+// way the user's music could get interrupted).
+let audioCtx: AudioContext | null = null
+
+function getCtx(): AudioContext | null {
   try {
     const Ctx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    const ctx = new Ctx()
+    if (!Ctx) return null
+    if (!audioCtx) audioCtx = new Ctx()
+    if (audioCtx.state === 'suspended') void audioCtx.resume()
+    return audioCtx
+  } catch {
+    return null
+  }
+}
+
+/** Short synth beep via Web Audio (no asset needed). */
+export function beep(freq = 880) {
+  enableMixedAudio()
+  const ctx = getCtx()
+  if (!ctx) return
+  try {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     osc.connect(gain)
     gain.connect(ctx.destination)
     osc.type = 'sine'
     osc.frequency.value = freq
-    gain.gain.setValueAtTime(0.001, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    const t = ctx.currentTime
+    gain.gain.setValueAtTime(0.001, t)
+    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.02)
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5)
     osc.start()
-    osc.stop(ctx.currentTime + 0.52)
-    osc.onended = () => ctx.close()
+    osc.stop(t + 0.52)
   } catch {
     // Audio not available — ignore.
+  }
+}
+
+/** Play one of the bundled end sounds; falls back to a synth beep on error. */
+export function playSound(id: string) {
+  enableMixedAudio()
+  try {
+    const audio = new Audio(`${import.meta.env.BASE_URL}sounds/${id}.mp3`)
+    void audio.play().catch(() => beep())
+  } catch {
+    beep()
   }
 }
 
@@ -46,6 +101,7 @@ function getBell(): HTMLAudioElement | null {
  * element silently then resets it so a later `playBell()` is allowed on iOS.
  */
 export function primeBell() {
+  enableMixedAudio()
   const el = getBell()
   if (!el) return
   try {
@@ -70,6 +126,7 @@ export function primeBell() {
 
 /** Play the rest-timer bell. Used only when a rest timer ends naturally. */
 export function playBell() {
+  enableMixedAudio()
   const el = getBell()
   if (!el) {
     beep()

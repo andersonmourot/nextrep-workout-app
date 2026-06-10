@@ -128,7 +128,11 @@ export function ProgramEditor() {
 
   function setExerciseName(dayIdx: number, exIdx: number, typed: string, prev: PlannedExercise) {
     const match = findExerciseByName(typed)
-    if (match) {
+    // Only snap to a matched library exercise when the text has no trailing
+    // space. Otherwise typing a space after a complete name (e.g. "Squat ")
+    // would resolve back to the canonical name and strip the space the user
+    // just typed, making the spacebar appear broken mid-rename.
+    if (match && typed === typed.trimEnd()) {
       // Built-ins resolve by id on every device, so leave name undefined (lets
       // overrides apply). For custom exercises, store the name so the program
       // stays self-contained when shared — followers who lack the creator's

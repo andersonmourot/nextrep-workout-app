@@ -165,8 +165,12 @@ export function DayReview() {
 
   function setDraftExerciseName(idx: number, typed: string, prev: PlannedExercise) {
     const match = findExerciseByName(typed)
-    if (match) {
-      updateDraftExercise(idx, { exerciseId: match.id, name: undefined })
+    // Only snap to a matched library exercise when there's no trailing space,
+    // so typing a space after a complete name doesn't strip the space (which
+    // made the spacebar appear broken while renaming).
+    if (match && typed === typed.trimEnd()) {
+      const keepName = match.id.startsWith('custom-') ? match.name : undefined
+      updateDraftExercise(idx, { exerciseId: match.id, name: keepName })
       return
     }
     const id = prev.exerciseId.startsWith('custom-') ? prev.exerciseId : `custom-${uid()}`

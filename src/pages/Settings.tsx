@@ -199,7 +199,7 @@ export function Settings() {
                 }}
                 className="btn flex-1 bg-red-500/90 text-white hover:bg-red-500"
               >
-                <LogOut className="h-4 w-4" /> Confirm Log out
+                <LogOut className="h-4 w-4" /> Confirm
               </button>
               <button onClick={() => setConfirmLogout(false)} className="btn-ghost flex-1">
                 Cancel

@@ -23,7 +23,13 @@ import { setCustomExercises, setExerciseOverrides } from './data/exercises'
 import { getCurrentUserId, getToken } from './auth'
 import { apiExercisesBatch, apiGetData, apiProgramsBatch, apiPutData } from './api'
 import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
-import { programLogSlots, programRun, resolveProgramDay, uid } from './lib/utils'
+import {
+  previousWeekWeights,
+  programLogSlots,
+  programRun,
+  resolveProgramDay,
+  uid,
+} from './lib/utils'
 
 export interface SavedTimer {
   id: string
@@ -503,13 +509,24 @@ export const useStore = create<AppState>()(
             }
           }
 
-          const sets: SetLog[][] = day.exercises.map((pe) =>
-            Array.from({ length: pe.sets }, () => ({
-              weight: 0,
+          // For weeks after Week 1, pre-fill each set's weight with what was
+          // logged for the same exercise on the previous week's matching day
+          // (still editable). New exercises with no prior-week log start at 0.
+          const globalIdx = ((week ?? 1) - 1) * program.days.length + dayLocalIdx
+          const prevWeights = previousWeekWeights(
+            program,
+            s.logs,
+            s.programAnchors[programId],
+            globalIdx,
+          )
+          const sets: SetLog[][] = day.exercises.map((pe) => {
+            const weights = prevWeights.get(pe.exerciseId)
+            return Array.from({ length: pe.sets }, (_, i) => ({
+              weight: weights ? (weights[i] ?? weights[weights.length - 1] ?? 0) : 0,
               reps: parseReps(pe.reps),
               completed: false,
-            })),
-          )
+            }))
+          })
           return {
             activeWorkout: {
               programId,

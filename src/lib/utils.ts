@@ -144,6 +144,32 @@ export function programLogSlots(
   return slots
 }
 
+/**
+ * Per-set weights logged for each exercise on the *previous* week's instance of
+ * the same day slot, keyed by exerciseId. Used to pre-fill a later week's weight
+ * inputs with last week's weights (still editable). Returns an empty map for
+ * Week 1, or when the prior week's matching day wasn't logged.
+ */
+export function previousWeekWeights(
+  program: Program,
+  logs: WorkoutLog[],
+  since: string | undefined,
+  globalIdx: number,
+): Map<string, number[]> {
+  const daysLen = Math.max(1, program.days.length)
+  const out = new Map<string, number[]>()
+  if (globalIdx < daysLen) return out // Week 1 has no previous week
+  const prev = programLogSlots(program, logs, since)[globalIdx - daysLen]
+  if (!prev) return out
+  for (const le of prev.exercises) {
+    out.set(
+      le.exerciseId,
+      le.sets.map((sl) => sl.weight),
+    )
+  }
+  return out
+}
+
 export interface ProgramRun {
   /** Number of training days in one week of the program. */
   daysLen: number

@@ -259,7 +259,7 @@ export const PROGRAMS: Program[] = [
   },
   {
     id: 'home-bodyweight',
-    name: 'Home Fitness Bodyweight',
+    name: 'At Home: Bodyweight',
     category: 'Bodyweight',
     level: 'Beginner',
     goal: 'Train anywhere, no gym',

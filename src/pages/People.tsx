@@ -9,11 +9,13 @@ import {
   Rss,
   Search,
   Star,
+  Trash2,
   Users,
 } from 'lucide-react'
 import {
   apiAddExercise,
   apiAddProgram,
+  apiRemoveProgramMember,
   apiFollow,
   apiFollowing,
   apiSearchUsers,
@@ -209,13 +211,17 @@ function SharedContent({
   const [loading, setLoading] = useState(() => getToken() != null)
   const [programs, setPrograms] = useState<Program[]>([])
   const [exercises, setExercises] = useState<Exercise[]>([])
-  const [addedPrograms, setAddedPrograms] = useState<Set<string>>(new Set())
+  // Maps a creator's program id -> the id of the program saved on this account
+  // (same id for a Follow, a fresh id for a Duplicate). Lets Remove undo it.
+  const [addedPrograms, setAddedPrograms] = useState<Map<string, string>>(new Map())
+  const [removingProgram, setRemovingProgram] = useState<string | null>(null)
   const [addedExercises, setAddedExercises] = useState<Set<string>>(new Set())
   // Program awaiting a Duplicate-vs-Follow choice in the popup (null = closed).
   const [chooseProgram, setChooseProgram] = useState<Program | null>(null)
   const [choosing, setChoosing] = useState(false)
   const customPrograms = useStore((s) => s.customPrograms)
   const addProgram = useStore((s) => s.addProgram)
+  const deleteProgram = useStore((s) => s.deleteProgram)
   const customExercises = useStore((s) => s.customExercises)
   const addCustomExercise = useStore((s) => s.addCustomExercise)
   const currentUserId = useAuth((s) => s.user?.id)
@@ -298,6 +304,7 @@ function SharedContent({
       }
     }
 
+    let localId = program.id
     if (mode === 'duplicate') {
       // Independent copy: new id + you as owner, so the original creator's edits
       // never overwrite it and you can freely edit and re-share it yourself.
@@ -310,12 +317,34 @@ function SharedContent({
         collaborative: false,
         version: Date.now(),
       }
+      localId = copy.id
       addProgram(copy)
       await apiUpsertProgram<Program>(token, copy)
     } else {
       addProgram(program)
     }
-    setAddedPrograms((prev) => new Set(prev).add(p.id))
+    setAddedPrograms((prev) => new Map(prev).set(p.id, localId))
+  }
+
+  // Undo an add: delete the saved program from this account and, for a followed
+  // program, drop the membership so the creator's edits stop syncing in.
+  async function handleRemove(p: Program) {
+    const token = getToken()
+    const localId = addedPrograms.get(p.id) ?? p.id
+    setRemovingProgram(p.id)
+    try {
+      // localId === p.id means it's a Follow (shares the creator's id); a
+      // Duplicate has its own id and was never added to the member list.
+      if (token && localId === p.id) await apiRemoveProgramMember(token, p.id)
+      deleteProgram(localId)
+      setAddedPrograms((prev) => {
+        const next = new Map(prev)
+        next.delete(p.id)
+        return next
+      })
+    } finally {
+      setRemovingProgram(null)
+    }
   }
 
   async function handleChoose(mode: 'follow' | 'duplicate') {
@@ -369,25 +398,21 @@ function SharedContent({
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-400">
                       <Check className="h-4 w-4" /> Yours
                     </span>
+                  ) : isAdded ? (
+                    <button
+                      onClick={() => void handleRemove(p)}
+                      disabled={removingProgram === p.id}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 transition hover:border-red-500/50 hover:text-red-400 active:scale-[0.98] disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" /> {removingProgram === p.id ? 'Removing…' : 'Remove'}
+                    </button>
                   ) : (
                     <button
                       onClick={() => setChooseProgram(p)}
-                      disabled={isAdded}
-                      className={cn(
-                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60',
-                        isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'text-white',
-                      )}
-                      style={isAdded ? undefined : { backgroundColor: ownerColor }}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                      style={{ backgroundColor: ownerColor }}
                     >
-                      {isAdded ? (
-                        <>
-                          <Check className="h-4 w-4" /> Added
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4" /> Add
-                        </>
-                      )}
+                      <Plus className="h-4 w-4" /> Add
                     </button>
                   )}
                 </div>

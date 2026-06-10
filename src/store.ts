@@ -107,6 +107,11 @@ const DEFAULTS = {
   // Free-text notes per exercise, keyed by exerciseId. Shared across every
   // program/day the exercise appears in, and shown on its exercise card.
   exerciseNotes: {} as Record<string, string>,
+  // Private per-exercise "sub-header" cue, keyed by exerciseId. Shown inline
+  // under the exercise title. Like notes, it's per-user and sticks to the
+  // exercise across every program it appears in; it is NOT shared when an
+  // exercise/program is shared.
+  exerciseSubheaders: {} as Record<string, string>,
 }
 
 /** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
@@ -159,6 +164,7 @@ interface AppState {
   trashedExercises: TrashedExercise[]
   completedPrograms: CompletedProgram[]
   exerciseNotes: Record<string, string>
+  exerciseSubheaders: Record<string, string>
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -209,6 +215,7 @@ interface AppState {
   deleteMaxRecord: (trackerId: string, recordId: string) => void
   deleteMaxTracker: (id: string) => void
   setExerciseNote: (exerciseId: string, notes: string) => void
+  setExerciseSubheader: (exerciseId: string, text: string) => void
   resetAll: () => void
 }
 
@@ -667,6 +674,14 @@ export const useStore = create<AppState>()(
           else delete next[exerciseId]
           return { exerciseNotes: next }
         }),
+      setExerciseSubheader: (exerciseId, text) =>
+        set((s) => {
+          const next = { ...s.exerciseSubheaders }
+          const clean = text.trim()
+          if (clean) next[exerciseId] = text.trim()
+          else delete next[exerciseId]
+          return { exerciseSubheaders: next }
+        }),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -695,6 +710,7 @@ export const useStore = create<AppState>()(
           trashedExercises: [],
           completedPrograms: [],
           exerciseNotes: {},
+          exerciseSubheaders: {},
         })
       },
     }),
@@ -733,6 +749,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     trashedExercises: s.trashedExercises,
     completedPrograms: s.completedPrograms,
     exerciseNotes: s.exerciseNotes,
+    exerciseSubheaders: s.exerciseSubheaders,
   }
 }
 

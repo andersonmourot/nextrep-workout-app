@@ -16,6 +16,7 @@ import { EXERCISES, findExerciseByName, getExercise, resolvePlannedExercise } fr
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
+import { ExerciseSubheader } from '../components/ExerciseSubheader'
 import type {
   Difficulty,
   PlannedExercise,
@@ -74,6 +75,7 @@ export function ProgramEditor() {
 
   const currentUserId = useAuth((s) => s.user?.id)
   const currentUserName = useAuth((s) => s.user?.name)
+  const isAdmin = useAuth((s) => !!s.user?.is_admin)
   // You're the owner of a brand-new program, or of one with no recorded owner
   // (legacy), or one you created. Only the owner may toggle collaboration.
   const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
@@ -647,6 +649,9 @@ export function ProgramEditor() {
                           onChange={(v) => updateExercise(dayIdx, exIdx, { restSec: v })}
                         />
                       </div>
+                      {isAdmin && (
+                        <ExerciseSubheader exerciseId={ex?.id ?? pe.exerciseId} className="mt-2" />
+                      )}
                       {exIdx < day.exercises.length - 1 && (
                         <button
                           onClick={() => linkWithNext(dayIdx, exIdx)}

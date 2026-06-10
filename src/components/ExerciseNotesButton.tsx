@@ -49,16 +49,12 @@ export function ExerciseNotesButton({
         }}
         className={cn(
           'relative grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 transition hover:text-gold',
-          hasNote && 'text-gold',
           className,
         )}
         aria-label={hasNote ? 'Edit exercise notes' : 'Add exercise notes'}
         title={hasNote ? 'Edit notes' : 'Add notes'}
       >
         <NotebookPen className="h-5 w-5" />
-        {hasNote && (
-          <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gold" />
-        )}
       </button>
 
       {open && (

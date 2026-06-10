@@ -18,7 +18,7 @@ import {
   Trash2,
   X,
 } from 'lucide-react'
-import { exerciseLabel, getExercise } from '../data/exercises'
+import { exerciseLabel, resolvePlannedExercise } from '../data/exercises'
 import { ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
 import { cn, programLogSlots, programRun, resolveProgramDay, uid } from '../lib/utils'
@@ -478,7 +478,7 @@ export function ProgramDetail() {
               </div>
               <ul className="divide-y divide-white/5 border-t border-white/5">
                 {day.exercises.map((pe, j) => {
-                  const ex = getExercise(pe.exerciseId)
+                  const ex = resolvePlannedExercise(pe)
                   const logged = log?.exercises[j]
                   const doneSummary =
                     logged && logged.sets.length > 0
@@ -503,7 +503,7 @@ export function ProgramDetail() {
                     <li key={`${pe.exerciseId}-${j}`} className="flex items-center gap-1 pr-2">
                       {ex ? (
                         <Link
-                          to={`/exercises/${pe.exerciseId}`}
+                          to={`/exercises/${ex.id}`}
                           className="flex flex-1 items-center justify-between gap-2 px-4 py-3 hover:bg-white/[0.02]"
                         >
                           {meta}
@@ -513,7 +513,7 @@ export function ProgramDetail() {
                         <div className="flex-1 px-4 py-3">{meta}</div>
                       )}
                       <ExerciseNotesButton
-                        exerciseId={pe.exerciseId}
+                        exerciseId={ex?.id ?? pe.exerciseId}
                         label={exerciseLabel(pe)}
                         className="h-8 w-8"
                       />

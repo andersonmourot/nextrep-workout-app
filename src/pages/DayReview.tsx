@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
-import { exerciseLabel, findExerciseByName, getExercise } from '../data/exercises'
+import { exerciseLabel, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
@@ -272,7 +272,7 @@ export function DayReview() {
             </p>
           </div>
           {draft.exercises.map((pe, exIdx) => {
-            const ex = getExercise(pe.exerciseId)
+            const ex = resolvePlannedExercise(pe)
             return (
               <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
                 <div className="flex items-center gap-2">
@@ -346,7 +346,7 @@ export function DayReview() {
       )}
 
       {!editing && day.exercises.map((pe, exIdx) => {
-        const ex = getExercise(pe.exerciseId)
+        const ex = resolvePlannedExercise(pe)
         const exerciseSets = sets[exIdx] ?? []
         return (
           <div key={`${pe.exerciseId}-${exIdx}`} className="card p-5">
@@ -361,10 +361,10 @@ export function DayReview() {
                 </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <ExerciseNotesButton exerciseId={pe.exerciseId} label={exerciseLabel(pe)} />
+                <ExerciseNotesButton exerciseId={ex?.id ?? pe.exerciseId} label={exerciseLabel(pe)} />
                 {ex && (
                   <Link
-                    to={`/exercises/${pe.exerciseId}`}
+                    to={`/exercises/${ex.id}`}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
                     aria-label="Exercise info"
                   >

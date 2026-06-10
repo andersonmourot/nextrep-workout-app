@@ -10,7 +10,7 @@ import {
   Plus,
   Trash2,
 } from 'lucide-react'
-import { EXERCISES, findExerciseByName, getExercise } from '../data/exercises'
+import { EXERCISES, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import { apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
@@ -559,7 +559,7 @@ export function ProgramEditor() {
             {!collapsed && (
             <div className="mt-3 space-y-2">
               {day.exercises.map((pe, exIdx) => {
-                const ex = getExercise(pe.exerciseId)
+                const ex = resolvePlannedExercise(pe)
                 return (
                   <div key={exIdx} className="rounded-xl border border-white/5 bg-ink-900 p-3">
                     <div className="flex items-center gap-2">

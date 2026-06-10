@@ -666,6 +666,19 @@ export function findExerciseByName(name: string): Exercise | undefined {
   )
 }
 
+/**
+ * Resolve a planned exercise to a library entry. Prefer the stored id; if that
+ * doesn't resolve (e.g. a typed-only "custom-…" placeholder that predates the
+ * exercise card), fall back to matching the saved name. This makes a program
+ * entry connect to a card automatically as soon as the card exists — no need
+ * to retype it.
+ */
+export function resolvePlannedExercise(
+  pe: Pick<PlannedExercise, 'exerciseId' | 'name'>,
+): Exercise | undefined {
+  return getExercise(pe.exerciseId) ?? (pe.name ? findExerciseByName(pe.name) : undefined)
+}
+
 /** Display label for a planned exercise: custom name, else the built-in name, else the id. */
 export function exerciseLabel(pe: Pick<PlannedExercise, 'exerciseId' | 'name'>): string {
   const custom = pe.name?.trim()

@@ -294,22 +294,24 @@ export function DayReview() {
                     placeholder="Type an exercise name"
                     className="input flex-1"
                   />
-                  <button
-                    onClick={() => moveDraftExercise(exIdx, -1)}
-                    disabled={exIdx === 0}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                    aria-label="Move exercise up"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => moveDraftExercise(exIdx, 1)}
-                    disabled={exIdx === draft.exercises.length - 1}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
-                    aria-label="Move exercise down"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
+                  <div className="flex shrink-0 flex-col overflow-hidden rounded-lg bg-ink-800">
+                    <button
+                      onClick={() => moveDraftExercise(exIdx, -1)}
+                      disabled={exIdx === 0}
+                      className="grid h-[18px] w-8 place-items-center border-b border-white/5 text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                      aria-label="Move exercise up"
+                    >
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => moveDraftExercise(exIdx, 1)}
+                      disabled={exIdx === draft.exercises.length - 1}
+                      className="grid h-[18px] w-8 place-items-center text-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                      aria-label="Move exercise down"
+                    >
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <button
                     onClick={() => removeDraftExercise(exIdx)}
                     disabled={draft.exercises.length === 1}

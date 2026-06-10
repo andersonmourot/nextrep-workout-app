@@ -55,7 +55,6 @@ export function ProgramEditor() {
   const [name, setName] = useState(existing?.name ?? '')
   const [category, setCategory] = useState<ProgramCategory>(existing?.category ?? 'Bodybuilding')
   const [level, setLevel] = useState<Difficulty>(existing?.level ?? 'Beginner')
-  const [goal, setGoal] = useState(existing?.goal ?? '')
   const [coach, setCoach] = useState(existing?.coach ?? 'You')
   const [durationWeeks, setDurationWeeks] = useState(existing?.durationWeeks ?? 4)
   const [daysPerWeek, setDaysPerWeek] = useState(existing?.daysPerWeek ?? 4)
@@ -262,7 +261,6 @@ export function ProgramEditor() {
       name: name.trim(),
       category,
       level,
-      goal: goal.trim() || 'Custom training',
       coach: coach.trim() || 'You',
       durationWeeks: Math.max(1, durationWeeks),
       daysPerWeek: Math.max(1, daysPerWeek),
@@ -370,15 +368,6 @@ export function ProgramEditor() {
             </select>
           </Field>
         </div>
-
-        <Field label="Goal">
-          <input
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            placeholder="e.g. Build muscle"
-            className="input"
-          />
-        </Field>
 
         <div className="grid grid-cols-3 gap-3">
           <Field label="Weeks">

@@ -84,7 +84,7 @@ export interface Program {
   name: string
   category: ProgramCategory
   level: Difficulty
-  goal: string
+  goal?: string
   coach: string
   durationWeeks: number
   daysPerWeek: number

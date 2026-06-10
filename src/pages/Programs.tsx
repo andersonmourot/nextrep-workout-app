@@ -65,7 +65,7 @@ export function Programs() {
     const q = query.trim().toLowerCase()
     if (!q) return byCat
     return byCat.filter((p) =>
-      [p.name, p.summary, p.goal, p.coach, p.category, p.level, ...(p.tags ?? [])]
+      [p.name, p.summary, p.coach, p.category, p.level, ...(p.tags ?? [])]
         .filter(Boolean)
         .some((s) => s.toLowerCase().includes(q)),
     )
@@ -315,7 +315,6 @@ export function Programs() {
                     <span className="inline-flex items-center gap-1">
                       <Dumbbell className="h-3.5 w-3.5" /> {p.daysPerWeek} days / week
                     </span>
-                    <span className="text-zinc-500">· {p.goal}</span>
                   </div>
                 </div>
               </Link>

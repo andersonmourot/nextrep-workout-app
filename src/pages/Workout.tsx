@@ -5,6 +5,8 @@ import { exerciseLabel, getExercise } from '../data/exercises'
 import { useProgram, useStore } from '../store'
 import type { SetLog, WorkoutLog } from '../types'
 import { cn, formatClock, resolveProgramDay, uid } from '../lib/utils'
+import { playBell, primeBell } from '../lib/sound'
+import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
 
 export function Workout() {
   const navigate = useNavigate()
@@ -63,6 +65,9 @@ export function Workout() {
       setNow(t2)
       const aw = useStore.getState().activeWorkout
       if (aw?.restEndsAt && t2 >= aw.restEndsAt) {
+        // Rest finished on its own — ring the bell. (Skipping clears restEndsAt
+        // directly without hitting this path, so a skipped timer stays silent.)
+        playBell()
         useStore.getState().setActiveWorkoutRest(null, 0)
       }
     }, 1000)
@@ -113,6 +118,8 @@ export function Workout() {
     const restSec = day.exercises[exIdx].restSec
     updateSet(exIdx, setIdx, { completed: willComplete })
     if (willComplete && restSec > 0) {
+      // Unlock audio within this tap so the bell can ring when rest ends (iOS).
+      primeBell()
       setActiveWorkoutRest(Date.now() + restSec * 1000, restSec)
     }
   }
@@ -196,20 +203,24 @@ export function Workout() {
                     {pe.sets} sets × {pe.reps} reps
                   </p>
                 </div>
-                {ex && (
-                  <Link
-                    to={`/exercises/${pe.exerciseId}`}
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
-                    aria-label="Exercise info"
-                  >
-                    <Info className="h-5 w-5" />
-                  </Link>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  <ExerciseNotesButton exerciseId={pe.exerciseId} label={exerciseLabel(pe)} />
+                  {ex && (
+                    <Link
+                      to={`/exercises/${pe.exerciseId}`}
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                      aria-label="Exercise info"
+                    >
+                      <Info className="h-5 w-5" />
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {pe.notes && (
                 <p className="mt-3 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold">{pe.notes}</p>
               )}
+              <ExerciseNote exerciseId={pe.exerciseId} />
 
               {/* Sets table */}
               <div className="mt-4">

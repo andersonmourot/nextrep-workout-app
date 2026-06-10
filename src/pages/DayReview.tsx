@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Info, Minus, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { exerciseLabel, findExerciseByName, getExercise } from '../data/exercises'
+import { ExerciseNote, ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { useIsCustomProgram, useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
 import { apiUpsertProgram } from '../api'
@@ -355,16 +356,21 @@ export function DayReview() {
                   {pe.sets} sets × {pe.reps} reps
                 </p>
               </div>
-              {ex && (
-                <Link
-                  to={`/exercises/${pe.exerciseId}`}
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
-                  aria-label="Exercise info"
-                >
-                  <Info className="h-5 w-5" />
-                </Link>
-              )}
+              <div className="flex shrink-0 items-center gap-2">
+                <ExerciseNotesButton exerciseId={pe.exerciseId} label={exerciseLabel(pe)} />
+                {ex && (
+                  <Link
+                    to={`/exercises/${pe.exerciseId}`}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-gold"
+                    aria-label="Exercise info"
+                  >
+                    <Info className="h-5 w-5" />
+                  </Link>
+                )}
+              </div>
             </div>
+
+            <ExerciseNote exerciseId={pe.exerciseId} />
 
             <div className="mt-4">
               <div className="grid grid-cols-[2rem_1fr_1fr_3rem] items-center gap-2 px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">

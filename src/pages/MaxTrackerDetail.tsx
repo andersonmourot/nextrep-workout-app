@@ -33,7 +33,7 @@ export function MaxTrackerDetail() {
   function add() {
     const w = parseFloat(weight)
     const r = parseInt(reps, 10)
-    const next = { weight: !(w > 0), reps: !(r > 0) }
+    const next = { weight: !(w >= 0), reps: !(r > 0) }
     if (next.weight || next.reps) {
       setErrors(next)
       return

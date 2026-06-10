@@ -88,6 +88,9 @@ const DEFAULTS = {
   trashedPrograms: [] as TrashedProgram[],
   trashedExercises: [] as TrashedExercise[],
   completedPrograms: [] as CompletedProgram[],
+  // Free-text notes per exercise, keyed by exerciseId. Shared across every
+  // program/day the exercise appears in, and shown on its exercise card.
+  exerciseNotes: {} as Record<string, string>,
 }
 
 /** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
@@ -139,6 +142,7 @@ interface AppState {
   trashedPrograms: TrashedProgram[]
   trashedExercises: TrashedExercise[]
   completedPrograms: CompletedProgram[]
+  exerciseNotes: Record<string, string>
 
   setName: (name: string) => void
   setUnit: (unit: Unit) => void
@@ -186,6 +190,7 @@ interface AppState {
   addMaxRecordToTracker: (trackerId: string, record: MaxRecord) => void
   deleteMaxRecord: (trackerId: string, recordId: string) => void
   deleteMaxTracker: (id: string) => void
+  setExerciseNote: (exerciseId: string, notes: string) => void
   resetAll: () => void
 }
 
@@ -415,6 +420,42 @@ export const useStore = create<AppState>()(
           // Resolve the plan for the week being trained so per-week edits apply.
           const day = resolveProgramDay(program, dayLocalIdx, week ?? 1)
           if (!day) return {}
+
+          // Resume an in-progress session for the same day rather than wiping it:
+          // if a workout is already live for this program/day/week, keep the
+          // entered weights/reps and completed sets, reconciling rows to the
+          // current plan (so edits made while away are applied without data loss).
+          const aw = s.activeWorkout
+          if (
+            aw &&
+            aw.programId === programId &&
+            aw.dayId === dayId &&
+            (aw.week ?? 1) === (week ?? 1)
+          ) {
+            const oldIds = aw.exerciseIds ?? day.exercises.map((pe) => pe.exerciseId)
+            const queue = new Map<string, SetLog[][]>()
+            oldIds.forEach((id, i) => {
+              const arr = queue.get(id) ?? []
+              arr.push(aw.sets[i] ?? [])
+              queue.set(id, arr)
+            })
+            const resumed: SetLog[][] = day.exercises.map((pe) => {
+              const existing = queue.get(pe.exerciseId)?.shift()
+              const rows = (existing ?? []).slice(0, pe.sets)
+              while (rows.length < pe.sets) {
+                rows.push({ weight: 0, reps: parseReps(pe.reps), completed: false })
+              }
+              return rows
+            })
+            return {
+              activeWorkout: {
+                ...aw,
+                sets: resumed,
+                exerciseIds: day.exercises.map((pe) => pe.exerciseId),
+              },
+            }
+          }
+
           const sets: SetLog[][] = day.exercises.map((pe) =>
             Array.from({ length: pe.sets }, () => ({
               weight: 0,
@@ -532,6 +573,14 @@ export const useStore = create<AppState>()(
         })),
       deleteMaxTracker: (id) =>
         set((s) => ({ maxTrackers: s.maxTrackers.filter((t) => t.id !== id) })),
+      setExerciseNote: (exerciseId, notes) =>
+        set((s) => {
+          const next = { ...s.exerciseNotes }
+          const clean = notes.trim()
+          if (clean) next[exerciseId] = notes
+          else delete next[exerciseId]
+          return { exerciseNotes: next }
+        }),
       resetAll: () => {
         setCustomExercises([])
         setExerciseOverrides({})
@@ -559,6 +608,7 @@ export const useStore = create<AppState>()(
           trashedPrograms: [],
           trashedExercises: [],
           completedPrograms: [],
+          exerciseNotes: {},
         })
       },
     }),
@@ -596,6 +646,7 @@ function snapshot(s: AppState): typeof DEFAULTS {
     trashedPrograms: s.trashedPrograms,
     trashedExercises: s.trashedExercises,
     completedPrograms: s.completedPrograms,
+    exerciseNotes: s.exerciseNotes,
   }
 }
 

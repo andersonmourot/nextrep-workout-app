@@ -37,7 +37,7 @@ export function MaxTracker() {
     const r = parseInt(reps, 10)
     const next = {
       name: !name.trim(),
-      weight: !(w > 0),
+      weight: !(w >= 0),
       reps: !(r > 0),
     }
     if (next.name || next.weight || next.reps) {

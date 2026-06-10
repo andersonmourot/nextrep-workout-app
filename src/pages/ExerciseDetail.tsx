@@ -14,6 +14,8 @@ export function ExerciseDetail() {
   const customExercises = useStore((s) => s.customExercises)
   const overrides = useStore((s) => s.exerciseOverrides)
   const deleteExercise = useStore((s) => s.deleteExercise)
+  const note = useStore((s) => (exerciseId ? s.exerciseNotes[exerciseId] ?? '' : ''))
+  const setExerciseNote = useStore((s) => s.setExerciseNote)
   const ex = exerciseId
     ? customExercises.find((e) => e.id === exerciseId) ??
       overrides[exerciseId] ??
@@ -91,6 +93,21 @@ export function ExerciseDetail() {
           ))}
         </div>
       </div>
+
+      {/* Notes — shared with this exercise everywhere it appears (active day,
+          program screens). Editing here updates those, and vice versa. */}
+      <section>
+        <h2 className="heading mb-2 text-sm font-semibold tracking-wider text-zinc-300">
+          Notes
+        </h2>
+        <textarea
+          value={note}
+          onChange={(e) => setExerciseNote(ex.id, e.target.value)}
+          placeholder="Add notes for this exercise — form cues, weights to try, reminders…"
+          rows={4}
+          className="input resize-none"
+        />
+      </section>
 
       {/* Muscle visual */}
       <div className="card grid place-items-center p-8">

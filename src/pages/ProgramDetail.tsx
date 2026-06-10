@@ -19,6 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { exerciseLabel, getExercise } from '../data/exercises'
+import { ExerciseNotesButton } from '../components/ExerciseNotesButton'
 import { MAX_FAVORITES, useIsCustomProgram, useProgram, useStore } from '../store'
 import { cn, programLogSlots, programRun, resolveProgramDay, uid } from '../lib/utils'
 import { accentVars } from '../lib/theme'
@@ -418,6 +419,13 @@ export function ProgramDetail() {
             ? run.currentWeekIndex * program.days.length + run.nextDayIndex
             : 0
           const isNext = isActive && !run?.isComplete && globalIdx === nextGlobalIdx
+          // This day has a live, in-progress session — Start should read "Resume"
+          // and pick up the entered data rather than restarting from scratch.
+          const isResumable =
+            !!activeWorkout &&
+            activeWorkout.programId === program.id &&
+            activeWorkout.dayId === baseDay.id &&
+            (activeWorkout.week ?? 1) === selectedWeek
           return (
             <div
               key={baseDay.id}
@@ -465,7 +473,7 @@ export function ProgramDetail() {
                   }}
                   className="btn-outline shrink-0 px-3 py-2 text-xs"
                 >
-                  <Play className="h-3.5 w-3.5" /> Start
+                  <Play className="h-3.5 w-3.5" /> {isResumable ? 'Resume' : 'Start'}
                 </button>
               </div>
               <ul className="divide-y divide-white/5 border-t border-white/5">
@@ -492,18 +500,23 @@ export function ProgramDetail() {
                     </div>
                   )
                   return (
-                    <li key={`${pe.exerciseId}-${j}`}>
+                    <li key={`${pe.exerciseId}-${j}`} className="flex items-center gap-1 pr-2">
                       {ex ? (
                         <Link
                           to={`/exercises/${pe.exerciseId}`}
-                          className="flex items-center justify-between px-4 py-3 hover:bg-white/[0.02]"
+                          className="flex flex-1 items-center justify-between gap-2 px-4 py-3 hover:bg-white/[0.02]"
                         >
                           {meta}
                           <ChevronRight className="h-4 w-4 shrink-0 text-zinc-600" />
                         </Link>
                       ) : (
-                        <div className="px-4 py-3">{meta}</div>
+                        <div className="flex-1 px-4 py-3">{meta}</div>
                       )}
+                      <ExerciseNotesButton
+                        exerciseId={pe.exerciseId}
+                        label={exerciseLabel(pe)}
+                        className="h-8 w-8"
+                      />
                     </li>
                   )
                 })}

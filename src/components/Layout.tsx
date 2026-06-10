@@ -1,5 +1,5 @@
-import { Link, Outlet, useLocation } from 'react-router-dom'
-import { Settings as SettingsIcon } from 'lucide-react'
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Play, Settings as SettingsIcon } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 import { Logo } from './Logo'
 import { Workout } from '../pages/Workout'
@@ -7,15 +7,19 @@ import { useStore } from '../store'
 
 export function Layout() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const activeWorkout = useStore((s) => s.activeWorkout)
   const activeProgramId = useStore((s) => s.activeProgramId)
-  // While a workout for the active program is live it takes over the Programs
-  // tab, but the bottom nav stays visible so the user can hop to other tabs and
-  // come back to it. An in-progress workout from a program that is no longer
-  // active is kept in state (saved until that program is reset) but doesn't
-  // hijack the Programs tab — it resurfaces when that program is active again.
-  const showWorkout =
-    !!activeWorkout && activeWorkout.programId === activeProgramId && pathname === '/programs'
+  // A workout is "live" while there's an active session for the active program.
+  // It lives on its own /workout route so the Programs tab always shows the
+  // program list (no more loop between the workout and a program's page). A
+  // persistent "Resume workout" banner gives a one-tap way back into it.
+  const workoutLive = !!activeWorkout && activeWorkout.programId === activeProgramId
+  const onWorkout = pathname === '/workout'
+  const showWorkout = workoutLive && onWorkout
+
+  // Landed on /workout with nothing live (e.g. finished/ended) — go to the list.
+  if (onWorkout && !workoutLive) return <Navigate to="/programs" replace />
 
   // App-shell layout: a flex column that fills #root, whose height is
   // screen.height in standalone via --app-height (see main.tsx + index.css).
@@ -44,6 +48,18 @@ export function Layout() {
             </div>
           </header>
           <main id="app-scroll" className="flex-1 overflow-y-auto">
+            {workoutLive && (
+              <div className="sticky top-0 z-20 bg-ink-950/80 backdrop-blur">
+                <div className="container-app py-2">
+                  <button
+                    onClick={() => navigate('/workout')}
+                    className="btn-gold flex w-full items-center justify-center gap-2"
+                  >
+                    <Play className="h-4 w-4" /> Resume workout
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="container-app py-5">
               <Outlet />
             </div>

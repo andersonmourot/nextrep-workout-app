@@ -57,6 +57,9 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
           <Route path="/programs" element={<Programs />} />
+          {/* The live workout renders as an overlay from Layout on this path;
+              Layout redirects here to the list when nothing is in progress. */}
+          <Route path="/workout" element={null} />
           <Route path="/programs/exercises" element={<ExercisesLibrary />} />
           <Route path="/programs/history" element={<ProgramHistory />} />
           <Route path="/programs/new" element={<ProgramEditor />} />

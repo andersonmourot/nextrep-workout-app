@@ -130,7 +130,7 @@ export function ProgramDetail() {
     if (activeProgramId !== program.id) startProgram(program.id)
     startWorkout(program.id, dayId, week)
     setPendingStart(null)
-    navigate('/programs')
+    navigate('/workout')
   }
 
   function handleStartDay(dayId: string, week: number) {

@@ -120,7 +120,7 @@ export function Dashboard() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    navigate('/programs')
+                    navigate('/workout')
                   }}
                   className="btn-gold w-full"
                 >
@@ -132,7 +132,7 @@ export function Dashboard() {
                   onClick={(e) => {
                     e.stopPropagation()
                     startWorkout(program.id, nextDay.id, (run?.currentWeekIndex ?? 0) + 1)
-                    navigate('/programs')
+                    navigate('/workout')
                   }}
                   className="btn-gold w-full"
                 >

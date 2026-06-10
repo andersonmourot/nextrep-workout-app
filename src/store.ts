@@ -9,7 +9,9 @@ import type {
   NutritionEntry,
   CompletedProgram,
   NutritionGoals,
+  PlannedExercise,
   Program,
+  ProgramDay,
   SetLog,
   TrashedExercise,
   TrashedProgram,
@@ -279,7 +281,52 @@ export const useStore = create<AppState>()(
         set((s) => {
           const next = [exercise, ...s.customExercises.filter((e) => e.id !== exercise.id)]
           setCustomExercises(next)
-          return { customExercises: next }
+
+          // Auto-link any typed-only "custom-…" placeholders in the user's
+          // programs that share this name, so creating a card immediately
+          // connects existing program entries (no need to retype them).
+          const target = exercise.name.trim().toLowerCase()
+          const idMap: Record<string, string> = {}
+          const relinkPE = (pe: PlannedExercise): PlannedExercise => {
+            if (
+              pe.name &&
+              pe.name.trim().toLowerCase() === target &&
+              pe.exerciseId !== exercise.id
+            ) {
+              idMap[pe.exerciseId] = exercise.id
+              return { ...pe, exerciseId: exercise.id, name: exercise.name }
+            }
+            return pe
+          }
+          const relinkDay = (d: ProgramDay): ProgramDay => ({
+            ...d,
+            exercises: d.exercises.map(relinkPE),
+          })
+          const customPrograms = s.customPrograms.map((p) => {
+            const days = p.days.map(relinkDay)
+            let weekOverrides = p.weekOverrides
+            if (weekOverrides) {
+              const wo: NonNullable<Program['weekOverrides']> = {}
+              for (const [k, arr] of Object.entries(weekOverrides)) {
+                wo[k] = arr.map((o) => ({ ...o, day: relinkDay(o.day) }))
+              }
+              weekOverrides = wo
+            }
+            return { ...p, days, weekOverrides }
+          })
+
+          const patch: Partial<AppState> = { customExercises: next }
+          if (Object.keys(idMap).length > 0) {
+            patch.customPrograms = customPrograms
+            // Keep any live session aligned so entered data isn't lost.
+            if (s.activeWorkout?.exerciseIds) {
+              patch.activeWorkout = {
+                ...s.activeWorkout,
+                exerciseIds: s.activeWorkout.exerciseIds.map((id) => idMap[id] ?? id),
+              }
+            }
+          }
+          return patch
         }),
       removeCustomExercise: (id) =>
         set((s) => {

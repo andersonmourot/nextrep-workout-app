@@ -132,6 +132,20 @@ export function apiAdminResetPassword(
   )
 }
 
+export interface Catalog<P = unknown, E = unknown> {
+  programs: P[]
+  exercises: E[]
+}
+
+/**
+ * Built-in program/exercise catalog, served unauthenticated. Shared by every
+ * client so the catalog has one source of truth. The web app falls back to its
+ * bundled copy if this can't be reached.
+ */
+export function apiGetCatalog<P = unknown, E = unknown>(): Promise<ApiResult<Catalog<P, E>>> {
+  return request('/api/catalog')
+}
+
 export function apiGetData<T = Record<string, unknown>>(token: string): Promise<ApiResult<T>> {
   return request('/api/data', {}, token)
 }

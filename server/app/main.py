@@ -550,6 +550,32 @@ def health():
     return {"ok": True}
 
 
+# Built-in program/exercise catalog, shared by every client (web + native). The
+# file is generated from the app's seed data and loaded once at startup.
+_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
+
+
+def _load_catalog() -> dict:
+    try:
+        with open(_CATALOG_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return {"programs": [], "exercises": []}
+    return {
+        "programs": data.get("programs") or [],
+        "exercises": data.get("exercises") or [],
+    }
+
+
+_CATALOG = _load_catalog()
+
+
+@app.get("/api/catalog")
+def catalog():
+    """Public, unauthenticated. Returns the built-in programs and exercises."""
+    return _CATALOG
+
+
 @app.post("/auth/signup", response_model=AuthResponse)
 def signup(body: SignupBody, db: Session = Depends(get_db)):
     email = body.email.lower().strip()

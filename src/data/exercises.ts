@@ -626,6 +626,19 @@ export const EXERCISE_MAP: Record<string, Exercise> = Object.fromEntries(
   EXERCISES.map((e) => [e.id, e]),
 )
 
+/**
+ * Replace the built-in exercise library with the server catalog. The bundled
+ * data above is the offline fallback; this hydrates it from `/api/catalog` at
+ * startup so every client shares one source of truth. Mutates EXERCISES and
+ * EXERCISE_MAP in place so existing imports keep their references.
+ */
+export function setBuiltInExercises(list: Exercise[] | null | undefined): void {
+  if (!Array.isArray(list) || list.length === 0) return
+  EXERCISES.splice(0, EXERCISES.length, ...list)
+  for (const key of Object.keys(EXERCISE_MAP)) delete EXERCISE_MAP[key]
+  for (const e of list) EXERCISE_MAP[e.id] = e
+}
+
 // User-created exercises, mirrored here from the store so the synchronous
 // lookups below (used app-wide) can resolve them without prop-drilling.
 let CUSTOM_EXERCISES: Exercise[] = []

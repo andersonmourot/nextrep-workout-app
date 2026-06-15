@@ -372,6 +372,19 @@ export const PROGRAM_MAP: Record<string, Program> = Object.fromEntries(
   PROGRAMS.map((p) => [p.id, p]),
 )
 
+/**
+ * Replace the built-in programs with the server catalog. The bundled data above
+ * is the offline fallback; this hydrates it from `/api/catalog` at startup so
+ * every client shares one source of truth. Mutates PROGRAMS and PROGRAM_MAP in
+ * place so existing imports keep their references.
+ */
+export function setBuiltInPrograms(list: Program[] | null | undefined): void {
+  if (!Array.isArray(list) || list.length === 0) return
+  PROGRAMS.splice(0, PROGRAMS.length, ...list)
+  for (const key of Object.keys(PROGRAM_MAP)) delete PROGRAM_MAP[key]
+  for (const p of list) PROGRAM_MAP[p.id] = p
+}
+
 export function getProgram(id: string): Program | undefined {
   return PROGRAM_MAP[id]
 }

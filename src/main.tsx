@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { ScrollToTop } from './components/ScrollToTop.tsx'
+import { hydrateCatalog } from './data/catalog.ts'
 
 // In the installed (standalone) PWA on iOS, lock zoom. This stops pinch-zoom and
 // the auto-zoom-on-input-focus that iOS does for small text fields (which shifts
@@ -37,14 +38,20 @@ if (isStandalone) {
   })
 }
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <ScrollToTop />
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-)
+function renderApp() {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <BrowserRouter>
+        <ScrollToTop />
+        <App />
+      </BrowserRouter>
+    </StrictMode>,
+  )
+}
+
+// Load the shared catalog from the backend (falls back to bundled data), then
+// render so all synchronous program/exercise lookups see the server data.
+hydrateCatalog().finally(renderApp)
 
 // Register the service worker (PWA install + offline shell) in production only.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

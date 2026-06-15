@@ -4,3 +4,6 @@ __pycache__/
 *.db
 .env
 app/static/
+# Writable catalog copy created at runtime on the data volume (admin edits).
+# The bundled fallback lives at app/catalog.json and is tracked.
+/catalog.json

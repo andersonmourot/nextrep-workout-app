@@ -19,6 +19,7 @@ import { People } from './pages/People'
 import { Timer } from './pages/Timer'
 import { Settings } from './pages/Settings'
 import { AdminUsers } from './pages/AdminUsers'
+import { AdminCatalog } from './pages/AdminCatalog'
 import { Auth } from './pages/Auth'
 import { ForgotPassword } from './pages/ForgotPassword'
 import { ResetPassword } from './pages/ResetPassword'
@@ -80,6 +81,9 @@ export default function App() {
           <Route path="/max/:id" element={<MaxTrackerDetail />} />
           <Route path="/people" element={<People />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/catalog" element={<AdminCatalog />} />
+          <Route path="/admin/catalog/programs/new" element={<ProgramEditor catalogMode />} />
+          <Route path="/admin/catalog/programs/edit" element={<ProgramEditor catalogMode />} />
           <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/legal/privacy" element={<Legal doc="privacy" />} />

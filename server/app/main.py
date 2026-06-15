@@ -289,6 +289,11 @@ class BatchBody(BaseModel):
     ids: list[str]
 
 
+class CatalogBody(BaseModel):
+    programs: list[dict]
+    exercises: list[dict]
+
+
 # ---- Helpers ----
 def _public(user: User) -> PublicUser:
     return PublicUser(
@@ -550,21 +555,43 @@ def health():
     return {"ok": True}
 
 
-# Built-in program/exercise catalog, shared by every client (web + native). The
-# file is generated from the app's seed data and loaded once at startup.
-_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
+# Built-in program/exercise catalog, shared by every client (web + native).
+# The bundled copy (generated from the app's seed data, baked into the image) is
+# the fallback. Admin edits are written to a writable copy on the data volume so
+# they persist across deploys and serve to everyone without a rebuild.
+_BUNDLED_CATALOG_PATH = os.path.join(os.path.dirname(__file__), "catalog.json")
 
 
-def _load_catalog() -> dict:
+def _catalog_data_dir() -> str:
+    """Writable directory for the editable catalog — same volume as the DB."""
+    db_path = os.environ.get("SMELLIS_DB_PATH")
+    if db_path:
+        return os.path.dirname(os.path.abspath(db_path)) or "."
+    return "/data" if os.path.isdir("/data") else "."
+
+
+_CATALOG_PATH = os.path.join(_catalog_data_dir(), "catalog.json")
+
+
+def _read_catalog_file(path: str) -> dict | None:
     try:
-        with open(_CATALOG_PATH, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        return {"programs": [], "exercises": []}
+        return None
     return {
         "programs": data.get("programs") or [],
         "exercises": data.get("exercises") or [],
     }
+
+
+def _load_catalog() -> dict:
+    """Prefer the admin-edited copy on the volume; fall back to the bundled one."""
+    return (
+        _read_catalog_file(_CATALOG_PATH)
+        or _read_catalog_file(_BUNDLED_CATALOG_PATH)
+        or {"programs": [], "exercises": []}
+    )
 
 
 _CATALOG = _load_catalog()
@@ -573,6 +600,22 @@ _CATALOG = _load_catalog()
 @app.get("/api/catalog")
 def catalog():
     """Public, unauthenticated. Returns the built-in programs and exercises."""
+    return _CATALOG
+
+
+@app.put("/api/admin/catalog")
+def put_catalog(body: CatalogBody, user: User = Depends(current_user)):
+    """Admin-only. Replace the whole catalog and persist it to the data volume."""
+    if not _is_admin(user):
+        raise HTTPException(status_code=403, detail="Admins only.")
+    global _CATALOG
+    payload = {"programs": body.programs, "exercises": body.exercises}
+    try:
+        with open(_CATALOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail="Could not save catalog.") from e
+    _CATALOG = payload
     return _CATALOG
 
 

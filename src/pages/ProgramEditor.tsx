@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   ChevronDown,
@@ -12,13 +12,21 @@ import {
   Trash2,
   Unlink,
 } from 'lucide-react'
-import { EXERCISES, findExerciseByName, getExercise, resolvePlannedExercise } from '../data/exercises'
+import {
+  EXERCISES,
+  findExerciseByName,
+  getExercise,
+  resolvePlannedExercise,
+  setBuiltInExercises,
+} from '../data/exercises'
+import { setBuiltInPrograms } from '../data/programs'
 import { useProgram, useStore } from '../store'
-import { apiUpsertProgram } from '../api'
+import { apiAdminPutCatalog, apiGetCatalog, apiUpsertProgram } from '../api'
 import { getToken, useAuth } from '../auth'
 import { ExerciseSubheader, ExerciseCueButton } from '../components/ExerciseSubheader'
 import type {
   Difficulty,
+  Exercise,
   PlannedExercise,
   Program,
   ProgramCategory,
@@ -46,11 +54,16 @@ function blankDay(n: number): ProgramDay {
   return { id: uid(), name: `Day ${n}`, focus: '', exercises: [blankExercise()] }
 }
 
-export function ProgramEditor() {
+export function ProgramEditor({ catalogMode = false }: { catalogMode?: boolean } = {}) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { programId } = useParams()
-  const existing = useProgram(programId)
-  const isEdit = !!programId
+  const storeProgram = useProgram(programId)
+  // In catalog mode the program to edit is passed via router state (loaded by
+  // the admin Catalog page), so we edit the catalog copy rather than a personal one.
+  const catalogProgram = (location.state as { program?: Program } | null)?.program
+  const existing = catalogMode ? catalogProgram : storeProgram
+  const isEdit = catalogMode ? !!catalogProgram : !!programId
   const { addProgram, updateProgram } = useStore()
 
   const [name, setName] = useState(existing?.name ?? '')
@@ -77,7 +90,8 @@ export function ProgramEditor() {
   const currentUserName = useAuth((s) => s.user?.name)
   // You're the owner of a brand-new program, or of one with no recorded owner
   // (legacy), or one you created. Only the owner may toggle collaboration.
-  const isOwner = !existing?.ownerId || existing.ownerId === currentUserId
+  // Catalog editing is admin-only, so the admin is always the effective owner.
+  const isOwner = catalogMode || !existing?.ownerId || existing.ownerId === currentUserId
 
   const totalWeeks = Math.max(1, durationWeeks || 1)
   // Clamp to the current program length: shrinking the Weeks field shouldn't
@@ -278,6 +292,31 @@ export function ProgramEditor() {
       version: Date.now(),
     }
 
+    setSaving(true)
+    const token = getToken()
+
+    // Catalog mode: write the program into the shared built-in catalog instead
+    // of the user's personal programs.
+    if (catalogMode) {
+      if (!token) {
+        setSaving(false)
+        return setError('You must be signed in.')
+      }
+      const cat = await apiGetCatalog<Program, Exercise>()
+      const programs = cat.ok && cat.data ? [...cat.data.programs] : []
+      const exercises = cat.ok && cat.data ? cat.data.exercises : []
+      const idx = programs.findIndex((p) => p.id === program.id)
+      if (idx >= 0) programs[idx] = program
+      else programs.unshift(program)
+      const res = await apiAdminPutCatalog<Program, Exercise>(token, { programs, exercises })
+      setSaving(false)
+      if (!res.ok || !res.data) return setError(res.error ?? 'Could not save to the catalog.')
+      setBuiltInPrograms(res.data.programs)
+      setBuiltInExercises(res.data.exercises)
+      navigate('/admin/catalog', { replace: true })
+      return
+    }
+
     // Persist locally first so the UI is responsive even if the network is slow.
     if (isEdit && existing) updateProgram(program)
     else addProgram(program)
@@ -285,8 +324,6 @@ export function ProgramEditor() {
     // Publish to the shared store so edits propagate to every account that has
     // this program. Use the canonical copy the server returns (authoritative
     // owner/version) when available.
-    setSaving(true)
-    const token = getToken()
     if (token) {
       const res = await apiUpsertProgram<Program>(token, program)
       if (res.ok && res.data) updateProgram(res.data.program)
@@ -309,6 +346,19 @@ export function ProgramEditor() {
     )
   }
 
+  // Catalog edit relies on the program passed via router state; on a hard
+  // refresh that state is gone, so send the admin back to reopen it.
+  if (catalogMode && location.pathname.endsWith('/edit') && !catalogProgram) {
+    return (
+      <div className="animate-fade-in py-10 text-center">
+        <p className="text-zinc-400">Reopen this program from the catalog to edit it.</p>
+        <Link to="/admin/catalog" className="btn-outline mt-4">
+          Back to Catalog
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="animate-fade-in space-y-6">
       <button
@@ -319,7 +369,9 @@ export function ProgramEditor() {
       </button>
 
       <div>
-        <p className="label-eyebrow">{isEdit ? 'Edit program' : 'Build your own'}</p>
+        <p className="label-eyebrow">
+          {catalogMode ? 'Admin · Catalog' : isEdit ? 'Edit program' : 'Build your own'}
+        </p>
         <h1 className="heading text-3xl font-bold text-zinc-50">
           {isEdit ? 'Edit Program' : 'Create Program'}
         </h1>
@@ -433,6 +485,7 @@ export function ProgramEditor() {
         </Field>
 
 
+        {!catalogMode && (
         <Field label="Collaborative">
           <div className="flex gap-2">
             <button
@@ -469,6 +522,7 @@ export function ProgramEditor() {
             {!isOwner && ' Only the original creator can change this setting.'}
           </p>
         </Field>
+        )}
       </section>
 
       {/* Days */}

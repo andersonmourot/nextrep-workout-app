@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Download,
   KeyRound,
+  ListChecks,
   LogOut,
   Moon,
   Plus,
@@ -76,6 +77,23 @@ export function Settings() {
               <span>
                 <span className="block font-semibold text-zinc-100">Users</span>
                 <span className="block text-xs text-zinc-500">Admin · view registered users</span>
+              </span>
+            </span>
+            <ChevronRight className="h-5 w-5 text-zinc-500" />
+          </Link>
+          <Link
+            to="/admin/catalog"
+            className="flex items-center justify-between rounded-xl p-3 transition hover:bg-white/5"
+          >
+            <span className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gold/15 text-gold">
+                <ListChecks className="h-5 w-5" />
+              </span>
+              <span>
+                <span className="block font-semibold text-zinc-100">Catalog</span>
+                <span className="block text-xs text-zinc-500">
+                  Admin · edit built-in programs & exercises
+                </span>
               </span>
             </span>
             <ChevronRight className="h-5 w-5 text-zinc-500" />

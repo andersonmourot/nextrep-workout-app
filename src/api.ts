@@ -146,6 +146,14 @@ export function apiGetCatalog<P = unknown, E = unknown>(): Promise<ApiResult<Cat
   return request('/api/catalog')
 }
 
+/** Admin-only: replace the whole built-in catalog (persisted server-side). */
+export function apiAdminPutCatalog<P = unknown, E = unknown>(
+  token: string,
+  catalog: Catalog<P, E>,
+): Promise<ApiResult<Catalog<P, E>>> {
+  return request('/api/admin/catalog', { method: 'PUT', body: JSON.stringify(catalog) }, token)
+}
+
 export function apiGetData<T = Record<string, unknown>>(token: string): Promise<ApiResult<T>> {
   return request('/api/data', {}, token)
 }

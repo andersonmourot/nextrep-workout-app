@@ -1,0 +1,916 @@
+import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import type {
+  ActiveWorkout,
+  BodyWeightEntry,
+  Exercise,
+  MaxRecord,
+  MaxTracker,
+  NutritionEntry,
+  CompletedProgram,
+  NutritionGoals,
+  PlannedExercise,
+  Program,
+  ProgramDay,
+  SetLog,
+  TrashedExercise,
+  TrashedProgram,
+  Unit,
+  WorkoutLog,
+} from './types'
+import { PROGRAMS, getProgram } from './data/programs'
+import { setCustomExercises, setExerciseOverrides } from './data/exercises'
+import { getCurrentUserId, getToken } from './auth'
+import { apiExercisesBatch, apiGetData, apiProgramsBatch, apiPutData } from './api'
+import { DEFAULT_THEME_COLOR, DEFAULT_THEME_MODE, type ThemeMode } from './lib/theme'
+import {
+  previousWeekWeights,
+  programLogSlots,
+  programRun,
+  resolveProgramDay,
+  uid,
+} from './lib/utils'
+
+export interface SavedTimer {
+  id: string
+  label: string
+  seconds: number
+}
+
+export interface IntervalSettings {
+  emomInterval: number
+  emomRounds: number
+  emomSets: number
+  emomSetRest: number
+  amrapCap: number
+  tabataWork: number
+  tabataRest: number
+  tabataRounds: number
+  tabataSets: number
+  tabataSetRest: number
+  forTimeCap: number
+}
+
+export const DEFAULT_NUTRITION_GOALS: NutritionGoals = {
+  calories: 2200,
+  protein: 160,
+  carbs: 220,
+  fat: 70,
+  water: 8,
+}
+
+export const DEFAULT_INTERVAL_SETTINGS: IntervalSettings = {
+  emomInterval: 60,
+  emomRounds: 10,
+  emomSets: 1,
+  emomSetRest: 60,
+  amrapCap: 600,
+  tabataWork: 20,
+  tabataRest: 10,
+  tabataRounds: 8,
+  tabataSets: 1,
+  tabataSetRest: 60,
+  forTimeCap: 1200,
+}
+
+const DEFAULTS = {
+  name: 'Athlete',
+  unit: 'lb' as Unit,
+  themeColor: DEFAULT_THEME_COLOR,
+  themeMode: DEFAULT_THEME_MODE as ThemeMode,
+  activeProgramId: null as string | null,
+  // Per-program reset anchor (ISO). Progress (current week/day) counts only logs
+  // on/after this date, so "Reset Program" restarts a program at Week 1 / Day 1
+  // without deleting the workout history that feeds global stats.
+  programAnchors: {} as Record<string, string>,
+  logs: [] as WorkoutLog[],
+  bodyWeight: [] as BodyWeightEntry[],
+  customPrograms: [] as Program[],
+  customExercises: [] as Exercise[],
+  hiddenProgramIds: [] as string[],
+  hiddenExerciseIds: [] as string[],
+  exerciseOverrides: {} as Record<string, Exercise>,
+  savedTimers: [] as SavedTimer[],
+  timerSound: 'beep' as string,
+  timerMode: 'timer' as string,
+  intervalSettings: DEFAULT_INTERVAL_SETTINGS as IntervalSettings,
+  intervalFormat: null as string | null,
+  favoriteUserIds: [] as string[],
+  favoriteProgramIds: [] as string[],
+  nutritionLog: [] as NutritionEntry[],
+  nutritionGoals: DEFAULT_NUTRITION_GOALS as NutritionGoals,
+  maxTrackers: [] as MaxTracker[],
+  activeWorkout: null as ActiveWorkout | null,
+  trashedPrograms: [] as TrashedProgram[],
+  trashedExercises: [] as TrashedExercise[],
+  completedPrograms: [] as CompletedProgram[],
+  // Free-text notes per exercise, keyed by exerciseId. Shared across every
+  // program/day the exercise appears in, and shown on its exercise card.
+  exerciseNotes: {} as Record<string, string>,
+  // Private per-exercise "sub-header" cue, keyed by exerciseId. Shown inline
+  // under the exercise title. Like notes, it's per-user and sticks to the
+  // exercise across every program it appears in; it is NOT shared when an
+  // exercise/program is shared.
+  exerciseSubheaders: {} as Record<string, string>,
+}
+
+/** First whole number found in a rep string (e.g. "8-12" -> 8), default 10. */
+function parseReps(reps: string): number {
+  const m = reps.match(/\d+/)
+  return m ? parseInt(m[0], 10) : 10
+}
+
+/** Max number of users that can be pinned to the top of the following list. */
+export const MAX_FAVORITES = 3
+
+/** Resolve the per-user storage key so each account keeps isolated data. */
+function dataKey(fallback: string): string {
+  const id = getCurrentUserId()
+  return id ? `smellis-data-${id}` : fallback
+}
+
+const perUserStorage = createJSONStorage(() => ({
+  getItem: (name: string) => localStorage.getItem(dataKey(name)),
+  setItem: (name: string, value: string) => localStorage.setItem(dataKey(name), value),
+  removeItem: (name: string) => localStorage.removeItem(dataKey(name)),
+}))
+
+interface AppState {
+  name: string
+  unit: Unit
+  themeColor: string
+  themeMode: ThemeMode
+  activeProgramId: string | null
+  programAnchors: Record<string, string>
+  logs: WorkoutLog[]
+  bodyWeight: BodyWeightEntry[]
+  customPrograms: Program[]
+  customExercises: Exercise[]
+  hiddenProgramIds: string[]
+  hiddenExerciseIds: string[]
+  exerciseOverrides: Record<string, Exercise>
+  savedTimers: SavedTimer[]
+  timerSound: string
+  timerMode: string
+  intervalSettings: IntervalSettings
+  intervalFormat: string | null
+  favoriteUserIds: string[]
+  favoriteProgramIds: string[]
+  nutritionLog: NutritionEntry[]
+  nutritionGoals: NutritionGoals
+  maxTrackers: MaxTracker[]
+  activeWorkout: ActiveWorkout | null
+  trashedPrograms: TrashedProgram[]
+  trashedExercises: TrashedExercise[]
+  completedPrograms: CompletedProgram[]
+  exerciseNotes: Record<string, string>
+  exerciseSubheaders: Record<string, string>
+
+  setName: (name: string) => void
+  setUnit: (unit: Unit) => void
+  setThemeColor: (color: string) => void
+  setThemeMode: (mode: ThemeMode) => void
+  startProgram: (id: string) => void
+  clearProgram: () => void
+  resetProgramProgress: (id: string) => void
+  addLog: (log: WorkoutLog) => void
+  deleteLog: (id: string) => void
+  removeCompletedProgram: (id: string) => void
+  addBodyWeight: (entry: BodyWeightEntry) => void
+  deleteBodyWeight: (id: string) => void
+  addProgram: (program: Program) => void
+  updateProgram: (program: Program) => void
+  deleteProgram: (id: string) => void
+  addCustomExercise: (exercise: Exercise) => void
+  removeCustomExercise: (id: string) => void
+  deleteExercise: (id: string) => void
+  setExerciseOverride: (exercise: Exercise) => void
+  restoreExercise: (id: string) => void
+  restoreExercises: () => void
+  restoreProgram: (id: string) => void
+  restorePrograms: () => void
+  restoreTrashedProgram: (id: string) => void
+  purgeTrashedProgram: (id: string) => void
+  restoreTrashedExercise: (id: string) => void
+  purgeTrashedExercise: (id: string) => void
+  addSavedTimer: (timer: SavedTimer) => void
+  removeSavedTimer: (id: string) => void
+  setTimerSound: (sound: string) => void
+  setTimerMode: (mode: string) => void
+  setIntervalSettings: (settings: IntervalSettings) => void
+  setIntervalFormat: (format: string | null) => void
+  toggleFavoriteUser: (id: string) => void
+  toggleFavoriteProgram: (id: string) => void
+  startWorkout: (programId: string, dayId: string, week?: number) => void
+  reconcileActiveWorkout: () => void
+  setActiveWorkoutSets: (sets: SetLog[][]) => void
+  setActiveWorkoutRest: (restEndsAt: number | null, restTotal: number) => void
+  /** Start a rest of `restSec` seconds from now (computes the end time). */
+  startRest: (restSec: number) => void
+  endWorkout: () => void
+  setNutritionEntry: (entry: NutritionEntry) => void
+  setNutritionGoals: (goals: NutritionGoals) => void
+  addMaxRecord: (name: string, record: MaxRecord) => void
+  addMaxRecordToTracker: (trackerId: string, record: MaxRecord) => void
+  deleteMaxRecord: (trackerId: string, recordId: string) => void
+  deleteMaxTracker: (id: string) => void
+  setExerciseNote: (exerciseId: string, notes: string) => void
+  setExerciseSubheader: (exerciseId: string, text: string) => void
+  // Transient UI state: which exercise's cue is currently being edited inline.
+  // Lets the header cue button (empty state) open the inline editor that lives
+  // under the title. Not persisted to the server.
+  editingCueId: string | null
+  setEditingCueId: (exerciseId: string | null) => void
+  resetAll: () => void
+}
+
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      ...DEFAULTS,
+      editingCueId: null,
+
+      setName: (name) => set({ name }),
+      setUnit: (unit) => set({ unit }),
+      setThemeColor: (themeColor) => set({ themeColor }),
+      setThemeMode: (themeMode) => set({ themeMode }),
+      // Only swap which program is active. Any in-progress workout from another
+      // program is kept (saved until that program is reset); the dashboard /
+      // Programs tab simply scope their display to the active program so the old
+      // session no longer shows while it isn't active.
+      startProgram: (id) => set({ activeProgramId: id }),
+      clearProgram: () => set({ activeProgramId: null }),
+      // Restart a program from Week 1 / Day 1: anchor progress to now (logs stay,
+      // so global history/stats are untouched) and drop any in-progress session.
+      resetProgramProgress: (id) =>
+        set((s) => ({
+          programAnchors: { ...s.programAnchors, [id]: new Date().toISOString() },
+          activeWorkout: s.activeWorkout?.programId === id ? null : s.activeWorkout,
+        })),
+      addLog: (log) =>
+        set((s) => {
+          const logs = [log, ...s.logs]
+          // Archive a program to Program History the moment its final scheduled
+          // day is logged (Week durationWeeks · last day). Keyed per run so it
+          // archives once; later weeks/edits won't create duplicates.
+          const pid = log.programId
+          const program = pid
+            ? s.customPrograms.find((p) => p.id === pid) ?? getProgram(pid)
+            : undefined
+          if (!program) return { logs }
+          const anchor = s.programAnchors[program.id]
+          const run = programRun(program, logs, anchor)
+          const totalDays = Math.max(1, program.durationWeeks) * run.daysLen
+          // Archive only once every scheduled week+day slot is filled (not merely
+          // when the log count reaches the total), so out-of-order logging can't
+          // archive a run while a day is still empty.
+          const slots = programLogSlots(program, logs, anchor)
+          const runLogs: WorkoutLog[] = []
+          for (let i = 0; i < totalDays; i += 1) {
+            const slot = slots[i]
+            if (slot) runLogs.push(slot)
+          }
+          if (runLogs.length < totalDays) return { logs }
+          const runStartId = runLogs[0]?.id ?? 'run'
+          const archiveId = `${program.id}-${runStartId}`
+          if (s.completedPrograms.some((c) => c.id === archiveId)) return { logs }
+          const entry: CompletedProgram = {
+            id: archiveId,
+            programId: program.id,
+            name: program.name,
+            accent: program.accent,
+            durationWeeks: program.durationWeeks,
+            daysPerWeek: program.daysPerWeek,
+            completedAt: runLogs[runLogs.length - 1]?.date ?? new Date().toISOString(),
+            program,
+            logs: runLogs,
+          }
+          return { logs, completedPrograms: [entry, ...s.completedPrograms] }
+        }),
+      deleteLog: (id) => set((s) => ({ logs: s.logs.filter((l) => l.id !== id) })),
+      removeCompletedProgram: (id) =>
+        set((s) => ({
+          completedPrograms: s.completedPrograms.filter((c) => c.id !== id),
+        })),
+      addBodyWeight: (entry) =>
+        set((s) => ({
+          bodyWeight: [...s.bodyWeight.filter((e) => e.date !== entry.date), entry].sort((a, b) =>
+            a.date < b.date ? -1 : 1,
+          ),
+        })),
+      deleteBodyWeight: (id) =>
+        set((s) => ({ bodyWeight: s.bodyWeight.filter((e) => e.id !== id) })),
+      addProgram: (program) =>
+        set((s) => ({ customPrograms: [program, ...s.customPrograms] })),
+      updateProgram: (program) =>
+        set((s) => ({
+          customPrograms: s.customPrograms.map((p) => (p.id === program.id ? program : p)),
+        })),
+      addCustomExercise: (exercise) =>
+        set((s) => {
+          const next = [exercise, ...s.customExercises.filter((e) => e.id !== exercise.id)]
+          setCustomExercises(next)
+
+          // Auto-link any typed-only "custom-…" placeholders in the user's
+          // programs that share this name, so creating a card immediately
+          // connects existing program entries (no need to retype them).
+          const target = exercise.name.trim().toLowerCase()
+          const idMap: Record<string, string> = {}
+          const relinkPE = (pe: PlannedExercise): PlannedExercise => {
+            if (
+              pe.name &&
+              pe.name.trim().toLowerCase() === target &&
+              pe.exerciseId !== exercise.id
+            ) {
+              idMap[pe.exerciseId] = exercise.id
+              return { ...pe, exerciseId: exercise.id, name: exercise.name }
+            }
+            return pe
+          }
+          const relinkDay = (d: ProgramDay): ProgramDay => ({
+            ...d,
+            exercises: d.exercises.map(relinkPE),
+          })
+          const customPrograms = s.customPrograms.map((p) => {
+            const days = p.days.map(relinkDay)
+            let weekOverrides = p.weekOverrides
+            if (weekOverrides) {
+              const wo: NonNullable<Program['weekOverrides']> = {}
+              for (const [k, arr] of Object.entries(weekOverrides)) {
+                wo[k] = arr.map((o) => ({ ...o, day: relinkDay(o.day) }))
+              }
+              weekOverrides = wo
+            }
+            return { ...p, days, weekOverrides }
+          })
+
+          const patch: Partial<AppState> = { customExercises: next }
+          if (Object.keys(idMap).length > 0) {
+            patch.customPrograms = customPrograms
+            // Keep any live session aligned so entered data isn't lost.
+            if (s.activeWorkout?.exerciseIds) {
+              patch.activeWorkout = {
+                ...s.activeWorkout,
+                exerciseIds: s.activeWorkout.exerciseIds.map((id) => idMap[id] ?? id),
+              }
+            }
+          }
+          return patch
+        }),
+      removeCustomExercise: (id) =>
+        set((s) => {
+          const next = s.customExercises.filter((e) => e.id !== id)
+          setCustomExercises(next)
+          return { customExercises: next }
+        }),
+      deleteExercise: (id) =>
+        set((s) => {
+          // Custom exercises move to Trash (kept 7 days before purge); built-in/
+          // default exercises are hidden so they can be restored later.
+          const custom = s.customExercises.find((e) => e.id === id)
+          if (custom) {
+            const nextCustom = s.customExercises.filter((e) => e.id !== id)
+            setCustomExercises(nextCustom)
+            return {
+              customExercises: nextCustom,
+              trashedExercises: [
+                { exercise: custom, deletedAt: Date.now() },
+                ...s.trashedExercises.filter((t) => t.exercise.id !== id),
+              ],
+            }
+          }
+          return {
+            hiddenExerciseIds: Array.from(new Set([...s.hiddenExerciseIds, id])),
+          }
+        }),
+      setExerciseOverride: (exercise) =>
+        set((s) => {
+          const next = { ...s.exerciseOverrides, [exercise.id]: exercise }
+          setExerciseOverrides(next)
+          return { exerciseOverrides: next }
+        }),
+      restoreExercise: (id) =>
+        set((s) => ({ hiddenExerciseIds: s.hiddenExerciseIds.filter((x) => x !== id) })),
+      restoreExercises: () => set({ hiddenExerciseIds: [] }),
+      restoreTrashedExercise: (id) =>
+        set((s) => {
+          const trashed = s.trashedExercises.find((t) => t.exercise.id === id)
+          if (!trashed) return {}
+          const nextCustom = [
+            ...s.customExercises.filter((e) => e.id !== id),
+            trashed.exercise,
+          ]
+          setCustomExercises(nextCustom)
+          return {
+            customExercises: nextCustom,
+            trashedExercises: s.trashedExercises.filter((t) => t.exercise.id !== id),
+          }
+        }),
+      purgeTrashedExercise: (id) =>
+        set((s) => ({
+          trashedExercises: s.trashedExercises.filter((t) => t.exercise.id !== id),
+        })),
+      deleteProgram: (id) =>
+        set((s) => {
+          // Custom programs move to Trash (kept 7 days before purge); built-in/
+          // default programs are hidden so they can be restored later.
+          const custom = s.customPrograms.find((p) => p.id === id)
+          const base = {
+            activeProgramId: s.activeProgramId === id ? null : s.activeProgramId,
+            favoriteProgramIds: s.favoriteProgramIds.filter((x) => x !== id),
+            activeWorkout:
+              s.activeWorkout?.programId === id ? null : s.activeWorkout,
+          }
+          if (custom) {
+            return {
+              ...base,
+              customPrograms: s.customPrograms.filter((p) => p.id !== id),
+              trashedPrograms: [
+                { program: custom, deletedAt: Date.now() },
+                ...s.trashedPrograms.filter((t) => t.program.id !== id),
+              ],
+            }
+          }
+          return {
+            ...base,
+            hiddenProgramIds: Array.from(new Set([...s.hiddenProgramIds, id])),
+          }
+        }),
+      restoreProgram: (id) =>
+        set((s) => ({ hiddenProgramIds: s.hiddenProgramIds.filter((x) => x !== id) })),
+      restorePrograms: () => set({ hiddenProgramIds: [] }),
+      restoreTrashedProgram: (id) =>
+        set((s) => {
+          const trashed = s.trashedPrograms.find((t) => t.program.id === id)
+          if (!trashed) return {}
+          return {
+            customPrograms: [
+              ...s.customPrograms.filter((p) => p.id !== id),
+              trashed.program,
+            ],
+            trashedPrograms: s.trashedPrograms.filter((t) => t.program.id !== id),
+          }
+        }),
+      purgeTrashedProgram: (id) =>
+        set((s) => ({
+          trashedPrograms: s.trashedPrograms.filter((t) => t.program.id !== id),
+        })),
+      addSavedTimer: (timer) =>
+        set((s) => ({
+          // Keep the five most recent, newest first; replace the oldest as new
+          // ones come in and de-duplicate by duration.
+          savedTimers: [
+            timer,
+            ...s.savedTimers.filter((t) => t.seconds !== timer.seconds),
+          ].slice(0, 5),
+        })),
+      removeSavedTimer: (id) =>
+        set((s) => ({ savedTimers: s.savedTimers.filter((t) => t.id !== id) })),
+      setTimerSound: (timerSound) => set({ timerSound }),
+      setTimerMode: (timerMode) => set({ timerMode }),
+      setIntervalSettings: (intervalSettings) => set({ intervalSettings }),
+      setIntervalFormat: (intervalFormat) => set({ intervalFormat }),
+      toggleFavoriteUser: (id) =>
+        set((s) => {
+          if (s.favoriteUserIds.includes(id))
+            return { favoriteUserIds: s.favoriteUserIds.filter((x) => x !== id) }
+          // Cap the number of pinned favorites.
+          if (s.favoriteUserIds.length >= MAX_FAVORITES) return {}
+          return { favoriteUserIds: [...s.favoriteUserIds, id] }
+        }),
+      toggleFavoriteProgram: (id) =>
+        set((s) => {
+          if (s.favoriteProgramIds.includes(id))
+            return { favoriteProgramIds: s.favoriteProgramIds.filter((x) => x !== id) }
+          // Cap the number of pinned favorite programs.
+          if (s.favoriteProgramIds.length >= MAX_FAVORITES) return {}
+          return { favoriteProgramIds: [...s.favoriteProgramIds, id] }
+        }),
+      startWorkout: (programId, dayId, week) =>
+        set((s) => {
+          const program =
+            s.customPrograms.find((p) => p.id === programId) ?? getProgram(programId)
+          if (!program) return {}
+          const dayLocalIdx = program.days.findIndex((d) => d.id === dayId)
+          if (dayLocalIdx < 0) return {}
+          // Resolve the plan for the week being trained so per-week edits apply.
+          const day = resolveProgramDay(program, dayLocalIdx, week ?? 1)
+          if (!day) return {}
+
+          // Resume an in-progress session for the same day rather than wiping it:
+          // if a workout is already live for this program/day/week, keep the
+          // entered weights/reps and completed sets, reconciling rows to the
+          // current plan (so edits made while away are applied without data loss).
+          const aw = s.activeWorkout
+          if (
+            aw &&
+            aw.programId === programId &&
+            aw.dayId === dayId &&
+            (aw.week ?? 1) === (week ?? 1)
+          ) {
+            const oldIds = aw.exerciseIds ?? day.exercises.map((pe) => pe.exerciseId)
+            const queue = new Map<string, SetLog[][]>()
+            oldIds.forEach((id, i) => {
+              const arr = queue.get(id) ?? []
+              arr.push(aw.sets[i] ?? [])
+              queue.set(id, arr)
+            })
+            const resumed: SetLog[][] = day.exercises.map((pe) => {
+              const existing = queue.get(pe.exerciseId)?.shift()
+              const rows = (existing ?? []).slice(0, pe.sets)
+              while (rows.length < pe.sets) {
+                rows.push({ weight: 0, reps: parseReps(pe.reps), completed: false })
+              }
+              return rows
+            })
+            return {
+              activeWorkout: {
+                ...aw,
+                sets: resumed,
+                exerciseIds: day.exercises.map((pe) => pe.exerciseId),
+              },
+            }
+          }
+
+          // For weeks after Week 1, pre-fill each set's weight with what was
+          // logged for the same exercise on the previous week's matching day
+          // (still editable). New exercises with no prior-week log start at 0.
+          const globalIdx = ((week ?? 1) - 1) * program.days.length + dayLocalIdx
+          const prevWeights = previousWeekWeights(
+            program,
+            s.logs,
+            s.programAnchors[programId],
+            globalIdx,
+          )
+          const sets: SetLog[][] = day.exercises.map((pe) => {
+            const weights = prevWeights.get(pe.exerciseId)
+            return Array.from({ length: pe.sets }, (_, i) => ({
+              weight: weights ? (weights[i] ?? weights[weights.length - 1] ?? 0) : 0,
+              reps: parseReps(pe.reps),
+              completed: false,
+            }))
+          })
+          return {
+            activeWorkout: {
+              programId,
+              dayId,
+              week,
+              startedAt: Date.now(),
+              sets,
+              exerciseIds: day.exercises.map((pe) => pe.exerciseId),
+              restEndsAt: null,
+              restTotal: 0,
+            },
+          }
+        }),
+      // Re-sync the live session to the current program/day plan so edits made on
+      // the program page (add/remove/reorder exercises, change set counts) show up
+      // in the running workout. Already-entered weights/reps and completed sets are
+      // preserved by matching exercises on their id (positionally among duplicates)
+      // and keeping existing set rows; only added rows are seeded from the plan.
+      reconcileActiveWorkout: () =>
+        set((s) => {
+          const aw = s.activeWorkout
+          if (!aw) return {}
+          const program =
+            s.customPrograms.find((p) => p.id === aw.programId) ?? getProgram(aw.programId)
+          if (!program) return {}
+          const dayLocalIdx = program.days.findIndex((d) => d.id === aw.dayId)
+          if (dayLocalIdx < 0) return {}
+          const day = resolveProgramDay(program, dayLocalIdx, aw.week ?? 1)
+          if (!day) return {}
+
+          // Queue of existing set-arrays grouped by exercise id, in original order,
+          // so duplicate exercises map positionally rather than all to the first.
+          const oldIds = aw.exerciseIds ?? day.exercises.map((pe) => pe.exerciseId)
+          const queue = new Map<string, SetLog[][]>()
+          oldIds.forEach((id, i) => {
+            const arr = queue.get(id) ?? []
+            arr.push(aw.sets[i] ?? [])
+            queue.set(id, arr)
+          })
+
+          const nextSets: SetLog[][] = day.exercises.map((pe) => {
+            const existing = queue.get(pe.exerciseId)?.shift()
+            const base = existing ?? []
+            const planned = pe.sets
+            const rows = base.slice(0, planned)
+            while (rows.length < planned) {
+              rows.push({ weight: 0, reps: parseReps(pe.reps), completed: false })
+            }
+            return rows
+          })
+          const nextIds = day.exercises.map((pe) => pe.exerciseId)
+
+          // No structural change → skip the write to avoid a render loop.
+          const same =
+            nextIds.length === oldIds.length &&
+            nextIds.every((id, i) => id === oldIds[i]) &&
+            nextSets.every((rows, i) => rows.length === (aw.sets[i]?.length ?? -1))
+          if (same) return {}
+
+          return { activeWorkout: { ...aw, sets: nextSets, exerciseIds: nextIds } }
+        }),
+      setActiveWorkoutSets: (sets) =>
+        set((s) => (s.activeWorkout ? { activeWorkout: { ...s.activeWorkout, sets } } : {})),
+      setActiveWorkoutRest: (restEndsAt, restTotal) =>
+        set((s) =>
+          s.activeWorkout
+            ? { activeWorkout: { ...s.activeWorkout, restEndsAt, restTotal } }
+            : {},
+        ),
+      startRest: (restSec) =>
+        set((s) =>
+          s.activeWorkout
+            ? {
+                activeWorkout: {
+                  ...s.activeWorkout,
+                  restEndsAt: Date.now() + restSec * 1000,
+                  restTotal: restSec,
+                },
+              }
+            : {},
+        ),
+      endWorkout: () => set({ activeWorkout: null }),
+      setNutritionEntry: (entry) =>
+        set((s) => ({
+          nutritionLog: [
+            ...s.nutritionLog.filter((e) => e.date !== entry.date),
+            entry,
+          ].sort((a, b) => (a.date < b.date ? -1 : 1)),
+        })),
+      setNutritionGoals: (nutritionGoals) => set({ nutritionGoals }),
+      addMaxRecord: (name, record) =>
+        set((s) => {
+          const clean = name.trim()
+          const existing = s.maxTrackers.find(
+            (t) => t.name.toLowerCase() === clean.toLowerCase(),
+          )
+          if (existing) {
+            return {
+              maxTrackers: s.maxTrackers.map((t) =>
+                t.id === existing.id ? { ...t, records: [...t.records, record] } : t,
+              ),
+            }
+          }
+          const tracker: MaxTracker = { id: uid(), name: clean, records: [record] }
+          return { maxTrackers: [tracker, ...s.maxTrackers] }
+        }),
+      addMaxRecordToTracker: (trackerId, record) =>
+        set((s) => ({
+          maxTrackers: s.maxTrackers.map((t) =>
+            t.id === trackerId ? { ...t, records: [...t.records, record] } : t,
+          ),
+        })),
+      deleteMaxRecord: (trackerId, recordId) =>
+        set((s) => ({
+          maxTrackers: s.maxTrackers.map((t) =>
+            t.id === trackerId
+              ? { ...t, records: t.records.filter((r) => r.id !== recordId) }
+              : t,
+          ),
+        })),
+      deleteMaxTracker: (id) =>
+        set((s) => ({ maxTrackers: s.maxTrackers.filter((t) => t.id !== id) })),
+      setExerciseNote: (exerciseId, notes) =>
+        set((s) => {
+          const next = { ...s.exerciseNotes }
+          const clean = notes.trim()
+          if (clean) next[exerciseId] = notes
+          else delete next[exerciseId]
+          return { exerciseNotes: next }
+        }),
+      setExerciseSubheader: (exerciseId, text) =>
+        set((s) => {
+          const next = { ...s.exerciseSubheaders }
+          const clean = text.trim()
+          if (clean) next[exerciseId] = text.trim()
+          else delete next[exerciseId]
+          return { exerciseSubheaders: next }
+        }),
+      setEditingCueId: (exerciseId) => set({ editingCueId: exerciseId }),
+      resetAll: () => {
+        setCustomExercises([])
+        setExerciseOverrides({})
+        set({
+          activeProgramId: null,
+          programAnchors: {},
+          logs: [],
+          bodyWeight: [],
+          customPrograms: [],
+          customExercises: [],
+          hiddenProgramIds: [],
+          hiddenExerciseIds: [],
+          exerciseOverrides: {},
+          savedTimers: [],
+          timerSound: 'beep',
+          timerMode: 'timer',
+          intervalSettings: DEFAULT_INTERVAL_SETTINGS,
+          intervalFormat: null,
+          favoriteUserIds: [],
+          favoriteProgramIds: [],
+          nutritionLog: [],
+          nutritionGoals: DEFAULT_NUTRITION_GOALS,
+          maxTrackers: [],
+          activeWorkout: null,
+          trashedPrograms: [],
+          trashedExercises: [],
+          completedPrograms: [],
+          exerciseNotes: {},
+          exerciseSubheaders: {},
+        })
+      },
+    }),
+    { name: 'smellis-store-v1', storage: perUserStorage, skipHydration: true },
+  ),
+)
+
+/** The persisted slice of state that syncs to the server (no actions). */
+function snapshot(s: AppState): typeof DEFAULTS {
+  return {
+    name: s.name,
+    unit: s.unit,
+    themeColor: s.themeColor,
+    themeMode: s.themeMode,
+    activeProgramId: s.activeProgramId,
+    programAnchors: s.programAnchors,
+    logs: s.logs,
+    bodyWeight: s.bodyWeight,
+    customPrograms: s.customPrograms,
+    customExercises: s.customExercises,
+    hiddenProgramIds: s.hiddenProgramIds,
+    hiddenExerciseIds: s.hiddenExerciseIds,
+    exerciseOverrides: s.exerciseOverrides,
+    savedTimers: s.savedTimers,
+    timerSound: s.timerSound,
+    timerMode: s.timerMode,
+    intervalSettings: s.intervalSettings,
+    intervalFormat: s.intervalFormat,
+    favoriteUserIds: s.favoriteUserIds,
+    favoriteProgramIds: s.favoriteProgramIds,
+    nutritionLog: s.nutritionLog,
+    nutritionGoals: s.nutritionGoals,
+    maxTrackers: s.maxTrackers,
+    activeWorkout: s.activeWorkout,
+    trashedPrograms: s.trashedPrograms,
+    trashedExercises: s.trashedExercises,
+    completedPrograms: s.completedPrograms,
+    exerciseNotes: s.exerciseNotes,
+    exerciseSubheaders: s.exerciseSubheaders,
+  }
+}
+
+/** Trash retention window: items are purged 7 days after deletion. */
+export const TRASH_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+/** Drop any trashed items whose 7-day retention window has elapsed. */
+function purgeExpiredTrash(next: typeof DEFAULTS): typeof DEFAULTS {
+  const cutoff = Date.now() - TRASH_TTL_MS
+  return {
+    ...next,
+    trashedPrograms: (next.trashedPrograms ?? []).filter((t) => t.deletedAt > cutoff),
+    trashedExercises: (next.trashedExercises ?? []).filter((t) => t.deletedAt > cutoff),
+  }
+}
+
+// Guard so applying server/cache data doesn't immediately push it back up.
+let applyingRemote = false
+let syncTimer: ReturnType<typeof setTimeout> | undefined
+
+/** Debounced push of the current state to the backend (when logged in). */
+useStore.subscribe((state) => {
+  if (applyingRemote) return
+  const token = getToken()
+  if (!token) return
+  if (syncTimer) clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    void apiPutData(token, snapshot(state))
+  }, 600)
+})
+
+function applyState(raw: typeof DEFAULTS): void {
+  const next = purgeExpiredTrash(raw)
+  applyingRemote = true
+  try {
+    useStore.setState(next)
+    useStore.setState({ editingCueId: null })
+    setCustomExercises(next.customExercises ?? [])
+    setExerciseOverrides(next.exerciseOverrides ?? {})
+  } finally {
+    applyingRemote = false
+  }
+}
+
+/** Load the current user's locally-cached data into the store (defaults if none). */
+export async function loadCurrentUserData(): Promise<void> {
+  const id = getCurrentUserId()
+  const key = id ? `smellis-data-${id}` : 'smellis-store-v1'
+  let next: typeof DEFAULTS = { ...DEFAULTS }
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      const state = (parsed?.state ?? parsed) as Partial<typeof DEFAULTS>
+      next = { ...DEFAULTS, ...state }
+    }
+  } catch {
+    next = { ...DEFAULTS }
+  }
+  applyState(next)
+}
+
+/** Pull authoritative data from the server and hydrate the store. */
+export async function syncFromServer(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const res = await apiGetData<Partial<typeof DEFAULTS>>(token)
+  if (res.ok && res.data) {
+    applyState({ ...DEFAULTS, ...res.data })
+  }
+  await refreshSharedPrograms()
+  await refreshSharedExercises()
+}
+
+/**
+ * Pull the newest version of every shared program the user has added and
+ * replace local copies whose content is stale. This is what propagates an
+ * owner's (or collaborator's) edits across all accounts. Logged history lives
+ * in separate `logs` records, so updating a program never erases past data —
+ * only future workouts use the new version.
+ */
+export async function refreshSharedPrograms(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const mine = useStore.getState().customPrograms
+  const ids = mine.filter((p) => p.ownerId && p.id).map((p) => p.id)
+  if (ids.length === 0) return
+  const res = await apiProgramsBatch<Program>(token, ids)
+  if (!res.ok || !res.data) return
+  const canon = new Map(res.data.programs.map((p) => [p.id, p]))
+  let changed = false
+  const updated = mine.map((p) => {
+    const c = canon.get(p.id)
+    if (c && (c.version ?? 0) > (p.version ?? 0)) {
+      changed = true
+      return { ...c }
+    }
+    return p
+  })
+  if (changed) useStore.setState({ customPrograms: updated })
+}
+
+/**
+ * Pull the newest version of every shared exercise the user has added and
+ * replace local copies whose content is stale. This propagates an owner's (or
+ * collaborator's) edits across all accounts that added the exercise. Each
+ * account's own sharing visibility (`shared`) is preserved, so pulling an
+ * update never re-publishes someone else's exercise onto your profile.
+ */
+export async function refreshSharedExercises(): Promise<void> {
+  const token = getToken()
+  if (!token) return
+  const mine = useStore.getState().customExercises
+  const ids = mine.filter((e) => e.ownerId && e.id).map((e) => e.id)
+  if (ids.length === 0) return
+  const res = await apiExercisesBatch<Exercise>(token, ids)
+  if (!res.ok || !res.data) return
+  const canon = new Map(res.data.exercises.map((e) => [e.id, e]))
+  let changed = false
+  const updated = mine.map((e) => {
+    const c = canon.get(e.id)
+    if (c && (c.version ?? 0) > (e.version ?? 0)) {
+      changed = true
+      return { ...c, shared: e.shared }
+    }
+    return e
+  })
+  if (changed) {
+    setCustomExercises(updated)
+    useStore.setState({ customExercises: updated })
+  }
+}
+
+/** Reset the in-memory store to defaults (used on logout). */
+export function clearStore(): void {
+  applyState({ ...DEFAULTS })
+}
+
+/** All programs: user-created first, then the built-in library (minus hidden). */
+export function useAllPrograms(): Program[] {
+  const custom = useStore((s) => s.customPrograms)
+  const hidden = useStore((s) => s.hiddenProgramIds)
+  return [...custom, ...PROGRAMS.filter((p) => !hidden.includes(p.id))]
+}
+
+/** Look up a program by id across custom and built-in programs. */
+export function useProgram(id?: string): Program | undefined {
+  const custom = useStore((s) => s.customPrograms)
+  if (!id) return undefined
+  return custom.find((p) => p.id === id) ?? getProgram(id)
+}
+
+/** True when the program id belongs to a user-created program. */
+export function useIsCustomProgram(id?: string): boolean {
+  const custom = useStore((s) => s.customPrograms)
+  return !!id && custom.some((p) => p.id === id)
+}

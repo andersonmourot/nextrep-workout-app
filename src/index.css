@@ -1,0 +1,173 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Dark theme (default). Surface + text palettes are RGB triplets so Tailwind
+     utilities like bg-ink-900 / text-zinc-400 can flip in light mode. */
+  :root {
+    color-scheme: dark;
+
+    --ink-950: 8 8 10;
+    --ink-900: 13 13 16;
+    --ink-850: 20 20 23;
+    --ink-800: 27 27 31;
+    --ink-700: 38 38 43;
+    --ink-600: 58 58 65;
+
+    --zinc-50: 250 250 250;
+    --zinc-100: 244 244 245;
+    --zinc-200: 228 228 231;
+    --zinc-300: 212 212 216;
+    --zinc-400: 161 161 170;
+    --zinc-500: 113 113 122;
+    --zinc-600: 82 82 91;
+    --zinc-700: 63 63 70;
+
+    /* Accent ("gold") — overridden at runtime from the user's saved color. */
+    --accent: 53 94 59;
+    --accent-400: 76 138 85;
+    --accent-600: 40 74 48;
+  }
+
+  /* Light theme: lighten surfaces and darken text by inverting the scales. */
+  :root.light {
+    color-scheme: light;
+
+    --ink-950: 245 246 248;
+    --ink-900: 255 255 255;
+    --ink-850: 255 255 255;
+    --ink-800: 241 242 245;
+    --ink-700: 228 229 233;
+    --ink-600: 203 204 209;
+
+    --zinc-50: 24 24 27;
+    --zinc-100: 39 39 42;
+    --zinc-200: 63 63 70;
+    --zinc-300: 82 82 91;
+    --zinc-400: 113 113 122;
+    --zinc-500: 130 130 138;
+    --zinc-600: 161 161 170;
+    --zinc-700: 180 180 186;
+  }
+
+  html {
+    height: 100%;
+    /* Paint the true screen edges dark so any sub-pixel mismatch is invisible. */
+    background: rgb(var(--ink-950));
+  }
+
+  /* Shell height: in standalone mode JS sets --app-height = screen.height (the
+     true full-screen height that iOS reports correctly even on first paint).
+     Without it, innerHeight / 100% / 100dvh all start 59 px short (= the top
+     safe-area) and only correct after a touch gesture.  In a browser tab
+     --app-height is unset so we fall back to 100%.  */
+  body,
+  #root {
+    height: 100%;
+    height: var(--app-height, 100%);
+  }
+
+  body {
+    @apply bg-ink-950 text-zinc-100 font-sans antialiased;
+    background-image: radial-gradient(
+        80rem 40rem at 50% -10%,
+        rgb(var(--accent) / 0.12),
+        transparent 60%
+      ),
+      radial-gradient(60rem 30rem at 100% 0%, rgb(var(--accent) / 0.07), transparent 55%);
+  }
+
+  /* White hairline borders/fills are nearly invisible on a light background,
+     so swap them for dark equivalents when the light theme is active. */
+  .light .border-white\/5 {
+    border-color: rgb(0 0 0 / 0.06);
+  }
+  .light .border-white\/10 {
+    border-color: rgb(0 0 0 / 0.1);
+  }
+  .light .border-white\/15 {
+    border-color: rgb(0 0 0 / 0.12);
+  }
+  .light .border-white\/20 {
+    border-color: rgb(0 0 0 / 0.16);
+  }
+  .light .border-white\/30 {
+    border-color: rgb(0 0 0 / 0.24);
+  }
+  .light .border-white {
+    border-color: rgb(0 0 0 / 0.3);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-700 rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+}
+
+@layer components {
+  .container-app {
+    @apply mx-auto w-full max-w-md px-4;
+  }
+
+  .card {
+    @apply rounded-2xl border border-white/5 bg-ink-850 shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none;
+  }
+  .btn-gold {
+    @apply btn bg-gold text-white hover:bg-gold-400;
+  }
+  .btn-ghost {
+    @apply btn bg-ink-800 text-zinc-200 hover:bg-ink-700 border border-white/5;
+  }
+  .btn-outline {
+    @apply btn border border-gold/40 text-gold hover:bg-gold/10;
+  }
+
+  .label-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.2em] text-gold/80;
+  }
+
+  .heading {
+    @apply font-display uppercase tracking-wide;
+  }
+
+  .chip {
+    @apply inline-flex items-center rounded-full border border-white/10 bg-ink-800 px-2.5 py-1 text-[11px] font-medium text-zinc-300;
+  }
+
+  .input {
+    /* text-base (16px): keeps iOS from zooming/nudging the layout when typing in
+       a field (anything smaller triggers it). Standard mobile-PWA practice. */
+    @apply w-full rounded-xl border border-white/10 bg-ink-900 px-3 py-2.5 text-base text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-gold/60;
+  }
+
+  .no-spin::-webkit-outer-spin-button,
+  .no-spin::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .no-spin {
+    -moz-appearance: textfield;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}

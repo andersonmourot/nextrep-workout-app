@@ -1,0 +1,1752 @@
+{
+  "programs": [
+    {
+      "id": "classic-physique",
+      "name": "The Classic",
+      "category": "Bodybuilding",
+      "level": "Advanced",
+      "goal": "Build muscle & symmetry",
+      "coach": "Coach CBUM",
+      "durationWeeks": 8,
+      "daysPerWeek": 5,
+      "accent": "#355e3b",
+      "summary": "A hypertrophy-focused split chasing the golden-era aesthetic — full, balanced, and detailed.",
+      "description": "Train each muscle group with intent across a 5-day split. Controlled tempos and quality reps over ego lifting. Push, Pull, Legs, Upper, then a dedicated Arms & Shoulders day to bring up the details.",
+      "tags": [
+        "Hypertrophy",
+        "Split",
+        "Gym"
+      ],
+      "days": [
+        {
+          "id": "cp-push",
+          "name": "Push",
+          "focus": "Chest · Shoulders · Triceps",
+          "exercises": [
+            {
+              "exerciseId": "barbell-bench-press",
+              "sets": 4,
+              "reps": "6-10",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "incline-dumbbell-press",
+              "sets": 3,
+              "reps": "8-12",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "overhead-press",
+              "sets": 3,
+              "reps": "8-10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "lateral-raise",
+              "sets": 4,
+              "reps": "12-15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "cable-fly",
+              "sets": 3,
+              "reps": "12-15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "triceps-pushdown",
+              "sets": 3,
+              "reps": "10-15",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "cp-pull",
+          "name": "Pull",
+          "focus": "Back · Biceps · Rear Delts",
+          "exercises": [
+            {
+              "exerciseId": "pull-up",
+              "sets": 4,
+              "reps": "6-10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "barbell-row",
+              "sets": 4,
+              "reps": "8-10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "lat-pulldown",
+              "sets": 3,
+              "reps": "10-12",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "seated-cable-row",
+              "sets": 3,
+              "reps": "10-12",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "face-pull",
+              "sets": 3,
+              "reps": "15-20",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "incline-dumbbell-curl",
+              "sets": 3,
+              "reps": "10-12",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "cp-legs",
+          "name": "Legs",
+          "focus": "Quads · Hamstrings · Calves",
+          "exercises": [
+            {
+              "exerciseId": "back-squat",
+              "sets": 4,
+              "reps": "6-10",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "romanian-deadlift",
+              "sets": 3,
+              "reps": "8-12",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "leg-press",
+              "sets": 3,
+              "reps": "10-15",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "leg-curl",
+              "sets": 3,
+              "reps": "12-15",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "calf-raise",
+              "sets": 4,
+              "reps": "12-20",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "cp-upper",
+          "name": "Upper",
+          "focus": "Chest · Back · Volume",
+          "exercises": [
+            {
+              "exerciseId": "incline-dumbbell-press",
+              "sets": 4,
+              "reps": "8-12",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "seated-cable-row",
+              "sets": 4,
+              "reps": "10-12",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "lat-pulldown",
+              "sets": 3,
+              "reps": "10-12",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "cable-fly",
+              "sets": 3,
+              "reps": "12-15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "lateral-raise",
+              "sets": 4,
+              "reps": "12-20",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "cp-arms",
+          "name": "Arms & Shoulders",
+          "focus": "Biceps · Triceps · Delts",
+          "exercises": [
+            {
+              "exerciseId": "overhead-press",
+              "sets": 4,
+              "reps": "8-12",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "barbell-curl",
+              "sets": 4,
+              "reps": "8-12",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "skullcrusher",
+              "sets": 4,
+              "reps": "8-12",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "incline-dumbbell-curl",
+              "sets": 3,
+              "reps": "10-12",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "triceps-pushdown",
+              "sets": 3,
+              "reps": "12-15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "lateral-raise",
+              "sets": 4,
+              "reps": "15-20",
+              "restSec": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "strength-foundations",
+      "name": "Foundation Builder",
+      "category": "Strength",
+      "level": "Intermediate",
+      "goal": "Get stronger on the basics",
+      "coach": "Coach CBUM",
+      "durationWeeks": 6,
+      "daysPerWeek": 4,
+      "accent": "#6aa9ff",
+      "summary": "An upper/lower strength build centered on heavy compound lifts and smart accessory work.",
+      "description": "Four focused days alternating upper and lower body. Push the main lifts in lower rep ranges and reinforce them with accessories. Built for steady, repeatable progress.",
+      "tags": [
+        "Compound",
+        "Upper/Lower",
+        "4-Day"
+      ],
+      "days": [
+        {
+          "id": "sf-lower-a",
+          "name": "Lower A",
+          "focus": "Squat focus",
+          "exercises": [
+            {
+              "exerciseId": "back-squat",
+              "sets": 5,
+              "reps": "5",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "romanian-deadlift",
+              "sets": 3,
+              "reps": "8",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "leg-press",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "calf-raise",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "sf-upper-a",
+          "name": "Upper A",
+          "focus": "Bench focus",
+          "exercises": [
+            {
+              "exerciseId": "barbell-bench-press",
+              "sets": 5,
+              "reps": "5",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "barbell-row",
+              "sets": 4,
+              "reps": "6-8",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "overhead-press",
+              "sets": 3,
+              "reps": "8",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "lat-pulldown",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 90
+            }
+          ]
+        },
+        {
+          "id": "sf-lower-b",
+          "name": "Lower B",
+          "focus": "Deadlift focus",
+          "exercises": [
+            {
+              "exerciseId": "deadlift",
+              "sets": 4,
+              "reps": "4",
+              "restSec": 210
+            },
+            {
+              "exerciseId": "goblet-squat",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "leg-curl",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "hanging-leg-raise",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "sf-upper-b",
+          "name": "Upper B",
+          "focus": "Press & pull volume",
+          "exercises": [
+            {
+              "exerciseId": "overhead-press",
+              "sets": 5,
+              "reps": "5",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "pull-up",
+              "sets": 4,
+              "reps": "6-10",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "incline-dumbbell-press",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "barbell-curl",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hiit-shred",
+      "name": "HIIT",
+      "category": "HIIT",
+      "level": "Intermediate",
+      "goal": "Burn fat & build conditioning",
+      "coach": "Coach CBUM",
+      "durationWeeks": 4,
+      "daysPerWeek": 3,
+      "accent": "#ff6a6a",
+      "summary": "Fast-paced circuits that spike the heart rate and torch calories with minimal equipment.",
+      "description": "Three high-intensity sessions per week. Move quickly through each circuit with short rest. Great as a standalone fat-loss block or a conditioning add-on.",
+      "tags": [
+        "Conditioning",
+        "Fat Loss",
+        "Circuit"
+      ],
+      "days": [
+        {
+          "id": "hs-full-1",
+          "name": "Full Body Blitz",
+          "focus": "Total body circuit",
+          "exercises": [
+            {
+              "exerciseId": "burpee",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "kettlebell-swing",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "jump-squat",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "mountain-climber",
+              "sets": 4,
+              "reps": "30",
+              "restSec": 30
+            },
+            {
+              "exerciseId": "push-up",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "hs-lower-2",
+          "name": "Lower Burn",
+          "focus": "Legs & core",
+          "exercises": [
+            {
+              "exerciseId": "jump-squat",
+              "sets": 5,
+              "reps": "15",
+              "restSec": 40
+            },
+            {
+              "exerciseId": "walking-lunge",
+              "sets": 4,
+              "reps": "20",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "kettlebell-swing",
+              "sets": 4,
+              "reps": "20",
+              "restSec": 40
+            },
+            {
+              "exerciseId": "mountain-climber",
+              "sets": 4,
+              "reps": "40",
+              "restSec": 30
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "45s",
+              "restSec": 30
+            }
+          ]
+        },
+        {
+          "id": "hs-upper-3",
+          "name": "Upper & Abs",
+          "focus": "Push, pull, core",
+          "exercises": [
+            {
+              "exerciseId": "push-up",
+              "sets": 5,
+              "reps": "15",
+              "restSec": 40
+            },
+            {
+              "exerciseId": "pull-up",
+              "sets": 4,
+              "reps": "AMRAP",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "burpee",
+              "sets": 4,
+              "reps": "10",
+              "restSec": 40
+            },
+            {
+              "exerciseId": "hanging-leg-raise",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "60s",
+              "restSec": 30
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "powerlifting-peak",
+      "name": "Powerlifting",
+      "category": "Powerlifting",
+      "level": "Advanced",
+      "goal": "Maximize the big three",
+      "coach": "Coach CBUM",
+      "durationWeeks": 6,
+      "daysPerWeek": 4,
+      "accent": "#b48cff",
+      "summary": "A squat, bench, and deadlift focused block built to drive up your one-rep maxes.",
+      "description": "Heavy main lifts in low rep ranges with targeted accessories to shore up weak points. Rest fully between top sets and prioritize bar speed and technique.",
+      "tags": [
+        "Powerlifting",
+        "Max Strength",
+        "Big Three"
+      ],
+      "days": [
+        {
+          "id": "pp-squat",
+          "name": "Squat Day",
+          "focus": "Squat + posterior chain",
+          "exercises": [
+            {
+              "exerciseId": "back-squat",
+              "sets": 5,
+              "reps": "3",
+              "restSec": 240
+            },
+            {
+              "exerciseId": "romanian-deadlift",
+              "sets": 3,
+              "reps": "6",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "leg-press",
+              "sets": 3,
+              "reps": "8",
+              "restSec": 120
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "60s",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "pp-bench",
+          "name": "Bench Day",
+          "focus": "Bench + triceps",
+          "exercises": [
+            {
+              "exerciseId": "barbell-bench-press",
+              "sets": 5,
+              "reps": "3",
+              "restSec": 240
+            },
+            {
+              "exerciseId": "overhead-press",
+              "sets": 3,
+              "reps": "6",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "skullcrusher",
+              "sets": 3,
+              "reps": "8",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "barbell-row",
+              "sets": 3,
+              "reps": "8",
+              "restSec": 120
+            }
+          ]
+        },
+        {
+          "id": "pp-deadlift",
+          "name": "Deadlift Day",
+          "focus": "Deadlift + back",
+          "exercises": [
+            {
+              "exerciseId": "deadlift",
+              "sets": 5,
+              "reps": "2",
+              "restSec": 240
+            },
+            {
+              "exerciseId": "barbell-row",
+              "sets": 4,
+              "reps": "6",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "lat-pulldown",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "hanging-leg-raise",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 60
+            }
+          ]
+        },
+        {
+          "id": "pp-accessory",
+          "name": "Accessory Day",
+          "focus": "Hypertrophy & weak points",
+          "exercises": [
+            {
+              "exerciseId": "incline-dumbbell-press",
+              "sets": 4,
+              "reps": "10",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "leg-press",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "seated-cable-row",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "barbell-curl",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "triceps-pushdown",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 60
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "home-bodyweight",
+      "name": "At Home: Bodyweight",
+      "category": "Bodyweight",
+      "level": "Beginner",
+      "goal": "Train anywhere, no gym",
+      "coach": "Coach CBUM",
+      "durationWeeks": 4,
+      "daysPerWeek": 4,
+      "accent": "#5ad19b",
+      "summary": "No equipment, no excuses. Build strength and conditioning using just your bodyweight.",
+      "description": "A four-day bodyweight plan you can do at home or while traveling. Focus on clean reps, full range of motion, and progressively adding reps each week.",
+      "tags": [
+        "No Equipment",
+        "Home",
+        "Beginner"
+      ],
+      "days": [
+        {
+          "id": "hb-push",
+          "name": "Push",
+          "focus": "Chest · Shoulders · Triceps",
+          "exercises": [
+            {
+              "exerciseId": "push-up",
+              "sets": 4,
+              "reps": "12-20",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "45s",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "mountain-climber",
+              "sets": 3,
+              "reps": "30",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "hb-legs",
+          "name": "Legs",
+          "focus": "Quads · Glutes · Calves",
+          "exercises": [
+            {
+              "exerciseId": "goblet-squat",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "walking-lunge",
+              "sets": 3,
+              "reps": "20",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "jump-squat",
+              "sets": 3,
+              "reps": "15",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "calf-raise",
+              "sets": 4,
+              "reps": "20",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "hb-pull",
+          "name": "Pull & Core",
+          "focus": "Back · Biceps · Abs",
+          "exercises": [
+            {
+              "exerciseId": "pull-up",
+              "sets": 4,
+              "reps": "AMRAP",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "hanging-leg-raise",
+              "sets": 3,
+              "reps": "12",
+              "restSec": 60
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "60s",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "hb-conditioning",
+          "name": "Conditioning",
+          "focus": "Full body burn",
+          "exercises": [
+            {
+              "exerciseId": "burpee",
+              "sets": 5,
+              "reps": "10",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "jump-squat",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 45
+            },
+            {
+              "exerciseId": "mountain-climber",
+              "sets": 4,
+              "reps": "40",
+              "restSec": 30
+            },
+            {
+              "exerciseId": "push-up",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 45
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "functional-athlete",
+      "name": "Functional Building",
+      "category": "Functional",
+      "level": "Intermediate",
+      "goal": "Move better & build power",
+      "coach": "Coach CBUM",
+      "durationWeeks": 5,
+      "daysPerWeek": 3,
+      "accent": "#ffa14d",
+      "summary": "Blend strength, power, and conditioning to build a resilient, athletic body.",
+      "description": "Three full-body sessions mixing compound strength, explosive power, and conditioning finishers. Designed to carry over to sport and everyday life.",
+      "tags": [
+        "Athletic",
+        "Power",
+        "Full Body"
+      ],
+      "days": [
+        {
+          "id": "fa-day1",
+          "name": "Power & Pull",
+          "focus": "Explosive + back",
+          "exercises": [
+            {
+              "exerciseId": "deadlift",
+              "sets": 4,
+              "reps": "5",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "kettlebell-swing",
+              "sets": 4,
+              "reps": "15",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "pull-up",
+              "sets": 4,
+              "reps": "8",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "plank",
+              "sets": 3,
+              "reps": "60s",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "fa-day2",
+          "name": "Push & Carry",
+          "focus": "Press + conditioning",
+          "exercises": [
+            {
+              "exerciseId": "overhead-press",
+              "sets": 4,
+              "reps": "6",
+              "restSec": 150
+            },
+            {
+              "exerciseId": "incline-dumbbell-press",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "walking-lunge",
+              "sets": 3,
+              "reps": "20",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "mountain-climber",
+              "sets": 3,
+              "reps": "40",
+              "restSec": 45
+            }
+          ]
+        },
+        {
+          "id": "fa-day3",
+          "name": "Legs & Engine",
+          "focus": "Lower power + cardio",
+          "exercises": [
+            {
+              "exerciseId": "back-squat",
+              "sets": 4,
+              "reps": "6",
+              "restSec": 180
+            },
+            {
+              "exerciseId": "jump-squat",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 75
+            },
+            {
+              "exerciseId": "romanian-deadlift",
+              "sets": 3,
+              "reps": "10",
+              "restSec": 90
+            },
+            {
+              "exerciseId": "burpee",
+              "sets": 4,
+              "reps": "12",
+              "restSec": 45
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "exercises": [
+    {
+      "id": "barbell-bench-press",
+      "name": "Barbell Bench Press",
+      "primaryMuscle": "Chest",
+      "secondaryMuscles": [
+        "Triceps",
+        "Shoulders"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Lie flat with eyes under the bar, feet planted, shoulder blades pinched.",
+        "Unrack and lower the bar under control to mid-chest.",
+        "Pause briefly, then press the bar back up over the shoulders.",
+        "Keep wrists stacked over elbows throughout."
+      ],
+      "tips": [
+        "Drive your feet into the floor.",
+        "Keep a slight arch and tucked elbows (~45°)."
+      ]
+    },
+    {
+      "id": "incline-dumbbell-press",
+      "name": "Incline Dumbbell Press",
+      "primaryMuscle": "Chest",
+      "secondaryMuscles": [
+        "Shoulders",
+        "Triceps"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Set bench to 30–45°. Press dumbbells to lockout over the upper chest.",
+        "Lower slowly until you feel a stretch across the chest.",
+        "Press back up, squeezing the upper pecs."
+      ],
+      "tips": [
+        "Avoid clanging the dumbbells at the top.",
+        "Control the eccentric for more tension."
+      ]
+    },
+    {
+      "id": "cable-fly",
+      "name": "Cable Fly",
+      "primaryMuscle": "Chest",
+      "secondaryMuscles": [
+        "Shoulders"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Set pulleys to chest height and grab both handles.",
+        "With a soft elbow bend, bring hands together in front of you.",
+        "Squeeze the chest, then return slowly to the stretch."
+      ],
+      "tips": [
+        "Think of hugging a tree.",
+        "Keep elbow angle fixed throughout."
+      ]
+    },
+    {
+      "id": "pull-up",
+      "name": "Pull-Up",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps",
+        "Forearms"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Hang from the bar with an overhand, shoulder-width grip.",
+        "Pull your chest toward the bar by driving elbows down.",
+        "Lower under control to a full hang."
+      ],
+      "tips": [
+        "Lead with the chest, not the chin.",
+        "Add weight once you can do 10+ clean reps."
+      ]
+    },
+    {
+      "id": "weighted-pull-up",
+      "name": "Weighted Pull-Up",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps",
+        "Forearms"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Attach weight using a dip belt, weighted vest, or dumbbell between your feet.",
+        "Hang from the bar with an overhand, shoulder-width grip.",
+        "Pull your chest toward the bar by driving elbows down.",
+        "Lower under control to a full hang."
+      ],
+      "tips": [
+        "Lead with the chest, not the chin.",
+        "Increase weight in small increments."
+      ]
+    },
+    {
+      "id": "barbell-row",
+      "name": "Barbell Row",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps",
+        "Core"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Hinge to ~45°, keep a flat back and braced core.",
+        "Row the bar to your lower ribs/upper abdomen.",
+        "Lower under control without rounding the spine."
+      ],
+      "tips": [
+        "Keep the bar close to your body.",
+        "Avoid using momentum to heave the weight."
+      ]
+    },
+    {
+      "id": "lat-pulldown",
+      "name": "Lat Pulldown",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Grip the bar slightly wider than shoulders.",
+        "Pull to your upper chest, driving elbows down and back.",
+        "Control the bar back to a full stretch."
+      ],
+      "tips": [
+        "Avoid leaning back excessively.",
+        "Squeeze the lats at the bottom."
+      ]
+    },
+    {
+      "id": "close-grip-lat-pulldown",
+      "name": "Close Grip Lat Pulldown",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Attach a close-grip (V-bar) handle and grip with palms facing each other.",
+        "Pull to your upper chest, driving elbows down and back.",
+        "Control the bar back to a full stretch."
+      ],
+      "tips": [
+        "Avoid leaning back excessively.",
+        "Squeeze the lats at the bottom."
+      ]
+    },
+    {
+      "id": "seated-cable-row",
+      "name": "Seated Cable Row",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps",
+        "Forearms"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Sit tall with a slight knee bend and grab the handle.",
+        "Row to your stomach, squeezing the shoulder blades.",
+        "Extend the arms forward under control."
+      ],
+      "tips": [
+        "Keep the torso still.",
+        "Pause and squeeze at the contraction."
+      ]
+    },
+    {
+      "id": "overhead-press",
+      "name": "Standing Overhead Press",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [
+        "Triceps",
+        "Core"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Start with the bar at shoulder height, elbows under the bar.",
+        "Brace and press overhead, moving the head slightly back then forward.",
+        "Lock out with the bar over the mid-foot."
+      ],
+      "tips": [
+        "Squeeze glutes to avoid leaning back.",
+        "Keep ribs down and core tight."
+      ]
+    },
+    {
+      "id": "lateral-raise",
+      "name": "Dumbbell Lateral Raise",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Hold dumbbells at your sides with a slight elbow bend.",
+        "Raise the arms out to shoulder height, leading with the elbows.",
+        "Lower slowly."
+      ],
+      "tips": [
+        "Pour the water — pinkies slightly higher.",
+        "Use a weight you can control."
+      ]
+    },
+    {
+      "id": "face-pull",
+      "name": "Cable Face Pull",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [
+        "Back"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Set a rope at face height.",
+        "Pull toward your forehead, separating the rope and flaring the elbows.",
+        "Return under control."
+      ],
+      "tips": [
+        "Great for shoulder health and posture.",
+        "Pause at peak contraction."
+      ]
+    },
+    {
+      "id": "barbell-curl",
+      "name": "Barbell Curl",
+      "primaryMuscle": "Biceps",
+      "secondaryMuscles": [
+        "Forearms"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Stand tall holding the bar at shoulder width.",
+        "Curl the bar up while keeping elbows pinned at your sides.",
+        "Lower under control to full extension."
+      ],
+      "tips": [
+        "Avoid swinging.",
+        "Squeeze the biceps at the top."
+      ]
+    },
+    {
+      "id": "incline-dumbbell-curl",
+      "name": "Incline Dumbbell Curl",
+      "primaryMuscle": "Biceps",
+      "secondaryMuscles": [
+        "Forearms"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Sit back on an incline bench, arms hanging straight down.",
+        "Curl the dumbbells, keeping upper arms still.",
+        "Lower slowly for a deep stretch."
+      ],
+      "tips": [
+        "The stretched position is key for growth.",
+        "Keep shoulders back."
+      ]
+    },
+    {
+      "id": "triceps-pushdown",
+      "name": "Triceps Rope Pushdown",
+      "primaryMuscle": "Triceps",
+      "secondaryMuscles": [],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Grab the rope with elbows tucked at your sides.",
+        "Extend down and spread the rope at the bottom.",
+        "Return under control to ~90°."
+      ],
+      "tips": [
+        "Keep elbows pinned.",
+        "Squeeze hard at lockout."
+      ]
+    },
+    {
+      "id": "skullcrusher",
+      "name": "EZ-Bar Skullcrusher",
+      "primaryMuscle": "Triceps",
+      "secondaryMuscles": [],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Lie down holding the bar over your forehead.",
+        "Lower the bar behind your head by bending the elbows.",
+        "Extend back to lockout."
+      ],
+      "tips": [
+        "Keep upper arms angled back slightly.",
+        "Control the eccentric."
+      ]
+    },
+    {
+      "id": "dumbbell-skullcrusher",
+      "name": "Dumbbell Skullcrusher",
+      "primaryMuscle": "Triceps",
+      "secondaryMuscles": [],
+      "equipment": "Dumbbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Lie down holding a dumbbell in each hand over your forehead.",
+        "Lower the dumbbells behind your head by bending the elbows.",
+        "Extend back to lockout."
+      ],
+      "tips": [
+        "Keep upper arms angled back slightly.",
+        "Control the eccentric."
+      ]
+    },
+    {
+      "id": "back-squat",
+      "name": "Barbell Back Squat",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Hamstrings",
+        "Core"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Advanced",
+      "instructions": [
+        "Set the bar on your upper traps, brace, and unrack.",
+        "Sit down and back until hips are below knees.",
+        "Drive up through mid-foot to standing."
+      ],
+      "tips": [
+        "Keep knees tracking over toes.",
+        "Maintain a neutral spine."
+      ]
+    },
+    {
+      "id": "leg-press",
+      "name": "Leg Press",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Place feet shoulder-width on the platform.",
+        "Lower until knees reach ~90°.",
+        "Press back without locking the knees hard."
+      ],
+      "tips": [
+        "Do not let the lower back round off the pad.",
+        "Control the descent."
+      ]
+    },
+    {
+      "id": "romanian-deadlift",
+      "name": "Romanian Deadlift",
+      "primaryMuscle": "Hamstrings",
+      "secondaryMuscles": [
+        "Glutes",
+        "Back"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Hold the bar at your hips with a flat back.",
+        "Push hips back, lowering the bar along your legs.",
+        "Drive hips forward to stand tall."
+      ],
+      "tips": [
+        "Feel the hamstring stretch.",
+        "Keep the bar close to your legs."
+      ]
+    },
+    {
+      "id": "leg-curl",
+      "name": "Seated Leg Curl",
+      "primaryMuscle": "Hamstrings",
+      "secondaryMuscles": [
+        "Calves"
+      ],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Adjust the pad above your heels.",
+        "Curl your legs down and back as far as possible.",
+        "Return slowly under control."
+      ],
+      "tips": [
+        "Squeeze the hamstrings at the bottom.",
+        "Avoid jerking the weight."
+      ]
+    },
+    {
+      "id": "hip-thrust",
+      "name": "Barbell Hip Thrust",
+      "primaryMuscle": "Glutes",
+      "secondaryMuscles": [
+        "Hamstrings"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Sit with your upper back on a bench, bar over your hips.",
+        "Drive through your heels to full hip extension.",
+        "Lower under control."
+      ],
+      "tips": [
+        "Squeeze glutes hard at the top.",
+        "Keep ribs down, chin tucked."
+      ]
+    },
+    {
+      "id": "walking-lunge",
+      "name": "Walking Lunge",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Hold dumbbells at your sides.",
+        "Step forward and lower until both knees are ~90°.",
+        "Drive up and step through to the next rep."
+      ],
+      "tips": [
+        "Keep your torso tall.",
+        "Control each step."
+      ]
+    },
+    {
+      "id": "calf-raise",
+      "name": "Standing Calf Raise",
+      "primaryMuscle": "Calves",
+      "secondaryMuscles": [],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Stand with the balls of your feet on the platform.",
+        "Rise onto your toes as high as possible.",
+        "Lower slowly for a deep stretch."
+      ],
+      "tips": [
+        "Pause at the top and bottom.",
+        "Full range beats heavy half reps."
+      ]
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "primaryMuscle": "Core",
+      "secondaryMuscles": [
+        "Shoulders"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Set forearms under shoulders, body in a straight line.",
+        "Brace the core and squeeze the glutes.",
+        "Hold for the prescribed time."
+      ],
+      "tips": [
+        "Do not let the hips sag.",
+        "Breathe steadily."
+      ]
+    },
+    {
+      "id": "hanging-leg-raise",
+      "name": "Hanging Leg Raise",
+      "primaryMuscle": "Core",
+      "secondaryMuscles": [
+        "Forearms"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Hang from a bar with a firm grip.",
+        "Raise your legs to hip height (or higher) without swinging.",
+        "Lower under control."
+      ],
+      "tips": [
+        "Tilt the pelvis to engage the abs.",
+        "Avoid using momentum."
+      ]
+    },
+    {
+      "id": "deadlift",
+      "name": "Conventional Deadlift",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Glutes",
+        "Hamstrings",
+        "Forearms"
+      ],
+      "equipment": "Barbell",
+      "difficulty": "Advanced",
+      "instructions": [
+        "Set up with the bar over mid-foot, shins close.",
+        "Brace, take the slack out, and drive the floor away.",
+        "Lock out hips and knees together, then control the descent."
+      ],
+      "tips": [
+        "Keep the bar against your legs.",
+        "Maintain a neutral spine throughout."
+      ]
+    },
+    {
+      "id": "goblet-squat",
+      "name": "Goblet Squat",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Core"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Hold a dumbbell at chest height.",
+        "Squat down between your knees, keeping the chest up.",
+        "Drive up to standing."
+      ],
+      "tips": [
+        "Great for learning squat mechanics.",
+        "Keep elbows inside the knees."
+      ]
+    },
+    {
+      "id": "push-up",
+      "name": "Push-Up",
+      "primaryMuscle": "Chest",
+      "secondaryMuscles": [
+        "Triceps",
+        "Shoulders",
+        "Core"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Set hands slightly wider than shoulders.",
+        "Lower until your chest nears the floor, elbows ~45°.",
+        "Press back to lockout, keeping a straight body line."
+      ],
+      "tips": [
+        "Brace the core the whole set.",
+        "Elevate hands to scale difficulty."
+      ]
+    },
+    {
+      "id": "burpee",
+      "name": "Burpee",
+      "primaryMuscle": "Full Body",
+      "secondaryMuscles": [
+        "Chest",
+        "Quads",
+        "Core"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Drop to a squat and kick your feet back to a plank.",
+        "Perform a push-up, then jump the feet back in.",
+        "Explode up into a jump."
+      ],
+      "tips": [
+        "Keep a steady rhythm.",
+        "Scale by removing the jump or push-up."
+      ]
+    },
+    {
+      "id": "mountain-climber",
+      "name": "Mountain Climbers",
+      "primaryMuscle": "Core",
+      "secondaryMuscles": [
+        "Shoulders",
+        "Quads"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Start in a high plank.",
+        "Drive one knee toward your chest, then switch rapidly.",
+        "Keep hips low and core braced."
+      ],
+      "tips": [
+        "Maintain a flat back.",
+        "Move fast but controlled."
+      ]
+    },
+    {
+      "id": "kettlebell-swing",
+      "name": "Kettlebell Swing",
+      "primaryMuscle": "Glutes",
+      "secondaryMuscles": [
+        "Hamstrings",
+        "Core",
+        "Back"
+      ],
+      "equipment": "Kettlebell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Hinge and hike the bell back between your legs.",
+        "Snap the hips forward to swing the bell to chest height.",
+        "Let it fall and absorb with another hinge."
+      ],
+      "tips": [
+        "Power comes from the hips, not the arms.",
+        "Keep a flat back."
+      ]
+    },
+    {
+      "id": "jump-squat",
+      "name": "Jump Squat",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Calves"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Squat down to a quarter/half depth.",
+        "Explode upward into a jump.",
+        "Land softly and immediately descend into the next rep."
+      ],
+      "tips": [
+        "Absorb the landing with bent knees.",
+        "Stay light on your feet."
+      ]
+    },
+    {
+      "id": "one-arm-dumbbell-row",
+      "name": "One Arm Dumbbell Row",
+      "primaryMuscle": "Back",
+      "secondaryMuscles": [
+        "Biceps",
+        "Core"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Place one knee and hand on a bench for support, other foot on the floor.",
+        "Row the dumbbell to your hip, driving the elbow straight back.",
+        "Lower under control to a full arm extension."
+      ],
+      "tips": [
+        "Keep your torso square to the floor.",
+        "Avoid rotating the hips to lift the weight."
+      ]
+    },
+    {
+      "id": "dumbbell-incline-wide-curl",
+      "name": "Dumbbell Incline Wide Curl",
+      "primaryMuscle": "Biceps",
+      "secondaryMuscles": [
+        "Forearms"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Sit on an incline bench (45°) with dumbbells hanging at your sides.",
+        "Curl both dumbbells outward in a wide arc toward your shoulders.",
+        "Squeeze at the top, then lower slowly to the start."
+      ],
+      "tips": [
+        "Keep your elbows pinned back behind your torso.",
+        "Use a controlled tempo — no swinging."
+      ]
+    },
+    {
+      "id": "machine-shoulder-press",
+      "name": "Machine Shoulder Press",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [
+        "Triceps"
+      ],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Adjust the seat so handles are at shoulder height.",
+        "Press the handles overhead until arms are nearly locked out.",
+        "Lower under control to the starting position."
+      ],
+      "tips": [
+        "Keep your back against the pad.",
+        "Avoid arching excessively at lockout."
+      ]
+    },
+    {
+      "id": "cable-upright-rows",
+      "name": "Cable Upright Rows",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [
+        "Biceps"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Attach a straight or EZ bar to a low cable.",
+        "Pull the bar straight up along your body to collarbone height, elbows leading.",
+        "Lower under control."
+      ],
+      "tips": [
+        "Keep the bar close to your body.",
+        "Stop at collarbone height to protect the shoulder joint."
+      ]
+    },
+    {
+      "id": "reverse-pec-deck",
+      "name": "Reverse Pec Deck",
+      "primaryMuscle": "Shoulders",
+      "secondaryMuscles": [
+        "Back"
+      ],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Sit facing the pad with handles at shoulder height.",
+        "Open your arms outward in a wide arc, squeezing the rear delts.",
+        "Return slowly to the start."
+      ],
+      "tips": [
+        "Lead with the elbows, not the hands.",
+        "Avoid using momentum — keep the motion controlled."
+      ]
+    },
+    {
+      "id": "ab-wheel-rollout",
+      "name": "Ab Wheel Rollout",
+      "primaryMuscle": "Core",
+      "secondaryMuscles": [
+        "Shoulders"
+      ],
+      "equipment": "Bodyweight",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Kneel on the floor and grip the ab wheel with both hands.",
+        "Roll forward, extending your body as far as you can while maintaining a flat back.",
+        "Contract your abs to pull the wheel back to the starting position."
+      ],
+      "tips": [
+        "Keep your hips from sagging.",
+        "Start with short range of motion and progress further over time."
+      ]
+    },
+    {
+      "id": "dumbbell-romanian-deadlift",
+      "name": "Dumbbell Romanian Deadlift",
+      "primaryMuscle": "Hamstrings",
+      "secondaryMuscles": [
+        "Glutes",
+        "Back"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Hold dumbbells in front of your thighs with a slight knee bend.",
+        "Hinge at the hips and lower the dumbbells along your legs until you feel a stretch in the hamstrings.",
+        "Drive your hips forward to return to standing."
+      ],
+      "tips": [
+        "Keep the dumbbells close to your legs.",
+        "Avoid rounding your lower back."
+      ]
+    },
+    {
+      "id": "dumbbell-bulgarian-split-squat",
+      "name": "Dumbbell Bulgarian Split Squat",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [
+        "Glutes",
+        "Hamstrings"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Stand a stride-length in front of a bench and rest one foot on it behind you.",
+        "Hold a dumbbell in each hand and lower until the front thigh is parallel to the floor.",
+        "Drive through the front heel to return to the top."
+      ],
+      "tips": [
+        "Keep your torso upright.",
+        "Make sure the front knee tracks over the toes without caving in."
+      ]
+    },
+    {
+      "id": "single-leg-extensions",
+      "name": "Single Leg Extensions",
+      "primaryMuscle": "Quads",
+      "secondaryMuscles": [],
+      "equipment": "Machine",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Sit in the leg extension machine and hook one foot under the pad.",
+        "Extend your leg until the knee is nearly locked out.",
+        "Lower under control and repeat before switching legs."
+      ],
+      "tips": [
+        "Squeeze the quad hard at the top.",
+        "Use a controlled tempo — don’t swing the weight."
+      ]
+    },
+    {
+      "id": "hammer-preacher-curl",
+      "name": "Hammer Preacher Curl",
+      "primaryMuscle": "Biceps",
+      "secondaryMuscles": [
+        "Forearms"
+      ],
+      "equipment": "Dumbbell",
+      "difficulty": "Beginner",
+      "instructions": [
+        "Sit at a preacher bench with a dumbbell in each hand, palms facing each other (neutral grip).",
+        "Curl the dumbbells up toward your shoulders without rotating the wrists.",
+        "Lower under control to a full arm extension."
+      ],
+      "tips": [
+        "Keep your upper arms pressed into the pad.",
+        "Avoid using momentum to lift."
+      ]
+    },
+    {
+      "id": "cable-fly-low-to-high",
+      "name": "Cable Fly Low to High",
+      "primaryMuscle": "Chest",
+      "secondaryMuscles": [
+        "Shoulders"
+      ],
+      "equipment": "Cable",
+      "difficulty": "Intermediate",
+      "instructions": [
+        "Set both pulleys to the lowest position and grab a handle in each hand, palms facing forward.",
+        "Step forward with a slight forward lean and arms down at your sides.",
+        "Sweep your hands up and together in an arc to about eye level, squeezing the upper chest.",
+        "Lower under control back to the starting position."
+      ],
+      "tips": [
+        "Keep a soft bend in the elbows throughout.",
+        "Lead with the upper chest, not the front delts."
+      ]
+    }
+  ]
+}

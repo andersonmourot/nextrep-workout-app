@@ -1,0 +1,704 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Dumbbell,
+  Plus,
+  Rss,
+  Search,
+  Star,
+  Trash2,
+  Users,
+} from 'lucide-react'
+import {
+  apiAddExercise,
+  apiAddProgram,
+  apiRemoveProgramMember,
+  apiFollow,
+  apiFollowing,
+  apiSearchUsers,
+  apiUnfollow,
+  apiUpsertProgram,
+  apiUserExercises,
+  apiUserPrograms,
+  type DiscoverUser,
+  type FollowUser,
+} from '../api'
+import { getToken, useAuth } from '../auth'
+import { MAX_FAVORITES, useStore } from '../store'
+import { getExercise } from '../data/exercises'
+import type { Exercise, PlannedExercise, Program, ProgramDay } from '../types'
+import { cn, uid } from '../lib/utils'
+
+export function People() {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<DiscoverUser[]>([])
+  const [searching, setSearching] = useState(false)
+  const [searched, setSearched] = useState(false)
+  const [following, setFollowing] = useState<FollowUser[]>([])
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const favoriteUserIds = useStore((s) => s.favoriteUserIds)
+  const toggleFavoriteUser = useStore((s) => s.toggleFavoriteUser)
+
+  const loadFollowing = useCallback(async () => {
+    const token = getToken()
+    if (!token) return
+    const res = await apiFollowing(token)
+    if (res.ok && res.data) setFollowing(res.data)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const token = getToken()
+    if (!token) return
+    void apiFollowing(token).then((res) => {
+      if (active && res.ok && res.data) setFollowing(res.data)
+    })
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const runSearch = useCallback(async (q: string) => {
+    const token = getToken()
+    if (!token || !q.trim()) {
+      setResults([])
+      setSearched(false)
+      return
+    }
+    setSearching(true)
+    const res = await apiSearchUsers(token, q.trim())
+    setSearching(false)
+    setSearched(true)
+    if (res.ok && res.data) setResults(res.data)
+  }, [])
+
+  function onQueryChange(v: string) {
+    setQuery(v)
+    if (debounce.current) clearTimeout(debounce.current)
+    debounce.current = setTimeout(() => void runSearch(v), 350)
+  }
+
+  async function toggleFollow(u: DiscoverUser) {
+    const token = getToken()
+    if (!token) return
+    setBusyId(u.id)
+    const res = u.following ? await apiUnfollow(token, u.id) : await apiFollow(token, u.id)
+    setBusyId(null)
+    if (res.ok) {
+      setResults((prev) =>
+        prev.map((r) => (r.id === u.id ? { ...r, following: !u.following } : r)),
+      )
+      void loadFollowing()
+    }
+  }
+
+  async function unfollow(userId: string) {
+    const token = getToken()
+    if (!token) return
+    setBusyId(userId)
+    const res = await apiUnfollow(token, userId)
+    setBusyId(null)
+    if (res.ok) {
+      setFollowing((prev) => prev.filter((f) => f.id !== userId))
+      setResults((prev) => prev.map((r) => (r.id === userId ? { ...r, following: false } : r)))
+    }
+  }
+
+  // Pin favorited accounts to the top; keep server order within each group.
+  const sortedFollowing = [...following].sort((a, b) => {
+    const fa = favoriteUserIds.includes(a.id) ? 0 : 1
+    const fb = favoriteUserIds.includes(b.id) ? 0 : 1
+    return fa - fb
+  })
+  const canFavorite = favoriteUserIds.length < MAX_FAVORITES
+
+  return (
+    <div className="animate-fade-in space-y-6">
+      <div>
+        <p className="label-eyebrow">Train together</p>
+        <h1 className="heading text-3xl font-bold text-zinc-50">People</h1>
+        <p className="mt-1 text-sm text-zinc-400">
+          Find other athletes by name, follow them, and add their programs.
+        </p>
+      </div>
+
+      {/* Search */}
+      <div>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+          <input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder="Search"
+            className="w-full rounded-xl border border-white/10 bg-ink-850 py-2.5 pl-9 pr-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-gold/60 focus:outline-none"
+          />
+        </div>
+
+        {searching && <p className="mt-3 text-sm text-zinc-500">Searching…</p>}
+
+        {!searching && searched && results.length === 0 && (
+          <p className="mt-3 text-sm text-zinc-500">No users found for “{query}”.</p>
+        )}
+
+        {results.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {results.map((u) => (
+              <SearchResultCard
+                key={u.id}
+                user={u}
+                busy={busyId === u.id}
+                onToggleFollow={() => void toggleFollow(u)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Following */}
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <Users className="h-4 w-4 text-gold" />
+          <h2 className="heading text-lg font-bold text-zinc-100">
+            Following {following.length > 0 && `(${following.length})`}
+          </h2>
+        </div>
+
+        {following.length === 0 ? (
+          <div className="card p-6 text-center text-sm text-zinc-500">
+            You’re not following anyone yet. Search above to find athletes and follow them.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sortedFollowing.map((f) => {
+              const favorited = favoriteUserIds.includes(f.id)
+              return (
+                <FollowingCard
+                  key={f.id}
+                  user={f}
+                  onUnfollow={() => void unfollow(f.id)}
+                  busy={busyId === f.id}
+                  favorited={favorited}
+                  canFavorite={canFavorite}
+                  onToggleFavorite={() => toggleFavoriteUser(f.id)}
+                />
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Expandable list of a user's shared programs and exercises (with Add buttons). */
+function SharedContent({
+  userId,
+  ownerName,
+  ownerColor,
+  programCount,
+  exerciseCount,
+}: {
+  userId: string
+  ownerName: string
+  ownerColor: string
+  programCount: number
+  exerciseCount: number
+}) {
+  const [loading, setLoading] = useState(() => getToken() != null)
+  const [programs, setPrograms] = useState<Program[]>([])
+  const [exercises, setExercises] = useState<Exercise[]>([])
+  // Maps a creator's program id -> the id of the program saved on this account
+  // (same id for a Follow, a fresh id for a Duplicate). Lets Remove undo it.
+  const [addedPrograms, setAddedPrograms] = useState<Map<string, string>>(new Map())
+  const [removingProgram, setRemovingProgram] = useState<string | null>(null)
+  const [addedExercises, setAddedExercises] = useState<Set<string>>(new Set())
+  // Program awaiting a Duplicate-vs-Follow choice in the popup (null = closed).
+  const [chooseProgram, setChooseProgram] = useState<Program | null>(null)
+  const [choosing, setChoosing] = useState(false)
+  const customPrograms = useStore((s) => s.customPrograms)
+  const addProgram = useStore((s) => s.addProgram)
+  const deleteProgram = useStore((s) => s.deleteProgram)
+  const customExercises = useStore((s) => s.customExercises)
+  const addCustomExercise = useStore((s) => s.addCustomExercise)
+  const currentUserId = useAuth((s) => s.user?.id)
+  const currentUserName = useAuth((s) => s.user?.name)
+
+  useEffect(() => {
+    let active = true
+    const token = getToken()
+    if (!token) return
+    const tasks: Promise<void>[] = []
+    if (programCount > 0) {
+      tasks.push(
+        apiUserPrograms<Program>(token, userId).then((res) => {
+          if (active && res.ok && res.data) setPrograms(res.data.programs ?? [])
+        }),
+      )
+    }
+    if (exerciseCount > 0) {
+      tasks.push(
+        apiUserExercises<Exercise>(token, userId).then((res) => {
+          if (active && res.ok && res.data) setExercises(res.data.exercises ?? [])
+        }),
+      )
+    }
+    void Promise.all(tasks).finally(() => {
+      if (active) setLoading(false)
+    })
+    return () => {
+      active = false
+    }
+  }, [userId, programCount, exerciseCount])
+
+  // "follow" keeps the program linked to its creator: it stays read-only and the
+  // creator's future edits sync in (via refreshSharedPrograms). "duplicate" makes
+  // an independent copy you fully own and can edit/share, with no link back.
+  async function addProgramToMine(p: Program, mode: 'follow' | 'duplicate') {
+    const token = getToken()
+    if (!token) return
+    // Follow registers membership so the creator's edits propagate; duplicate is a
+    // standalone copy, so we don't join the original's member list.
+    const res = mode === 'follow' ? await apiAddProgram<Program>(token, p.id) : null
+    const base = res && res.ok && res.data ? res.data.program : { ...p, coach: p.coach || ownerName }
+
+    // Make the program self-contained on this account: backfill any missing
+    // custom-exercise names and import the creator's referenced shared custom
+    // exercises, so nothing shows up as the raw "custom-..." id.
+    const ownerExById = new Map(exercises.map((e) => [e.id, e]))
+    const referenced = new Set<string>()
+    const fixDay = (day: ProgramDay) => {
+      day.exercises = (day.exercises ?? []).map((pe: PlannedExercise) => {
+        if (pe.exerciseId?.startsWith('custom-')) referenced.add(pe.exerciseId)
+        if (pe.name?.trim() || getExercise(pe.exerciseId)) return pe
+        const nm = ownerExById.get(pe.exerciseId)?.name
+        return nm ? { ...pe, name: nm } : pe
+      })
+    }
+
+    const program: Program = {
+      ...base,
+      coach: base.coach || ownerName,
+      days: (base.days ?? []).map((d) => ({ ...d, exercises: [...(d.exercises ?? [])] })),
+    }
+    program.days.forEach(fixDay)
+    if (program.weekOverrides) {
+      const next: NonNullable<Program['weekOverrides']> = {}
+      for (const [k, list] of Object.entries(program.weekOverrides)) {
+        next[k] = list.map((o) => {
+          const day = { ...o.day, exercises: [...(o.day.exercises ?? [])] }
+          fixDay(day)
+          return { ...o, day }
+        })
+      }
+      program.weekOverrides = next
+    }
+
+    for (const id of referenced) {
+      const def = ownerExById.get(id)
+      if (def && !customExercises.some((c) => c.id === id)) {
+        addCustomExercise({ ...def, shared: false, ownerName: def.ownerName || ownerName })
+      }
+    }
+
+    let localId = program.id
+    if (mode === 'duplicate') {
+      // Independent copy: new id + you as owner, so the original creator's edits
+      // never overwrite it and you can freely edit and re-share it yourself.
+      const copy: Program = {
+        ...program,
+        id: `custom-${uid()}`,
+        ownerId: currentUserId,
+        ownerName: currentUserName ?? program.ownerName,
+        coach: currentUserName || program.coach,
+        collaborative: false,
+        version: Date.now(),
+      }
+      localId = copy.id
+      addProgram(copy)
+      await apiUpsertProgram<Program>(token, copy)
+    } else {
+      addProgram(program)
+    }
+    setAddedPrograms((prev) => new Map(prev).set(p.id, localId))
+  }
+
+  // Undo an add: delete the saved program from this account and, for a followed
+  // program, drop the membership so the creator's edits stop syncing in.
+  async function handleRemove(p: Program) {
+    const token = getToken()
+    const localId = addedPrograms.get(p.id) ?? p.id
+    setRemovingProgram(p.id)
+    try {
+      // localId === p.id means it's a Follow (shares the creator's id); a
+      // Duplicate has its own id and was never added to the member list.
+      if (token && localId === p.id) await apiRemoveProgramMember(token, p.id)
+      deleteProgram(localId)
+      setAddedPrograms((prev) => {
+        const next = new Map(prev)
+        next.delete(p.id)
+        return next
+      })
+    } finally {
+      setRemovingProgram(null)
+    }
+  }
+
+  async function handleChoose(mode: 'follow' | 'duplicate') {
+    if (!chooseProgram) return
+    setChoosing(true)
+    try {
+      await addProgramToMine(chooseProgram, mode)
+    } finally {
+      setChoosing(false)
+      setChooseProgram(null)
+    }
+  }
+
+  async function addExerciseToMine(e: Exercise) {
+    const token = getToken()
+    // Register membership so the creator's edits propagate to this account.
+    const res = token ? await apiAddExercise<Exercise>(token, e.id) : null
+    const canon = res && res.ok && res.data ? res.data.exercise : e
+    // Copy into the current user's library; don't auto-reshare from their
+    // profile (shared:false), but keep ownerId/version so updates propagate.
+    addCustomExercise({ ...canon, shared: false, ownerName: canon.ownerName || ownerName })
+    setAddedExercises((prev) => new Set(prev).add(e.id))
+  }
+
+  return (
+    <div className="space-y-4 border-t border-white/5 p-4">
+      {loading && <p className="text-sm text-zinc-500">Loading…</p>}
+
+      {programs.length > 0 && (
+        <div>
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <Plus className="h-3.5 w-3.5" /> Programs
+          </h3>
+          <div className="space-y-2">
+            {programs.map((p) => {
+              const isOwner = !!currentUserId && p.ownerId === currentUserId
+              const isAdded = addedPrograms.has(p.id) || customPrograms.some((c) => c.id === p.id)
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-ink-900 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-zinc-100">{p.name}</p>
+                    <p className="truncate text-xs text-zinc-500">
+                      {p.category} · {p.level} · {p.days?.length ?? 0} day
+                      {(p.days?.length ?? 0) === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  {isOwner ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-400">
+                      <Check className="h-4 w-4" /> Yours
+                    </span>
+                  ) : isAdded ? (
+                    <button
+                      onClick={() => void handleRemove(p)}
+                      disabled={removingProgram === p.id}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-white/10 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 transition hover:border-red-500/50 hover:text-red-400 active:scale-[0.98] disabled:opacity-60"
+                    >
+                      <Trash2 className="h-4 w-4" /> {removingProgram === p.id ? 'Removing…' : 'Remove'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setChooseProgram(p)}
+                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                      style={{ backgroundColor: ownerColor }}
+                    >
+                      <Plus className="h-4 w-4" /> Add
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {exercises.length > 0 && (
+        <div>
+          <h3 className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-zinc-400">
+            <Dumbbell className="h-3.5 w-3.5" /> Exercises
+          </h3>
+          <div className="space-y-2">
+            {exercises.map((e) => {
+              const isAdded = addedExercises.has(e.id) || customExercises.some((c) => c.id === e.id)
+              return (
+                <div
+                  key={e.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-ink-900 p-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-zinc-100">{e.name}</p>
+                    <p className="truncate text-xs text-zinc-500">
+                      {e.primaryMuscle} · {e.equipment} · {e.difficulty}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => void addExerciseToMine(e)}
+                    disabled={isAdded}
+                    className={cn(
+                      'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60',
+                      isAdded ? 'border border-white/10 bg-ink-800 text-zinc-400' : 'text-white',
+                    )}
+                    style={isAdded ? undefined : { backgroundColor: ownerColor }}
+                  >
+                    {isAdded ? (
+                      <>
+                        <Check className="h-4 w-4" /> Added
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" /> Add
+                      </>
+                    )}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {!loading && programs.length === 0 && exercises.length === 0 && (
+        <p className="text-sm text-zinc-500">This athlete hasn’t shared anything yet.</p>
+      )}
+
+      {chooseProgram &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-6"
+            onClick={() => !choosing && setChooseProgram(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="card w-full max-w-sm p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="heading text-lg font-bold text-zinc-50">Add {chooseProgram.name}</h3>
+              <p className="mt-1 text-sm text-zinc-400">
+                Choose how you want to add {ownerName}’s program.
+              </p>
+              <div className="mt-4 space-y-2.5">
+                <button
+                  onClick={() => void handleChoose('duplicate')}
+                  disabled={choosing}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-ink-850 p-3 text-left transition hover:border-white/30 disabled:opacity-60"
+                >
+                  <Copy className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+                  <span>
+                    <span className="block text-sm font-semibold text-zinc-100">Duplicate</span>
+                    <span className="block text-xs text-zinc-400">
+                      Make your own copy. Fully editable and sharable — changes by the original
+                      creator won’t affect it.
+                    </span>
+                  </span>
+                </button>
+                <button
+                  onClick={() => void handleChoose('follow')}
+                  disabled={choosing}
+                  className="flex w-full items-start gap-3 rounded-xl border border-white/10 bg-ink-850 p-3 text-left transition hover:border-white/30 disabled:opacity-60"
+                >
+                  <Rss className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+                  <span>
+                    <span className="block text-sm font-semibold text-zinc-100">Follow</span>
+                    <span className="block text-xs text-zinc-400">
+                      Save to your Programs and stay in sync. When {ownerName} updates it, your copy
+                      updates too. Only the creator can edit it.
+                    </span>
+                  </span>
+                </button>
+              </div>
+              <button
+                onClick={() => setChooseProgram(null)}
+                disabled={choosing}
+                className="btn-ghost mt-3 w-full disabled:opacity-60"
+              >
+                {choosing ? 'Adding…' : 'Cancel'}
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </div>
+  )
+}
+
+function SearchResultCard({
+  user,
+  busy,
+  onToggleFollow,
+}: {
+  user: DiscoverUser
+  busy: boolean
+  onToggleFollow: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const hasShared = user.program_count > 0 || user.exercise_count > 0
+
+  const subtitleParts: string[] = []
+  if (user.program_count > 0)
+    subtitleParts.push(`${user.program_count} program${user.program_count === 1 ? '' : 's'}`)
+  if (user.exercise_count > 0)
+    subtitleParts.push(`${user.exercise_count} exercise${user.exercise_count === 1 ? '' : 's'}`)
+
+  return (
+    <div className="card overflow-hidden border-l-4 p-0" style={{ borderLeftColor: user.color }}>
+      <div className="flex items-center justify-between gap-3 p-4">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          disabled={!hasShared}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+        >
+          {hasShared && (
+            <ChevronDown
+              className={cn('h-4 w-4 shrink-0 text-zinc-500 transition', open && 'rotate-180')}
+            />
+          )}
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase text-white"
+            style={{ background: user.color }}
+            aria-hidden
+          >
+            {user.name.trim().charAt(0) || '?'}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-zinc-100">{user.name}</span>
+            {subtitleParts.length > 0 && (
+              <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                {subtitleParts.join(' · ')}
+              </span>
+            )}
+          </span>
+        </button>
+        <button
+          onClick={onToggleFollow}
+          disabled={busy}
+          className={cn(
+            'shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:opacity-50',
+            user.following
+              ? 'border border-white/15 bg-ink-800 text-zinc-300 hover:border-white/30'
+              : 'btn-gold',
+          )}
+        >
+          {user.following ? 'Following' : 'Follow'}
+        </button>
+      </div>
+
+      {open && hasShared && (
+        <SharedContent
+          userId={user.id}
+          ownerName={user.name}
+          ownerColor={user.color}
+          programCount={user.program_count}
+          exerciseCount={user.exercise_count}
+        />
+      )}
+    </div>
+  )
+}
+
+function FollowingCard({
+  user,
+  onUnfollow,
+  busy,
+  favorited,
+  canFavorite,
+  onToggleFavorite,
+}: {
+  user: FollowUser
+  onUnfollow: () => void
+  busy: boolean
+  favorited: boolean
+  canFavorite: boolean
+  onToggleFavorite: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const hasShared = user.program_count > 0 || user.exercise_count > 0
+
+  const subtitleParts: string[] = []
+  if (user.program_count > 0)
+    subtitleParts.push(`${user.program_count} program${user.program_count === 1 ? '' : 's'}`)
+  if (user.exercise_count > 0)
+    subtitleParts.push(`${user.exercise_count} exercise${user.exercise_count === 1 ? '' : 's'}`)
+
+  return (
+    <div className="card overflow-hidden border-l-4 p-0" style={{ borderLeftColor: user.color }}>
+      <div className="flex items-center justify-between gap-3 p-4">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          disabled={!hasShared}
+          className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:cursor-default"
+        >
+          {hasShared && (
+            <ChevronDown
+              className={cn('h-4 w-4 shrink-0 text-zinc-500 transition', open && 'rotate-180')}
+            />
+          )}
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase text-white"
+            style={{ background: user.color }}
+            aria-hidden
+          >
+            {user.name.trim().charAt(0) || '?'}
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-semibold text-zinc-100">{user.name}</span>
+            {subtitleParts.length > 0 && (
+              <span className="mt-0.5 block truncate text-xs text-zinc-500">
+                {subtitleParts.join(' · ')}
+              </span>
+            )}
+          </span>
+        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            onClick={onToggleFavorite}
+            disabled={!favorited && !canFavorite}
+            aria-pressed={favorited}
+            title={
+              favorited
+                ? 'Unpin from top'
+                : canFavorite
+                  ? 'Pin to top of following'
+                  : `You can favorite up to ${MAX_FAVORITES}`
+            }
+            className={cn(
+              'rounded-lg border p-2 transition disabled:opacity-40',
+              favorited
+                ? 'border-gold/40 bg-gold/10 text-gold'
+                : 'border-white/15 bg-ink-800 text-zinc-400 hover:border-white/30',
+            )}
+          >
+            <Star className={cn('h-4 w-4', favorited && 'fill-current')} />
+          </button>
+          <button
+            onClick={onUnfollow}
+            disabled={busy}
+            className="rounded-lg border border-white/15 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 transition hover:border-white/30 disabled:opacity-50"
+          >
+            Unfollow
+          </button>
+        </div>
+      </div>
+
+      {open && hasShared && (
+        <SharedContent
+          userId={user.id}
+          ownerName={user.name}
+          ownerColor={user.color}
+          programCount={user.program_count}
+          exerciseCount={user.exercise_count}
+        />
+      )}
+    </div>
+  )
+}

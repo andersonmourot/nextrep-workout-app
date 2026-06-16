@@ -1,0 +1,80 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/AuthView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Sign Up",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "Login",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 73
+        }
+      },
+      {
+        "comment": "",
+        "key": "NextRep",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "Email",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 25
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 30
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sign Up",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Login",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Already have an account? Login",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Don't have an account? Sign Up",
+        "location": {
+          "startingColumn": 72,
+          "startingLine": 63
+        }
+      }
+    ]
+  },
+  "version": 1
+}

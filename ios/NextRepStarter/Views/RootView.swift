@@ -61,7 +61,7 @@ struct AppShellView: View {
             }
 
             NavigationStack {
-                PlaceholderView(title: "Profile", systemImage: "person")
+                WorkoutHistoryView()
             }
             .tabItem {
                 Label("Profile", systemImage: "person")

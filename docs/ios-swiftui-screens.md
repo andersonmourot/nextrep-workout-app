@@ -455,12 +455,155 @@ built-in from the catalog. If missing, show a "not found" + back link.
 
 ---
 
+# Batch 3 — Program editor + standalone Timer
+
+The Program editor is the largest single screen in the app; the Timer is a
+self-contained tool (its own tab). Both reuse §0 foundations and §5 cue control.
+
+---
+
+## 9. Program editor — `src/pages/ProgramEditor.tsx`
+
+Create or edit a program. Reached from the Programs list `+` (new), Program
+detail Edit (existing), and — in **catalog mode** — the Admin Catalog page
+(edits the shared built-in catalog instead of a personal program; admin only).
+
+**State** mirrors the `Program` fields: `name`, `category`, `level`, `coach`,
+`durationWeeks`, `daysPerWeek`, `accent`, `summary`, `description`,
+`collaborative`, `days: ProgramDay[]`, plus `weekOverrides` (per-week day
+overrides), an edited `week` selector, and per-day `collapsed` flags. In edit
+mode prefill from the existing program; in catalog mode the program to edit
+arrives via navigation state (the canonical catalog copy).
+
+1. **Header:** eyebrow = `Admin · Catalog` (catalog mode) / `Edit program` /
+   `Build your own`; title "Edit Program" or "Create Program".
+2. **Basics card:**
+   - Program name (text).
+   - Category (picker: Bodybuilding, Strength, HIIT, Powerlifting, Functional,
+     Bodyweight) + Level (Beginner/Intermediate/Advanced), side by side.
+   - Weeks / Days-per-week (numeric) + Coach (text), three-up.
+   - **Accent color** swatch picker (row of round color buttons from a preset
+     `ACCENTS` list; selected has a white ring). This accent themes the program
+     everywhere.
+   - Summary (short, one line) + Description (multiline).
+   - **Collaborative** toggle (Yes/No) — hidden in catalog mode; only the owner
+     can change it. Caption explains: collaborative = anyone who added it can
+     edit (edits apply to all); non-collab = only you edit (still applies to
+     all). 
+3. **Training Days section** (`Training Days · {days.count}`):
+   - **Week selector** (only if `durationWeeks > 1`): −/＋ chevrons + "Week {w} /
+     {total}", with a note (Week 1 = base plan applies to un-edited weeks; Week
+     N>1 = changes apply from week N onward). A "Copy Week {w} to all weeks"
+     button (confirm inline) overwrites every week with the current week's plan.
+     Editing a week other than 1 writes a per-week override; day add/remove is
+     disabled when `week > 1` (structure is fixed past week 1).
+   - **Day cards** (resolved for the selected week): a collapse chevron, Day name
+     + Focus inputs (two-up), and a remove-day trash (disabled when only one day
+     or `week > 1`). When expanded, the exercise builder:
+     - Render exercises via `supersetGroups`. **Standalone exercise row:** a
+       name input with **library type-ahead** (`ExerciseNameInput`; free text =
+       custom), up/down reorder buttons, a cue button (§5), a remove trash, a
+       caption `{primaryMuscle} · {equipment}` or "Custom exercise", a three-up
+       Sets (num) / Reps (text) / Rest (num) field row, the cue subheader, and a
+       dashed **"Superset with next"** button (when not the last exercise) that
+       links this exercise with the one below into a group.
+     - **Superset group block:** an accent-bordered container holding its member
+       rows (each tagged A1/A2/…) with the same fields, shared rest on the last
+       member, and an **"Unlink"** action to break the group back into
+       standalone exercises. (`linkWithNext` assigns a shared `groupId` +
+       normalizes set counts; `unlinkGroup` clears `groupId`.)
+     - An **"Add exercise"** button per day.
+   - An **"Add day"** button under the list.
+4. **Validation + Save** (sticky/footer primary): require a name, ≥1 day, ≥1
+   named exercise per day (also validate week overrides). Build the `Program`
+   (id = existing or `custom-{uid}`, `version = now`, owner = current user,
+   `weekOverrides` when present).
+   - **Normal:** persist locally (`addProgram`/`updateProgram`) then publish via
+     `apiUpsertProgram` (adopt the server's canonical copy); navigate to the
+     program detail (edit) or Programs list (new).
+   - **Catalog mode:** fetch the catalog, upsert this program into its
+     `programs`, `PUT /api/admin/catalog` (admin token), update the in-memory
+     built-ins, and return to `/admin/catalog`.
+5. **Error line** shows the first validation/save problem.
+
+> CLI prompt — "Build the Program editor per docs/ios-swiftui-screens.md §9.
+> State mirrors the Program model plus weekOverrides, a week selector, and
+> per-day collapse flags; prefill in edit mode, and support a catalogMode that
+> edits the shared built-in catalog (admin) from a program passed via nav state.
+> Header eyebrow/title per mode. Basics card: name; category + level pickers;
+> weeks/days-per-week/coach; an accent swatch picker; summary + description; and
+> a collaborative Yes/No toggle (hidden in catalog mode, owner-only) with the
+> explanatory caption. Training Days section: a week selector (>1 week) with the
+> base-vs-from-week note and a 'Copy week to all weeks' confirm (day add/remove
+> disabled past week 1); day cards with collapse, name/focus inputs, remove-day;
+> and the exercise builder using `supersetGroups` — standalone rows (library
+> type-ahead name input, reorder, cue (§5), remove, Sets/Reps/Rest fields, cue
+> subheader, 'Superset with next') and superset group blocks (A1/A2 tagged
+> members, shared rest, Unlink), plus Add-exercise and Add-day. Validate name/≥1
+> day/named exercises (incl. overrides), build the Program (id, version=now,
+> owner, weekOverrides), then in normal mode addProgram/updateProgram +
+> apiUpsertProgram and navigate to detail/list, or in catalog mode upsert into
+> the catalog via PUT /api/admin/catalog and return to /admin/catalog. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 10. Standalone Timer (Timer tab) — `src/pages/Timer.tsx`
+
+A self-contained tool with three modes selected by a top segmented control. The
+selected mode persists (`timerMode` in the store).
+
+1. **Header:** title "Timer" (Oswald). **Mode segmented control:** Timer /
+   Stopwatch / Interval.
+
+2. **Timer (Countdown):** a big circular **ProgressRing** (value = remaining /
+   total) with the time in the center (mm:ss). A 3-2-1 "Get ready!" pre-count
+   before it starts; "Time's up!" when done. An input accepting `mm:ss` or raw
+   seconds (Enter starts) and a Start/Reset/Cancel button. An **Alert sound**
+   picker (`SOUND_OPTIONS`, e.g. Bell) with a preview play button — selecting or
+   previewing plays the sound. A **Recent timers** list (saved presets): tap to
+   load, trash to remove.
+
+3. **Stopwatch:** a large mm:ss.cc display (centiseconds), Start/Pause + Reset
+   (and lap if present). Counts up.
+
+4. **Interval:** an interval/HIIT timer with three formats (segmented):
+   - **EMOM** — every `emomInterval`s for `emomRounds` rounds, `emomSets` sets
+     with `emomSetRest` between sets.
+   - **TABATA** — `tabataWork`s work / `tabataRest`s rest × `tabataRounds`,
+     `tabataSets` sets with `tabataSetRest`.
+   - **AMRAP** — a single `amrapCap`-minute (cap) work block.
+   Numeric setting fields per format (with min/max validation). A live runner
+   showing the current **phase** (work / rest / set-rest), round/set counters,
+   the phase clock, total session time, and a final-3-seconds tick beep before
+   each phase change; play the alert sound at phase transitions. Start/Pause/
+   Reset controls.
+
+5. **Sound / background:** route all timer sounds through the shared audio
+   layer; configure `AVAudioSession` for background playback (as in §4) so the
+   timer's end/phase sounds fire when the app is backgrounded or the screen is
+   locked, with a local-notification fallback for the countdown finishing.
+
+> CLI prompt — "Build the standalone Timer (Timer tab) per
+> docs/ios-swiftui-screens.md §10. A 'Timer' title and a Timer/Stopwatch/
+> Interval segmented control whose selection persists (timerMode). Timer mode: a
+> circular ProgressRing (remaining/total) with centered mm:ss, a 3-2-1 'Get
+> ready!' pre-count and 'Time's up!' end state, an input accepting mm:ss or
+> seconds (Enter starts), Start/Reset/Cancel, an alert-sound picker with preview,
+> and a Recent-timers list (load/remove). Stopwatch: mm:ss.cc count-up with
+> Start/Pause/Reset. Interval: EMOM/TABATA/AMRAP formats with their numeric
+> settings and validation, and a runner showing phase (work/rest/set-rest),
+> round/set counters, phase + total clocks, a final-3s tick beep, and the alert
+> sound at phase changes. Configure AVAudioSession for background playback (as in
+> §4) so timer sounds fire when backgrounded/locked, with a local-notification
+> fallback. Use the shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
 ## Remaining screens (later batches — will detail on request)
-Program/Exercise **editors** (`ProgramEditor.tsx` — incl. supersets and admin
-catalog mode), Progress/Profile + history + body-weight (`Progress.tsx`,
-`WorkoutHistory.tsx`, `BodyWeightHistory.tsx`), People/Search + following
-(`People.tsx`), Settings (`Settings.tsx`), standalone Timer (`Timer.tsx`), Max
-tracker (`MaxTracker.tsx`/`MaxTrackerDetail.tsx`), Nutrition (`Nutrition.tsx`),
+Progress/Profile + history + body-weight (`Progress.tsx`, `WorkoutHistory.tsx`,
+`BodyWeightHistory.tsx`), Program history (`ProgramHistory.tsx`), People/Search
++ following (`People.tsx`), Settings (`Settings.tsx`), Max tracker
+(`MaxTracker.tsx`/`MaxTrackerDetail.tsx`), Nutrition (`Nutrition.tsx`),
 Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`),
-Program history (`ProgramHistory.tsx`), Legal (`Legal.tsx`), Admin (Users +
-Catalog).
+Legal (`Legal.tsx`), Admin Users + Catalog.

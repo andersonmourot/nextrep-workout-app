@@ -1,0 +1,128 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/ProgramDetailView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Switch Programs?",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 45
+        }
+      },
+      {
+        "comment": "",
+        "key": "Switch",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "You have an active workout in progress. Switching programs will end your current workout. Continue?",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 60
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Custom",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 112
+        }
+      },
+      {
+        "comment": "",
+        "key": "Following",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Active Program",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set as Active Program",
+        "location": {
+          "startingColumn": 56,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Week %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 321
+        }
+      },
+      {
+        "comment": "",
+        "key": "Up next",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 331
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld × %@ · %llds rest",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 375
+        }
+      }
+    ]
+  },
+  "version": 1
+}

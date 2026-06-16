@@ -1,0 +1,160 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/AuthView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Create your account to start training.",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Welcome back. Log in to continue.",
+        "location": {
+          "startingColumn": 95,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rep",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 48
+        }
+      },
+      {
+        "comment": "",
+        "key": "Name",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your name",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 70
+        }
+      },
+      {
+        "comment": "",
+        "key": "Email",
+        "location": {
+          "startingColumn": 38,
+          "startingLine": 82
+        }
+      },
+      {
+        "comment": "",
+        "key": "your@email.com",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 100
+        }
+      },
+      {
+        "comment": "",
+        "key": "Hide",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show",
+        "location": {
+          "startingColumn": 70,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 55,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Password",
+        "location": {
+          "startingColumn": 57,
+          "startingLine": 120
+        }
+      },
+      {
+        "comment": "",
+        "key": "Forgot password?",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 148
+        }
+      },
+      {
+        "comment": "",
+        "key": "Create account",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Log in",
+        "location": {
+          "startingColumn": 79,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "Please wait…",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 183
+        }
+      },
+      {
+        "comment": "",
+        "key": "New here? Create an account",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 219
+        }
+      },
+      {
+        "comment": "",
+        "key": "Already have an account? Log in",
+        "location": {
+          "startingColumn": 83,
+          "startingLine": 219
+        }
+      }
+    ]
+  },
+  "version": 1
+}

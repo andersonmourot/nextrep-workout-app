@@ -1,0 +1,40 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/BodyWeightHistoryView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Progress",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 23
+        }
+      },
+      {
+        "comment": "",
+        "key": "No weight entries yet",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "Body Weight History",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "Every logged entry, newest first.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 43
+        }
+      }
+    ]
+  },
+  "version": 1
+}

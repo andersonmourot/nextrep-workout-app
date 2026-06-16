@@ -1,0 +1,536 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001000000000000001 /* NextRepiOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000000000000001 /* NextRepiOSApp.swift */; };
+		A1000003000000000000001 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000000000000001 /* Models.swift */; };
+		A1000005000000000000001 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006000000000000001 /* KeychainStore.swift */; };
+		A1000007000000000000001 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000000000000001 /* APIClient.swift */; };
+		A1000009000000000000001 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000000000000001 /* AudioManager.swift */; };
+		A1000011000000000000001 /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012000000000000001 /* AuthFlowView.swift */; };
+		A1000013000000000000001 /* ProgramsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014000000000000001 /* ProgramsListView.swift */; };
+		A100001A000000000000001 /* ProgramHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001B000000000000001 /* ProgramHistoryView.swift */; };
+		A100001C000000000000001 /* MaxTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001D000000000000001 /* MaxTrackerView.swift */; };
+	AE21093330C4A4CB78D997A43 /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A840511B3FBC9417FB614152E /* PeopleView.swift */; };
+	A48388D8DA5E14ED2B59A7DF2 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5EA4C5A0A86646388787BA80 /* ProfileView.swift */; };
+		A1000015000000000000001 /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016000000000000001 /* ProgramDetailView.swift */; };
+		A1000017000000000000001 /* DayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000000000000001 /* DayDetailView.swift */; };
+		A1000019000000000000001 /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020000000000000001 /* ActiveWorkoutView.swift */; };
+		A1000021000000000000001 /* IntervalTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022000000000000001 /* IntervalTimerView.swift */; };
+		A1000023000000000000001 /* ProgramEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000024000000000000001 /* ProgramEditorView.swift */; };
+		A1000025000000000000001 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000026000000000000001 /* DiscoverView.swift */; };
+	A96AFA196D7354FD6B57211CD /* AdminCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9BB8C09EE259435EB4248B19 /* AdminCatalogView.swift */; };
+	A318DADA2A326425898C28376 /* AdminUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1EA965D46D18438EAE6C41B7 /* AdminUsersView.swift */; };
+	AE2CF9C0252E84AE79A502043 /* LegalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A555E3E82B39A4AA4954CFA97 /* LegalView.swift */; };
+	ADE40B862ABEA4E338EF07E7A /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF6A5546720D4495283284362 /* ForgotPasswordView.swift */; };
+	A4D38EED434DC43BDA0E79E58 /* ResetPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46C83879BB5A48CCA8100786 /* ResetPasswordView.swift */; };
+	A7265277398E64BEDBF42E216 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABFA8FBBCAE594969A10E8772 /* AuthView.swift */; };
+	AF97FE62C2CBE4BFCAEFB5832 /* NutritionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEBFAE08FA88949BC8FF0642C /* NutritionView.swift */; };
+	ACB08136889C44EA984228B4D /* WorkoutHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2513F6C3B9804548B180F705 /* WorkoutHistoryView.swift */; };
+	A13C26176E27B46FC997A8B23 /* BodyWeightHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAC5B7100C0F9491F806729B8 /* BodyWeightHistoryView.swift */; };
+		A1000027000000000000001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000028000000000000001 /* SettingsView.swift */; };
+		A1000050000000000000001 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000051000000000000001 /* MainTabView.swift */; };
+		A1000052000000000000001 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000053000000000000001 /* Theme.swift */; };
+		A1000054000000000000001 /* Oswald-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1000055000000000000001 /* Oswald-SemiBold.ttf */; };
+		A1000056000000000000001 /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A1000057000000000000001 /* Inter-Regular.ttf */; };
+		A1000060000000000000001 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000061000000000000001 /* Utils.swift */; };
+		A1000062000000000000001 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000063000000000000001 /* AppStore.swift */; };
+		A1000064000000000000001 /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000065000000000000001 /* ProgressRing.swift */; };
+		A1000068000000000000001 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000069000000000000001 /* DashboardView.swift */; };
+		D8422CA84EF749048E858C14 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2185960578F74191852A44AB /* Inter-Medium.ttf */; };
+		A25B1744F1054B798AF3AA53 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 4D12712BA974447E96AC12E8 /* Inter-SemiBold.ttf */; };
+		0C6A45BFF9E1442D985A7582 /* Inter-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 504AB5DB0C7049D582110FBE /* Inter-Bold.ttf */; };
+		5DC4406F726143859B5235D9 /* Oswald-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3081C69052BA48B1B292B9C1 /* Oswald-Medium.ttf */; };
+		0DB83A548EBB4D319D4D94BE /* Oswald-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = ADEBFE661A8A4F62A40342D1 /* Oswald-Bold.ttf */; };
+		7BB9E71E464641AFA0A9C8C7 /* ScreenShell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 547ABEBF5AD240E68921FFE5 /* ScreenShell.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A1000029000000000000001 /* NextRepiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NextRepiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000002000000000000001 /* NextRepiOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/NextRepiOSApp.swift; sourceTree = SOURCE_ROOT; };
+		A1000004000000000000001 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Models/Models.swift; sourceTree = SOURCE_ROOT; };
+		A1000006000000000000001 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/KeychainStore.swift; sourceTree = SOURCE_ROOT; };
+		A1000008000000000000001 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/APIClient.swift; sourceTree = SOURCE_ROOT; };
+		A1000010000000000000001 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/AudioManager.swift; sourceTree = SOURCE_ROOT; };
+		A1000012000000000000001 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/AuthFlowView.swift; sourceTree = SOURCE_ROOT; };
+		A1000014000000000000001 /* ProgramsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ProgramsListView.swift; sourceTree = SOURCE_ROOT; };
+		A100001B000000000000001 /* ProgramHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ProgramHistoryView.swift; sourceTree = SOURCE_ROOT; };
+		A100001D000000000000001 /* MaxTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/MaxTrackerView.swift; sourceTree = SOURCE_ROOT; };
+	A840511B3FBC9417FB614152E /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/PeopleView.swift; sourceTree = SOURCE_ROOT; };
+	A5EA4C5A0A86646388787BA80 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ProfileView.swift; sourceTree = SOURCE_ROOT; };
+		A1000016000000000000001 /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ProgramDetailView.swift; sourceTree = SOURCE_ROOT; };
+		A1000018000000000000001 /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/DayDetailView.swift; sourceTree = SOURCE_ROOT; };
+		A1000020000000000000001 /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ActiveWorkoutView.swift; sourceTree = SOURCE_ROOT; };
+		A1000022000000000000001 /* IntervalTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/IntervalTimerView.swift; sourceTree = SOURCE_ROOT; };
+		A1000024000000000000001 /* ProgramEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ProgramEditorView.swift; sourceTree = SOURCE_ROOT; };
+		A1000026000000000000001 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/DiscoverView.swift; sourceTree = SOURCE_ROOT; };
+	A9BB8C09EE259435EB4248B19 /* AdminCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/AdminCatalogView.swift; sourceTree = SOURCE_ROOT; };
+	A1EA965D46D18438EAE6C41B7 /* AdminUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/AdminUsersView.swift; sourceTree = SOURCE_ROOT; };
+	A555E3E82B39A4AA4954CFA97 /* LegalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/LegalView.swift; sourceTree = SOURCE_ROOT; };
+	AF6A5546720D4495283284362 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ForgotPasswordView.swift; sourceTree = SOURCE_ROOT; };
+	A46C83879BB5A48CCA8100786 /* ResetPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/ResetPasswordView.swift; sourceTree = SOURCE_ROOT; };
+	ABFA8FBBCAE594969A10E8772 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/AuthView.swift; sourceTree = SOURCE_ROOT; };
+	AEBFAE08FA88949BC8FF0642C /* NutritionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/NutritionView.swift; sourceTree = SOURCE_ROOT; };
+	A2513F6C3B9804548B180F705 /* WorkoutHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/WorkoutHistoryView.swift; sourceTree = SOURCE_ROOT; };
+	AAC5B7100C0F9491F806729B8 /* BodyWeightHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/BodyWeightHistoryView.swift; sourceTree = SOURCE_ROOT; };
+		A1000028000000000000001 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		A1000051000000000000001 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/MainTabView.swift; sourceTree = SOURCE_ROOT; };
+		A1000053000000000000001 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Theme.swift; sourceTree = SOURCE_ROOT; };
+		A1000055000000000000001 /* Oswald-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Oswald-SemiBold.ttf; sourceTree = SOURCE_ROOT; };
+		A1000057000000000000001 /* Inter-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Inter-Regular.ttf; sourceTree = SOURCE_ROOT; };
+		A1000061000000000000001 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Utils.swift; sourceTree = SOURCE_ROOT; };
+		A1000063000000000000001 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Store/AppStore.swift; sourceTree = SOURCE_ROOT; };
+		A1000065000000000000001 /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/Components/ProgressRing.swift; sourceTree = SOURCE_ROOT; };
+		A1000069000000000000001 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/DashboardView.swift; sourceTree = SOURCE_ROOT; };
+		A1000030000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = NextRepiOS/Info.plist; sourceTree = SOURCE_ROOT; };
+		A1000031000000000000001 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/WatchConnectivityManager.swift; sourceTree = SOURCE_ROOT; };
+		A1000032000000000000001 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/RestTimerLiveActivity.swift; sourceTree = SOURCE_ROOT; };
+		A1000033000000000000001 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Services/HealthKitManager.swift; sourceTree = SOURCE_ROOT; };
+		2185960578F74191852A44AB /* Inter-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Inter-Medium.ttf; sourceTree = SOURCE_ROOT; };
+		4D12712BA974447E96AC12E8 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Inter-SemiBold.ttf; sourceTree = SOURCE_ROOT; };
+		504AB5DB0C7049D582110FBE /* Inter-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Inter-Bold.ttf; sourceTree = SOURCE_ROOT; };
+		3081C69052BA48B1B292B9C1 /* Oswald-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Oswald-Medium.ttf; sourceTree = SOURCE_ROOT; };
+		ADEBFE661A8A4F62A40342D1 /* Oswald-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = NextRepiOS/Fonts/Oswald-Bold.ttf; sourceTree = SOURCE_ROOT; };
+		547ABEBF5AD240E68921FFE5 /* ScreenShell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepiOS/Views/Components/ScreenShell.swift; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A1000031000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A1000032000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A1000033000000000000001 /* NextRepiOS */,
+				A1000034000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A1000033000000000000001 /* NextRepiOS */ = {
+			isa = PBXGroup;
+			children = (
+				A1000002000000000000001 /* NextRepiOSApp.swift */,
+				A1000053000000000000001 /* Theme.swift */,
+				A1000061000000000000001 /* Utils.swift */,
+				A1000058000000000000001 /* Fonts */,
+				A1000066000000000000001 /* Store */,
+				A1000035000000000000001 /* Models */,
+				A1000036000000000000001 /* Services */,
+				A1000037000000000000001 /* Views */,
+				A1000030000000000000001 /* Info.plist */,
+			);
+			path = NextRepiOS;
+			sourceTree = "<group>";
+		};
+		A1000034000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A1000029000000000000001 /* NextRepiOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000035000000000000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000004000000000000001 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000036000000000000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A1000006000000000000001 /* KeychainStore.swift */,
+				A1000008000000000000001 /* APIClient.swift */,
+				A1000010000000000000001 /* AudioManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A1000037000000000000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A1000067000000000000001 /* Components */,
+				A1000069000000000000001 /* DashboardView.swift */,
+				A1000012000000000000001 /* AuthFlowView.swift */,
+				A1000014000000000000001 /* ProgramsListView.swift */,
+				A100001B000000000000001 /* ProgramHistoryView.swift */,
+				A100001D000000000000001 /* MaxTrackerView.swift */,
+			A840511B3FBC9417FB614152E /* PeopleView.swift */,
+			A5EA4C5A0A86646388787BA80 /* ProfileView.swift */,
+				A1000016000000000000001 /* ProgramDetailView.swift */,
+				A1000018000000000000001 /* DayDetailView.swift */,
+				A1000020000000000000001 /* ActiveWorkoutView.swift */,
+				A1000022000000000000001 /* IntervalTimerView.swift */,
+				A1000024000000000000001 /* ProgramEditorView.swift */,
+				A1000026000000000000001 /* DiscoverView.swift */,
+			A9BB8C09EE259435EB4248B19 /* AdminCatalogView.swift */,
+			A1EA965D46D18438EAE6C41B7 /* AdminUsersView.swift */,
+			A555E3E82B39A4AA4954CFA97 /* LegalView.swift */,
+			AF6A5546720D4495283284362 /* ForgotPasswordView.swift */,
+			A46C83879BB5A48CCA8100786 /* ResetPasswordView.swift */,
+			ABFA8FBBCAE594969A10E8772 /* AuthView.swift */,
+			AEBFAE08FA88949BC8FF0642C /* NutritionView.swift */,
+			A2513F6C3B9804548B180F705 /* WorkoutHistoryView.swift */,
+			AAC5B7100C0F9491F806729B8 /* BodyWeightHistoryView.swift */,
+				A1000028000000000000001 /* SettingsView.swift */,
+				A1000051000000000000001 /* MainTabView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A1000067000000000000001 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1000065000000000000001 /* ProgressRing.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A1000058000000000000001 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				A1000055000000000000001 /* Oswald-SemiBold.ttf */,
+				A1000057000000000000001 /* Inter-Regular.ttf */,				547ABEBF5AD240E68921FFE5 /* ScreenShell.swift */,
+
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
+		A1000066000000000000001 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				A1000063000000000000001 /* AppStore.swift */,
+			);
+			path = Store;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A1000038000000000000001 /* NextRepiOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A1000039000000000000001 /* Build configuration list for PBXNativeTarget "NextRepiOS" */;
+			buildPhases = (
+				A1000040000000000000001 /* Sources */,
+				A1000031000000000000001 /* Frameworks */,
+				A1000041000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NextRepiOS;
+			productName = NextRepiOS;
+			productReference = A1000029000000000000001 /* NextRepiOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A1000042000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					A1000038000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A1000043000000000000001 /* Build configuration list for PBXProject "NextRepiOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A1000032000000000000001;
+			productRefGroup = A1000034000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A1000038000000000000001 /* NextRepiOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A1000041000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D8422CA84EF749048E858C14 /* Inter-Medium.ttf in Resources */,
+				A25B1744F1054B798AF3AA53 /* Inter-SemiBold.ttf in Resources */,
+				0C6A45BFF9E1442D985A7582 /* Inter-Bold.ttf in Resources */,
+				5DC4406F726143859B5235D9 /* Oswald-Medium.ttf in Resources */,
+				A1000054000000000000001 /* Oswald-SemiBold.ttf in Resources */,
+				0DB83A548EBB4D319D4D94BE /* Oswald-Bold.ttf in Resources */,
+				A1000056000000000000001 /* Inter-Regular.ttf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A1000040000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001000000000000001 /* NextRepiOSApp.swift in Sources */,
+				A1000052000000000000001 /* Theme.swift in Sources */,
+				A1000060000000000000001 /* Utils.swift in Sources */,
+				A1000062000000000000001 /* AppStore.swift in Sources */,
+				A1000064000000000000001 /* ProgressRing.swift in Sources */,
+				A1000068000000000000001 /* DashboardView.swift in Sources */,
+				A1000003000000000000001 /* Models.swift in Sources */,
+				A1000005000000000000001 /* KeychainStore.swift in Sources */,
+				A1000007000000000000001 /* APIClient.swift in Sources */,
+				A1000009000000000000001 /* AudioManager.swift in Sources */,
+				A1000011000000000000001 /* AuthFlowView.swift in Sources */,
+				A1000013000000000000001 /* ProgramsListView.swift in Sources */,
+				A100001A000000000000001 /* ProgramHistoryView.swift in Sources */,
+				A100001C000000000000001 /* MaxTrackerView.swift in Sources */,
+			AE21093330C4A4CB78D997A43 /* PeopleView.swift in Sources */,
+			A48388D8DA5E14ED2B59A7DF2 /* ProfileView.swift in Sources */,
+				A1000015000000000000001 /* ProgramDetailView.swift in Sources */,
+				A1000017000000000000001 /* DayDetailView.swift in Sources */,
+				A1000019000000000000001 /* ActiveWorkoutView.swift in Sources */,
+				A1000021000000000000001 /* IntervalTimerView.swift in Sources */,
+				A1000023000000000000001 /* ProgramEditorView.swift in Sources */,
+				A1000025000000000000001 /* DiscoverView.swift in Sources */,
+			A96AFA196D7354FD6B57211CD /* AdminCatalogView.swift in Sources */,
+			A318DADA2A326425898C28376 /* AdminUsersView.swift in Sources */,
+			AE2CF9C0252E84AE79A502043 /* LegalView.swift in Sources */,
+			ADE40B862ABEA4E338EF07E7A /* ForgotPasswordView.swift in Sources */,
+			A4D38EED434DC43BDA0E79E58 /* ResetPasswordView.swift in Sources */,
+			A7265277398E64BEDBF42E216 /* AuthView.swift in Sources */,
+			AF97FE62C2CBE4BFCAEFB5832 /* NutritionView.swift in Sources */,
+			ACB08136889C44EA984228B4D /* WorkoutHistoryView.swift in Sources */,
+			A13C26176E27B46FC997A8B23 /* BodyWeightHistoryView.swift in Sources */,
+				A1000027000000000000001 /* SettingsView.swift in Sources */,
+				A1000050000000000000001 /* MainTabView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A1000044000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A1000045000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A1000046000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NextRepiOS/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nextrep.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A1000047000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NextRepiOS/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nextrep.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A1000039000000000000001 /* Build configuration list for PBXNativeTarget "NextRepiOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000046000000000000001 /* Debug */,
+				A1000047000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A1000043000000000000001 /* Build configuration list for PBXProject "NextRepiOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A1000044000000000000001 /* Debug */,
+				A1000045000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A1000042000000000000001 /* Project object */;
+}

@@ -1,0 +1,208 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/ActiveWorkoutView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Exercise %lld of %lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 188
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld sets × %@ reps",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add a cue...",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "Set",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 280
+        }
+      },
+      {
+        "comment": "",
+        "key": "Weight (%@)",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reps",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 289
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 293
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ %lld · no rest between",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 331
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld rounds",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 338
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 348
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add a cue...",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 411
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 470
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 481
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 499
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 557
+        }
+      },
+      {
+        "comment": "",
+        "key": "0",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 576
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finish Workout",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 661
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rest",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 679
+        }
+      },
+      {
+        "comment": "",
+        "key": "+15s",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 697
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 709
+        }
+      },
+      {
+        "comment": "",
+        "key": "Workout Complete",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 938
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 961
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 1069
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 1057
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 1073
+        }
+      }
+    ]
+  },
+  "version": 1
+}

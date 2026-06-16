@@ -1,0 +1,12 @@
+{
+  "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/NextRepiOSApp.swift" : {
+    "abi-baseline-json" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS.abi.json",
+    "const-values" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS-primary.swiftconstvalues",
+    "dependencies" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS-primary.d",
+    "diagnostics" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS-primary.dia",
+    "objc-header" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS-Swift.h",
+    "swiftdoc" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS.swiftdoc",
+    "swiftmodule" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS.swiftmodule",
+    "swiftsourceinfo" : "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/build/NextRepiOS.build/Release-iphonesimulator/NextRepiOS.build/Objects-normal/arm64/NextRepiOS.swiftsourceinfo"
+  }
+}

@@ -1,0 +1,368 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/ProgramEditorView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Edit Program",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 221
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program Details",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Workout Days",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 189
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program Name",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Coach",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 152
+        }
+      },
+      {
+        "comment": "",
+        "key": "Category",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Level",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 169
+        }
+      },
+      {
+        "comment": "",
+        "key": "Duration: %lld weeks",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 178
+        }
+      },
+      {
+        "comment": "",
+        "key": "Days per week: %lld",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 183
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bodybuilding",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Strength",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "HIIT",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 163
+        }
+      },
+      {
+        "comment": "",
+        "key": "Powerlifting",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "Functional",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 165
+        }
+      },
+      {
+        "comment": "",
+        "key": "Bodyweight",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Beginner",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "Intermediate",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Advanced",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 175
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld exercises",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 200
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Day",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 217
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 225
+        }
+      },
+      {
+        "comment": "",
+        "key": "Save",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 231
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Day",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day Details",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 251
+        }
+      },
+      {
+        "comment": "",
+        "key": "Exercises",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 263
+        }
+      },
+      {
+        "comment": "",
+        "key": "Day Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 252
+        }
+      },
+      {
+        "comment": "",
+        "key": "Focus",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 257
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld sets",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 276
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 277
+        }
+      },
+      {
+        "comment": "",
+        "key": "•",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "%llds rest",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 280
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Exercise",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 300
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 308
+        }
+      },
+      {
+        "comment": "",
+        "key": "Edit Exercise",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 368
+        }
+      },
+      {
+        "comment": "",
+        "key": "Exercise Details",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 326
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 348
+        }
+      },
+      {
+        "comment": "",
+        "key": "Superset",
+        "location": {
+          "startingColumn": 21,
+          "startingLine": 356
+        }
+      },
+      {
+        "comment": "",
+        "key": "Exercise Name",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 327
+        }
+      },
+      {
+        "comment": "",
+        "key": "Sets: %lld",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 332
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reps",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 337
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rest: %llds",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "Notes",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 349
+        }
+      },
+      {
+        "comment": "",
+        "key": "Link with another exercise to create a superset",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 362
+        }
+      },
+      {
+        "comment": "",
+        "key": "Remove from Superset",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 358
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 372
+        }
+      }
+    ]
+  },
+  "version": 1
+}

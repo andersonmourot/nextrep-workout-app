@@ -1,0 +1,24 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Theme.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "NextRep",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 220
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume workout",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 314
+        }
+      }
+    ]
+  },
+  "version": 1
+}

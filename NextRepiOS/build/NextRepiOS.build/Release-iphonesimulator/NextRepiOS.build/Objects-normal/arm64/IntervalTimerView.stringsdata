@@ -1,0 +1,240 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/IntervalTimerView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 253
+        }
+      },
+      {
+        "comment": "",
+        "key": "Settings",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 260
+        }
+      },
+      {
+        "comment": "",
+        "key": "WORK",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "REST",
+        "location": {
+          "startingColumn": 61,
+          "startingLine": 285
+        }
+      },
+      {
+        "comment": "",
+        "key": "Round %lld of %lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 302
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pause",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 322
+        }
+      },
+      {
+        "comment": "",
+        "key": "Reset",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 334
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rounds: %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 354
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timer Complete!",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 373
+        }
+      },
+      {
+        "comment": "",
+        "key": "Great job! You completed %lld rounds",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 377
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start New Timer",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 382
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timer Settings",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 471
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timer Type",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 424
+        }
+      },
+      {
+        "comment": "",
+        "key": "Work Settings",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 437
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rest Settings",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 445
+        }
+      },
+      {
+        "comment": "",
+        "key": "AMRAP Duration",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 454
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rounds",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 462
+        }
+      },
+      {
+        "comment": "",
+        "key": "Type",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 425
+        }
+      },
+      {
+        "comment": "",
+        "key": "Work Duration",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 439
+        }
+      },
+      {
+        "comment": "",
+        "key": "%llds",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 441
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rest Duration",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 447
+        }
+      },
+      {
+        "comment": "",
+        "key": "%llds",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 449
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total Duration",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 456
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld min",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 458
+        }
+      },
+      {
+        "comment": "",
+        "key": "Total Rounds",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 464
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 466
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 475
+        }
+      }
+    ]
+  },
+  "version": 1
+}

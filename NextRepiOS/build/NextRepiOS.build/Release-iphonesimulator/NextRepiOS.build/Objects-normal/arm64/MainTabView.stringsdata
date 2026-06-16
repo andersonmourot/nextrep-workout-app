@@ -1,0 +1,24 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/MainTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TIMER",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Rest timer and workout timer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 72
+        }
+      }
+    ]
+  },
+  "version": 1
+}

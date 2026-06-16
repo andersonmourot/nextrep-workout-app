@@ -1,0 +1,168 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepiOS/NextRepiOS/Views/DashboardView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Workout Screen",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 42
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program Detail Screen",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Today · %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "Week %lld · Day %lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 107
+        }
+      },
+      {
+        "comment": "",
+        "key": "+%lld more",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 129
+        }
+      },
+      {
+        "comment": "",
+        "key": "Resume Workout",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Workout",
+        "location": {
+          "startingColumn": 64,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Program complete",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 161
+        }
+      },
+      {
+        "comment": "",
+        "key": "Congratulations! You've completed all %lld weeks of %@.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 164
+        }
+      },
+      {
+        "comment": "",
+        "key": "View Program",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "No active program",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 182
+        }
+      },
+      {
+        "comment": "",
+        "key": "Select a program to start tracking your workouts and see your progress.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Browse Programs",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 192
+        }
+      },
+      {
+        "comment": "",
+        "key": "of %lld/wk",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 260
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 255
+        }
+      },
+      {
+        "comment": "",
+        "key": "Recent Activity",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 274
+        }
+      },
+      {
+        "comment": "",
+        "key": "View all",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 279
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your completed workouts will show up here.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 304
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ · %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 323
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld %@",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 335
+        }
+      }
+    ]
+  },
+  "version": 1
+}

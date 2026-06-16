@@ -62,9 +62,7 @@ struct ProgramsListView: View {
     private var headerSection: some View {
         HStack {
             Text("Programs")
-                .font(Theme.display(28))
-                .foregroundColor(Theme.text)
-                .tracking(1)
+                .screenTitle()
             
             Spacer()
             
@@ -100,13 +98,10 @@ struct ProgramsListView: View {
                 .foregroundColor(Theme.textDim)
             
             TextField("Search", text: $searchText)
-                .font(Theme.body(14))
                 .foregroundColor(Theme.text)
                 .autocorrectionDisabled()
         }
-        .padding(12)
-        .background(Theme.inputBg)
-        .cornerRadius(12)
+        .appField()
     }
     
     // MARK: - Category Chips
@@ -119,9 +114,8 @@ struct ProgramsListView: View {
                         selectedCategory = category
                     }) {
                         Text(category)
-                            .font(Theme.body(11))
-                            .fontWeight(.medium)
-                            .foregroundColor(selectedCategory == category ? .white : Theme.textDim)
+                            .font(Theme.body(11, .medium))
+                            .foregroundColor(selectedCategory == category ? .white : Theme.text.opacity(0.84))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
                             .background(selectedCategory == category ? Theme.accent : Theme.surface2)
@@ -167,9 +161,7 @@ struct ProgramsListView: View {
                 .foregroundColor(Theme.textDim)
         }
         .frame(maxWidth: .infinity)
-        .padding(40)
-        .background(Theme.surface)
-        .cornerRadius(16)
+        .cardStyle()
     }
     
     private func programCard(_ program: Program) -> some View {
@@ -185,9 +177,7 @@ struct ProgramsListView: View {
                 // Top row with eyebrow and badges
                 HStack {
                     Text("\(program.category) · \(program.level)")
-                        .font(Theme.body(11))
-                        .foregroundColor(accentColor.opacity(0.8))
-                        .tracking(2)
+                        .eyebrow()
                     
                     Spacer()
                     
@@ -214,9 +204,7 @@ struct ProgramsListView: View {
                 
                 // Title
                 Text(program.name)
-                    .font(Theme.display(20))
-                    .foregroundColor(Theme.text)
-                    .tracking(1)
+                    .sectionTitle()
                 
                 // Summary
                 if let summary = program.summary {
@@ -247,23 +235,8 @@ struct ProgramsListView: View {
                         .foregroundColor(Theme.textDim)
                 }
             }
-            .padding(16)
-            .background(
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        accentColor.opacity(0.15),
-                        Theme.surface
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.white.opacity(0.05), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 8)
+            .cardStyle()
+            .programCardGradient()
         }
         .buttonStyle(PlainButtonStyle())
     }

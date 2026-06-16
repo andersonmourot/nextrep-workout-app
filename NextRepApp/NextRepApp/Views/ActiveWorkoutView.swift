@@ -280,6 +280,7 @@ class ActiveWorkoutStore: ObservableObject {
     func startWorkout(program: Program, day: Day, dayIndex: Int, week: Int? = nil) {
         print("🏋️ startWorkout called - program: \(program.name), day: \(day.name ?? "Unknown"), dayIndex: \(dayIndex)")
         
+        // Set all properties first, then trigger the UI change
         self.programId = program.id
         self.dayId = day.id
         self.week = week
@@ -297,7 +298,7 @@ class ActiveWorkoutStore: ObservableObject {
         
         print("🏋️ Workout initialized with \(day.exercises.count) exercises and \(self.sets.flatMap { $0 }.count) total sets")
         
-        // Show the workout screen
+        // Show the workout screen last
         self.showActiveWorkout = true
     }
     

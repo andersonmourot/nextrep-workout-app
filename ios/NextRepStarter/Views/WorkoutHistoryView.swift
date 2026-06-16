@@ -3,12 +3,14 @@ import SwiftUI
 
 struct WorkoutHistoryView: View {
     @Environment(AppStore.self) private var store
+    @State private var weightText = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 profileStats
+                bodyWeightSection
 
                 if sortedLogs.isEmpty {
                     emptyState
@@ -81,6 +83,91 @@ struct WorkoutHistoryView: View {
         computeProfileStreak(logs: store.appData.logs)
     }
 
+    private var bodyWeightSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Body Weight")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                if let latest = sortedBodyWeight.last {
+                    Text("\(formatWeight(latest.weight)) \(store.appData.unit)")
+                        .font(.caption.monospacedDigit().weight(.bold))
+                        .foregroundStyle(Theme.accentLight)
+                }
+            }
+
+            if sortedBodyWeight.count >= 2 {
+                BodyWeightTrend(entries: sortedBodyWeight)
+                    .frame(height: 90)
+                    .padding(12)
+                    .background(Theme.inputBg.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            HStack(spacing: 10) {
+                TextField("Today's weight", text: $weightText)
+                    .keyboardType(.decimalPad)
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.inputBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Button("Log") {
+                    if let weight = Double(weightText.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                        store.addBodyWeight(weight)
+                        weightText = ""
+                    }
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            if sortedBodyWeight.isEmpty {
+                Text("Log body weight to see your trend here.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            } else {
+                ForEach(sortedBodyWeight.suffix(3).reversed()) { entry in
+                    HStack {
+                        Text(formatBodyWeightDate(entry.date))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textDim)
+
+                        Spacer()
+
+                        Text("\(formatWeight(entry.weight)) \(store.appData.unit)")
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(Theme.text)
+
+                        Button {
+                            store.deleteBodyWeight(id: entry.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .padding(10)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    private var sortedBodyWeight: [BodyWeightEntry] {
+        store.appData.bodyWeight.sorted { $0.date < $1.date }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Workout History")
@@ -141,6 +228,51 @@ private struct ProfileStatTile: View {
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(.white.opacity(0.05), lineWidth: 1)
+        }
+    }
+}
+
+private struct BodyWeightTrend: View {
+    let entries: [BodyWeightEntry]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let points = trendPoints(size: proxy.size)
+
+            ZStack(alignment: .bottomLeading) {
+                Path { path in
+                    guard let first = points.first else {
+                        return
+                    }
+                    path.move(to: first)
+                    for point in points.dropFirst() {
+                        path.addLine(to: point)
+                    }
+                }
+                .stroke(Theme.accentLight, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+
+                ForEach(Array(points.enumerated()), id: \.offset) { _, point in
+                    Circle()
+                        .fill(Theme.accentLight)
+                        .frame(width: 7, height: 7)
+                        .position(point)
+                }
+            }
+        }
+    }
+
+    private func trendPoints(size: CGSize) -> [CGPoint] {
+        let weights = entries.map(\.weight)
+        guard let minWeight = weights.min(), let maxWeight = weights.max(), entries.count > 1 else {
+            return []
+        }
+
+        let range = max(1, maxWeight - minWeight)
+        return entries.enumerated().map { index, entry in
+            let x = size.width * CGFloat(index) / CGFloat(max(1, entries.count - 1))
+            let normalized = (entry.weight - minWeight) / range
+            let y = size.height - (size.height * CGFloat(normalized))
+            return CGPoint(x: x, y: y)
         }
     }
 }
@@ -405,6 +537,14 @@ private func formatWeight(_ weight: Double) -> String {
     return String(format: "%.1f", weight)
 }
 
+private func formatBodyWeightDate(_ value: String) -> String {
+    if let date = BodyWeightDateFormatter.input.date(from: value) {
+        return BodyWeightDateFormatter.output.string(from: date)
+    }
+
+    return value
+}
+
 private enum DisplayDateFormatter {
     static let shared: DateFormatter = {
         let formatter = DateFormatter()
@@ -419,6 +559,22 @@ private enum DayKeyFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+}
+
+private enum BodyWeightDateFormatter {
+    static let input: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    static let output: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
         return formatter
     }()
 }

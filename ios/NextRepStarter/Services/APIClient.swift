@@ -29,6 +29,14 @@ struct DataPutRequest: Encodable {
     var data: AppData
 }
 
+struct ProgramPutRequest: Encodable {
+    var program: Program
+}
+
+struct ExercisePutRequest: Encodable {
+    var exercise: Exercise
+}
+
 private struct EmptyRequest: Encodable {}
 
 final class APIClient {
@@ -124,6 +132,26 @@ final class APIClient {
             "/api/exercises/\(exerciseId)/add",
             method: "POST",
             token: token
+        )
+        return response.exercise
+    }
+
+    func upsertProgram(token: String, program: Program) async throws -> Program {
+        let response: ProgramResponse = try await request(
+            "/api/programs/\(program.id)",
+            method: "PUT",
+            token: token,
+            body: ProgramPutRequest(program: program)
+        )
+        return response.program
+    }
+
+    func upsertExercise(token: String, exercise: Exercise) async throws -> Exercise {
+        let response: ExerciseResponse = try await request(
+            "/api/exercises/\(exercise.id)",
+            method: "PUT",
+            token: token,
+            body: ExercisePutRequest(exercise: exercise)
         )
         return response.exercise
     }

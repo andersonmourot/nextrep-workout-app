@@ -66,6 +66,14 @@ final class AppStore {
             }
     }
 
+    func isCustomProgram(_ program: Program) -> Bool {
+        appData.customPrograms.contains(where: { $0.id == program.id })
+    }
+
+    func isCustomExercise(_ exercise: Exercise) -> Bool {
+        appData.customExercises.contains(where: { $0.id == exercise.id })
+    }
+
     func restoreSession() async {
         guard !hasAttemptedRestore else { return }
         hasAttemptedRestore = true
@@ -222,6 +230,74 @@ final class AppStore {
         do {
             let exercise = try await apiClient.addExercise(token: token, exerciseId: id)
             upsertCustomExercise(exercise)
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func saveCustomProgram(_ program: Program) {
+        upsertCustomProgram(program)
+        scheduleSync()
+    }
+
+    func deleteCustomProgram(id: String) {
+        appData.customPrograms.removeAll { $0.id == id }
+        if appData.activeProgramId == id {
+            appData.activeProgramId = nil
+        }
+        scheduleSync()
+    }
+
+    func addBodyWeight(_ weight: Double) {
+        let entry = BodyWeightEntry(
+            id: UUID().uuidString,
+            date: Self.dateOnlyFormatter.string(from: Date()),
+            weight: weight,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        appData.bodyWeight.removeAll { $0.date == entry.date }
+        appData.bodyWeight.append(entry)
+        appData.bodyWeight.sort { $0.date < $1.date }
+        scheduleSync()
+    }
+
+    func deleteBodyWeight(id: String) {
+        appData.bodyWeight.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
+    func shareProgram(_ program: Program) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            var publish = program
+            publish.ownerName = user?.name ?? appData.name
+            publish.version = Int(Date().timeIntervalSince1970 * 1000)
+            let shared = try await apiClient.upsertProgram(token: token, program: publish)
+            upsertCustomProgram(shared)
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func shareExercise(_ exercise: Exercise) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            var publish = exercise
+            publish.ownerName = user?.name ?? appData.name
+            publish.shared = true
+            publish.version = Int(Date().timeIntervalSince1970 * 1000)
+            let shared = try await apiClient.upsertExercise(token: token, exercise: publish)
+            upsertCustomExercise(shared)
             scheduleSync()
         } catch {
             authError = error.localizedDescription
@@ -489,4 +565,11 @@ final class AppStore {
         let digits = reps.prefix { $0.isNumber }
         return Int(digits) ?? 10
     }
+
+    private static let dateOnlyFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }

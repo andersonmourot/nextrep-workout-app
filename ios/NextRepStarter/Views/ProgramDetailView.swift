@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProgramDetailView: View {
     @Environment(AppStore.self) private var store
+    @State private var shareMessage: String?
     let program: Program
 
     var body: some View {
@@ -39,7 +40,47 @@ struct ProgramDetailView: View {
         }
         .navigationTitle(program.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if store.isCustomProgram(program) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 13) {
+                        NavigationLink {
+                            ProgramEditorView(program: program)
+                        } label: {
+                            Image(systemName: "pencil")
+                        }
+
+                        Button {
+                            Task {
+                                await store.shareProgram(program)
+                                shareMessage = "Program shared"
+                            }
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                    .tint(Theme.accentLight)
+                }
+            }
+        }
         .screenBackground()
+        .overlay(alignment: .bottom) {
+            if let shareMessage {
+                Text(shareMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.accent)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 18)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                            self.shareMessage = nil
+                        }
+                    }
+            }
+        }
     }
 
     private var heroCard: some View {

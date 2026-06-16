@@ -32,7 +32,13 @@ struct ProgramsListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 14) {
+                HStack(spacing: 13) {
+                    NavigationLink {
+                        ProgramEditorView()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+
                     NavigationLink {
                         ExerciseLibraryView()
                     } label: {

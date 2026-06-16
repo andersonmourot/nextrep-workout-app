@@ -139,6 +139,8 @@ struct ExerciseLibraryView: View {
 }
 
 struct ExerciseDetailView: View {
+    @Environment(AppStore.self) private var store
+    @State private var shareMessage: String?
     let exercise: Exercise
 
     var body: some View {
@@ -154,7 +156,39 @@ struct ExerciseDetailView: View {
         }
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if store.isCustomExercise(exercise) {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task {
+                            await store.shareExercise(exercise)
+                            shareMessage = "Exercise shared"
+                        }
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .tint(Theme.accentLight)
+                }
+            }
+        }
         .screenBackground()
+        .overlay(alignment: .bottom) {
+            if let shareMessage {
+                Text(shareMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Theme.accent)
+                    .clipShape(Capsule())
+                    .padding(.bottom, 18)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                            self.shareMessage = nil
+                        }
+                    }
+            }
+        }
     }
 
     private var hero: some View {

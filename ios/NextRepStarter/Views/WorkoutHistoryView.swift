@@ -8,6 +8,7 @@ struct WorkoutHistoryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                profileStats
 
                 if sortedLogs.isEmpty {
                     emptyState
@@ -22,7 +23,82 @@ struct WorkoutHistoryView: View {
                             .buttonStyle(.plain)
                         }
                     }
+
+    private var profileStats: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+            ProfileStatTile(
+                icon: "dumbbell.fill",
+                value: "\(store.appData.logs.count)",
+                label: "Workouts"
+            )
+            ProfileStatTile(
+                icon: "chart.line.uptrend.xyaxis",
+                value: formatVolume(totalVolume),
+                label: "Volume \(store.appData.unit)"
+            )
+            ProfileStatTile(
+                icon: "checkmark.circle.fill",
+                value: "\(completedSetTotal)",
+                label: "Sets"
+            )
+            ProfileStatTile(
+                icon: "flame.fill",
+                value: "\(profileStreak)",
+                label: "Streak"
+            )
+        }
+    }
+
+    private var totalVolume: Double {
+        store.appData.logs.reduce(0) { total, log in
+            total + log.totalVolume
+        }
+    }
+
+    private var completedSetTotal: Int {
+        store.appData.logs.reduce(0) { total, log in
+            total + completedSetCount(log)
+        }
+    }
+
+    private var profileStreak: Int {
+        computeProfileStreak(logs: store.appData.logs)
+    }
                 }
+
+private struct ProfileStatTile: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(Theme.accentLight)
+
+            Text(value)
+                .font(.title3.monospacedDigit().weight(.bold))
+                .foregroundStyle(Theme.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.0)
+                .foregroundStyle(Theme.textFaint)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        }
+    }
+}
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -258,6 +334,35 @@ private func completedSetCount(_ log: WorkoutLog) -> Int {
     }
 }
 
+private func computeProfileStreak(logs: [WorkoutLog]) -> Int {
+    guard !logs.isEmpty else {
+        return 0
+    }
+
+    let days = Set(logs.compactMap { localDayKey($0.date) })
+    var cursor = Calendar.current.startOfDay(for: Date())
+
+    if !days.contains(dayKey(cursor)) {
+        cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor) ?? cursor
+    }
+
+    var streak = 0
+    while days.contains(dayKey(cursor)) {
+        streak += 1
+        cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor) ?? cursor
+    }
+
+    return streak
+}
+
+private func localDayKey(_ value: String) -> String? {
+    parseDate(value).map(dayKey)
+}
+
+private func dayKey(_ date: Date) -> String {
+    DayKeyFormatter.shared.string(from: date)
+}
+
 private func logDate(_ log: WorkoutLog) -> Date {
     parseDate(log.date) ?? .distantPast
 }
@@ -305,6 +410,15 @@ private enum DisplayDateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
+        return formatter
+    }()
+}
+
+private enum DayKeyFormatter {
+    static let shared: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
 }

@@ -33,7 +33,7 @@ struct AppShellView: View {
     var body: some View {
         TabView {
             NavigationStack {
-                PlaceholderView(title: "Home", systemImage: "house")
+                DashboardView()
             }
             .tabItem {
                 Label("Home", systemImage: "house")

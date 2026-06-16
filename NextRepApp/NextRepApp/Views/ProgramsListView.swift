@@ -2,19 +2,19 @@ import SwiftUI
 
 struct ProgramsListView: View {
     @Binding var isAuthenticated: Bool
-    @State private var appData: AppData?
+    @State private var catalog: Catalog?
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var searchText = ""
     
     var filteredPrograms: [Program] {
         if searchText.isEmpty {
-            return appData?.customPrograms ?? []
+            return catalog?.programs ?? []
         } else {
-            return appData?.customPrograms.filter { program in
+            return catalog?.programs.filter { program in
                 program.name.localizedCaseInsensitiveContains(searchText) ||
-                program.coach.localizedCaseInsensitiveContains(searchText) ||
-                program.category.localizedCaseInsensitiveContains(searchText)
+                (program.coach?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                (program.category?.localizedCaseInsensitiveContains(searchText) ?? false)
             } ?? []
         }
     }
@@ -42,7 +42,7 @@ struct ProgramsListView: View {
                         .buttonStyle(.bordered)
                     }
                     .padding()
-                } else if let programs = appData?.customPrograms, programs.isEmpty {
+                } else if let programs = catalog?.programs, programs.isEmpty {
                     VStack {
                         Image(systemName: "dumbbell")
                             .font(.system(size: 50))
@@ -83,9 +83,9 @@ struct ProgramsListView: View {
         
         Task {
             do {
-                let data = try await APIClient.shared.getAppData()
+                let catalogData = try await APIClient.shared.getCatalog()
                 await MainActor.run {
-                    self.appData = data
+                    self.catalog = catalogData
                     self.isLoading = false
                 }
             } catch {
@@ -116,34 +116,44 @@ struct ProgramRowView: View {
                 Text(program.name)
                     .font(.headline)
                 Spacer()
-                Text(program.level)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.green.opacity(0.2))
-                    .foregroundStyle(.green)
-                    .cornerRadius(8)
+                if let level = program.level {
+                    Text(level)
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.green.opacity(0.2))
+                        .foregroundStyle(.green)
+                        .cornerRadius(8)
+                }
             }
             
-            Text(program.coach)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            if let coach = program.coach {
+                Text(coach)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             
             HStack {
-                Label("\(program.durationWeeks) weeks", systemImage: "calendar")
+                if let durationWeeks = program.durationWeeks {
+                    Label("\(durationWeeks) weeks", systemImage: "calendar")
+                }
                 Spacer()
-                Label("\(program.daysPerWeek) days/week", systemImage: "figure.strengthtraining.traditional")
+                if let daysPerWeek = program.daysPerWeek {
+                    Label("\(daysPerWeek) days/week", systemImage: "figure.strengthtraining.traditional")
+                }
             }
             .font(.caption)
             .foregroundStyle(.secondary)
             
-            Text(program.category)
-                .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.2))
-                .foregroundStyle(.secondary)
-                .cornerRadius(8)
+            if let category = program.category {
+                Text(category)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.gray.opacity(0.2))
+                    .foregroundStyle(.secondary)
+                    .cornerRadius(8)
+            }
         }
         .padding(.vertical, 4)
     }

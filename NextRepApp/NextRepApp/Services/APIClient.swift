@@ -39,7 +39,29 @@ class APIClient {
         }
         
         let decoder = JSONDecoder()
-        return try decoder.decode(T.self, from: data)
+        
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch let DecodingError.keyNotFound(key, context) {
+            print("Decoding error: Key '\(key.stringValue)' not found at path: \(context.codingPath)")
+            print("Context: \(context.debugDescription)")
+            throw APIError.decodingError
+        } catch let DecodingError.typeMismatch(type, context) {
+            print("Decoding error: Type mismatch for type \(type) at path: \(context.codingPath)")
+            print("Context: \(context.debugDescription)")
+            throw APIError.decodingError
+        } catch let DecodingError.valueNotFound(type, context) {
+            print("Decoding error: Value not found for type \(type) at path: \(context.codingPath)")
+            print("Context: \(context.debugDescription)")
+            throw APIError.decodingError
+        } catch let DecodingError.dataCorrupted(context) {
+            print("Decoding error: Data corrupted at path: \(context.codingPath)")
+            print("Context: \(context.debugDescription)")
+            throw APIError.decodingError
+        } catch {
+            print("Decoding error: \(error)")
+            throw APIError.decodingError
+        }
     }
     
     private func performRequestWithoutResponse(_ request: URLRequest) async throws {
@@ -97,6 +119,14 @@ class APIClient {
     }
     
     // MARK: - Data Endpoints
+    
+    func getCatalog() async throws -> Catalog {
+        guard let request = createRequest(endpoint: "/api/catalog", method: "GET") else {
+            throw APIError.invalidURL
+        }
+        
+        return try await performRequest(request, responseType: Catalog.self)
+    }
     
     func getAppData() async throws -> AppData {
         guard let request = createRequest(endpoint: "/api/data", method: "GET") else {

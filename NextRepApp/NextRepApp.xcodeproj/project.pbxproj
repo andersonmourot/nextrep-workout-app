@@ -26,6 +26,7 @@
 		AA0044 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0045 /* Theme.swift */; };
 		AA0046 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0047 /* Utils.swift */; };
 		AA0048 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0049 /* AppStore.swift */; };
+		AA0053 /* Catalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0054 /* Catalog.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +51,7 @@
 		AA0045 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Theme.swift; sourceTree = SOURCE_ROOT; };
 		AA0047 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Utils.swift; sourceTree = SOURCE_ROOT; };
 		AA0049 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Store/AppStore.swift; sourceTree = SOURCE_ROOT; };
+		AA0054 /* Catalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Models/Catalog.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +109,7 @@
 				AA0028 /* AppData.swift */,
 				AA0030 /* User.swift */,
 				AA0032 /* LoginRequest.swift */,
+				AA0054 /* Catalog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -225,6 +228,7 @@
 				AA0044 /* Theme.swift in Sources */,
 				AA0046 /* Utils.swift in Sources */,
 				AA0048 /* AppStore.swift in Sources */,
+				AA0053 /* Catalog.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

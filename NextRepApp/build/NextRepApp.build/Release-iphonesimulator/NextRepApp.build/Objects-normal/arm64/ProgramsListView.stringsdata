@@ -70,16 +70,16 @@
         "comment": "",
         "key": "%lld weeks",
         "location": {
-          "startingColumn": 23,
-          "startingLine": 133
+          "startingColumn": 27,
+          "startingLine": 138
         }
       },
       {
         "comment": "",
         "key": "%lld days/week",
         "location": {
-          "startingColumn": 23,
-          "startingLine": 135
+          "startingColumn": 27,
+          "startingLine": 142
         }
       }
     ]

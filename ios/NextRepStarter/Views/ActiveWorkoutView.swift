@@ -5,6 +5,7 @@ struct ActiveWorkoutView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var showingFinishConfirm = false
+    @State private var finishedLog: WorkoutLog?
     let program: Program
     let day: ProgramDay
 
@@ -40,17 +41,24 @@ struct ActiveWorkoutView: View {
         .navigationTitle("Workout")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .navigationDestination(item: $finishedLog) { log in
+            WorkoutSummaryView(log: log, unit: store.appData.unit) {
+                finishedLog = nil
+                dismiss()
+            }
+        }
         .onAppear {
             store.startWorkout(program: program, day: day)
         }
         .alert("Finish Workout?", isPresented: $showingFinishConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Finish", role: .destructive) {
-                store.finishWorkout(program: program, day: day)
-                Task {
-                    await store.syncNow()
+                if let log = store.finishWorkout(program: program, day: day) {
+                    finishedLog = log
+                    Task {
+                        await store.syncNow()
+                    }
                 }
-                dismiss()
             }
         } message: {
             Text("This will save completed sets to workout history and clear the active session.")

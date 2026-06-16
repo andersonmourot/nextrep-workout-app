@@ -23,6 +23,8 @@ Observation, URLSession, and Keychain Services.
   navigation, and a first-pass Active Workout screen for set logging and rest
   timing, Finish Workout history persistence, and a Profile workout-history
   viewer with logged set details.
+- `WorkoutSummaryView.swift` shows the just-finished workout before returning to
+  the previous screen.
 
 ## Backend assumptions
 
@@ -46,7 +48,6 @@ by the web app. Keep that behavior as you add native features.
 3. Verify login against the production backend.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
-   - Finish-workout summary screen
    - Broader Profile stats and progress charts
    - Rest-complete sound/local notification behavior
    - Day detail and edit flows

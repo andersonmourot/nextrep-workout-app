@@ -1,10 +1,17 @@
 import SwiftUI
 import Foundation
 
+extension Notification.Name {
+    static let startWorkout = Notification.Name("startWorkout")
+}
+
 struct RootView: View {
     @State private var selectedTab: Tab = .home
     @StateObject private var authState = AuthState.shared
     @StateObject private var activeWorkoutStore = ActiveWorkoutStore.shared
+    @State private var showActiveWorkout = false
+    @State private var activeWorkoutProgram: Program?
+    @State private var activeWorkoutDay: Day?
     
     enum Tab: String, CaseIterable {
         case home = "Home"
@@ -147,11 +154,21 @@ struct RootView: View {
             }
             .preferredColorScheme(.dark)
             .environmentObject(activeWorkoutStore)
-            .fullScreenCover(isPresented: $activeWorkoutStore.showActiveWorkout) {
-                if let program = activeWorkoutStore.activeWorkoutProgram, let day = activeWorkoutStore.activeWorkoutDay {
+            .fullScreenCover(isPresented: $showActiveWorkout) {
+                if let program = activeWorkoutProgram, let day = activeWorkoutDay {
                     ActiveWorkoutView(program: program, day: day)
                 } else {
                     EmptyView()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .startWorkout)) { notification in
+                print("🏋️ RootView received startWorkout notification")
+                if let program = notification.userInfo?["program"] as? Program,
+                   let day = notification.userInfo?["day"] as? Day {
+                    print("🏋️ Extracted program: \(program.name), day: \(day.name ?? "Unknown")")
+                    activeWorkoutProgram = program
+                    activeWorkoutDay = day
+                    showActiveWorkout = true
                 }
             }
             .onAppear {

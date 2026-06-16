@@ -270,9 +270,6 @@ class ActiveWorkoutStore: ObservableObject {
     @Published var isResting = false
     @Published var restEndsAt: Double = 0
     @Published var restDuration: Int = 0
-    @Published var showActiveWorkout = false
-    @Published var activeWorkoutProgram: Program?
-    @Published var activeWorkoutDay: Day?
     private var timer: Timer?
     
     private init() {}
@@ -280,13 +277,10 @@ class ActiveWorkoutStore: ObservableObject {
     func startWorkout(program: Program, day: Day, dayIndex: Int, week: Int? = nil) {
         print("🏋️ startWorkout called - program: \(program.name), day: \(day.name ?? "Unknown"), dayIndex: \(dayIndex)")
         
-        // Set all properties first, then trigger the UI change
         self.programId = program.id
         self.dayId = day.id
         self.week = week
         self.startedAt = Date().timeIntervalSince1970
-        self.activeWorkoutProgram = program
-        self.activeWorkoutDay = day
         
         // Initialize sets for each exercise in the day
         self.sets = day.exercises.map { exercise in
@@ -298,8 +292,9 @@ class ActiveWorkoutStore: ObservableObject {
         
         print("🏋️ Workout initialized with \(day.exercises.count) exercises and \(self.sets.flatMap { $0 }.count) total sets")
         
-        // Show the workout screen last
-        self.showActiveWorkout = true
+        // Post notification to trigger full-screen cover
+        NotificationCenter.default.post(name: .startWorkout, object: nil, userInfo: ["program": program, "day": day])
+        print("🏋️ Posted startWorkout notification")
     }
     
     func tick() {

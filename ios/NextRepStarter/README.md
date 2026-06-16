@@ -20,11 +20,12 @@ Observation, URLSession, and Keychain Services.
 - `Services/RestTimerNotifier.swift` for rest-complete local notifications.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
-- `Views/*` with a minimal auth flow, Home dashboard, read-only Programs tab,
-  Program Detail + Day Detail navigation, Exercise Library search/detail,
-  Interval Timer basics, and a first-pass Active Workout screen for set logging
-  and rest timing, Finish Workout history persistence, and a Profile
-  workout-history viewer with stat cards and logged set details.
+- `Views/*` with a minimal auth flow, Home dashboard, Programs tab with
+  Exercise Library access, Program Detail + Day Detail navigation, Search tab
+  people discovery/social sharing, Interval Timer basics, and a first-pass
+  Active Workout screen for set logging and rest timing, Finish Workout history
+  persistence, and a Profile workout-history viewer with stat cards and logged
+  set details.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
 - Active workouts request notification permission, schedule a rest-complete

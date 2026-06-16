@@ -29,6 +29,47 @@ struct Catalog: Codable, Equatable {
     }
 }
 
+struct DiscoverUser: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    var color: String
+    var following: Bool
+    var programCount: Int
+    var exerciseCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case color
+        case following
+        case programCount = "program_count"
+        case exerciseCount = "exercise_count"
+    }
+}
+
+struct SharedUser: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+}
+
+struct SharedPrograms: Codable, Equatable {
+    var user: SharedUser
+    var programs: [Program]
+}
+
+struct SharedExercises: Codable, Equatable {
+    var user: SharedUser
+    var exercises: [Exercise]
+}
+
+struct ProgramResponse: Codable, Equatable {
+    var program: Program
+}
+
+struct ExerciseResponse: Codable, Equatable {
+    var exercise: Exercise
+}
+
 struct Exercise: Codable, Identifiable, Equatable {
     var id: String
     var name: String

@@ -127,6 +127,107 @@ final class AppStore {
         }
     }
 
+    func searchUsers(query: String) async -> [DiscoverUser] {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return []
+        }
+
+        do {
+            authError = nil
+            return try await apiClient.searchUsers(token: token, query: query)
+        } catch {
+            authError = error.localizedDescription
+            return []
+        }
+    }
+
+    func follow(userId: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            try await apiClient.followUser(token: token, userId: userId)
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func unfollow(userId: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            try await apiClient.unfollowUser(token: token, userId: userId)
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func sharedPrograms(for userId: String) async -> [Program] {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return []
+        }
+
+        do {
+            authError = nil
+            return try await apiClient.userPrograms(token: token, userId: userId).programs
+        } catch {
+            authError = error.localizedDescription
+            return []
+        }
+    }
+
+    func sharedExercises(for userId: String) async -> [Exercise] {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return []
+        }
+
+        do {
+            authError = nil
+            return try await apiClient.userExercises(token: token, userId: userId).exercises
+        } catch {
+            authError = error.localizedDescription
+            return []
+        }
+    }
+
+    func addSharedProgram(id: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            let program = try await apiClient.addProgram(token: token, programId: id)
+            upsertCustomProgram(program)
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func addSharedExercise(id: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            let exercise = try await apiClient.addExercise(token: token, exerciseId: id)
+            upsertCustomExercise(exercise)
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
     func startWorkout(program: Program, day: ProgramDay, week: Int = 1) {
         if let active = appData.activeWorkout,
            active.programId == program.id,
@@ -372,6 +473,16 @@ final class AppStore {
         Task {
             await restNotifier.scheduleRestComplete(after: seconds, exerciseName: exerciseName)
         }
+    }
+
+    private func upsertCustomProgram(_ program: Program) {
+        appData.customPrograms.removeAll { $0.id == program.id }
+        appData.customPrograms.append(program)
+    }
+
+    private func upsertCustomExercise(_ exercise: Exercise) {
+        appData.customExercises.removeAll { $0.id == exercise.id }
+        appData.customExercises.append(exercise)
     }
 
     private static func parseReps(_ reps: String) -> Int {

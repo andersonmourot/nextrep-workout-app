@@ -54,7 +54,7 @@ struct AppShellView: View {
             }
 
             NavigationStack {
-                ExerciseLibraryView()
+                PeopleSearchView()
             }
             .tabItem {
                 Label("Search", systemImage: "magnifyingglass")

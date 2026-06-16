@@ -8,6 +8,7 @@ struct ProgramsListView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                exerciseLibraryButton
                 searchField
 
                 if filteredPrograms.isEmpty {
@@ -64,6 +65,20 @@ struct ProgramsListView: View {
                 .tracking(1.5)
                 .foregroundStyle(Theme.accentLight)
         }
+    }
+
+    private var exerciseLibraryButton: some View {
+        NavigationLink {
+            ExerciseLibraryView()
+        } label: {
+            HStack {
+                Label("Exercise Library", systemImage: "figure.strengthtraining.traditional")
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+            }
+        }
+        .buttonStyle(GhostButtonStyle())
     }
 
     private var searchField: some View {

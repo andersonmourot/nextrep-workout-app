@@ -81,6 +81,53 @@ final class APIClient {
         )
     }
 
+    func searchUsers(token: String, query: String) async throws -> [DiscoverUser] {
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        return try await request("/api/users/search?q=\(encoded)", token: token)
+    }
+
+    func followUser(token: String, userId: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/users/\(userId)/follow",
+            method: "POST",
+            token: token
+        )
+    }
+
+    func unfollowUser(token: String, userId: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/users/\(userId)/follow",
+            method: "DELETE",
+            token: token
+        )
+    }
+
+    func userPrograms(token: String, userId: String) async throws -> SharedPrograms {
+        try await request("/api/users/\(userId)/programs", token: token)
+    }
+
+    func userExercises(token: String, userId: String) async throws -> SharedExercises {
+        try await request("/api/users/\(userId)/exercises", token: token)
+    }
+
+    func addProgram(token: String, programId: String) async throws -> Program {
+        let response: ProgramResponse = try await request(
+            "/api/programs/\(programId)/add",
+            method: "POST",
+            token: token
+        )
+        return response.program
+    }
+
+    func addExercise(token: String, exerciseId: String) async throws -> Exercise {
+        let response: ExerciseResponse = try await request(
+            "/api/exercises/\(exerciseId)/add",
+            method: "POST",
+            token: token
+        )
+        return response.exercise
+    }
+
     private func request<Response: Decodable>(
         _ path: String,
         method: String = "GET",
@@ -131,8 +178,13 @@ final class APIClient {
     private func makeURL(_ path: String) -> URL {
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
         let basePath = components.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let requestPath = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let parts = trimmed.split(separator: "?", maxSplits: 1, omittingEmptySubsequences: false)
+        let requestPath = String(parts.first ?? "")
         components.path = "/" + [basePath, requestPath].filter { !$0.isEmpty }.joined(separator: "/")
+        if parts.count > 1 {
+            components.percentEncodedQuery = String(parts[1])
+        }
         return components.url!
     }
 }

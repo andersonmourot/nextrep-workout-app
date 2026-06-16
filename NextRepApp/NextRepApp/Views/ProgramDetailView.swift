@@ -80,19 +80,16 @@ struct ProgramDetailView: View {
                     
                     VStack(spacing: 12) {
                         ForEach(program.days) { day in
-                            NavigationLink(destination: ActiveWorkoutView(program: program, day: day)) {
-                                DayCard(day: day)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                            DayCard(day: day)
                         }
                     }
                 }
             }
             .padding()
+            .background(Theme.bg)
         }
         .navigationTitle("Program Details")
         .navigationBarTitleDisplayMode(.inline)
-        .background(Theme.bg)
     }
 }
 
@@ -126,7 +123,7 @@ struct DayCard: View {
 
 struct ActiveWorkoutView: View {
     let program: Program
-    let day: Day
+    let day: Day?
     
     var body: some View {
         VStack(spacing: 20) {
@@ -137,8 +134,10 @@ struct ActiveWorkoutView: View {
             Text("Program: \(program.name)")
                 .font(.headline)
             
-            Text("Day: \(day.name ?? "Workout")")
-                .font(.subheadline)
+            if let day = day {
+                Text("Day: \(day.name ?? "Workout")")
+                    .font(.subheadline)
+            }
             
             Spacer()
             

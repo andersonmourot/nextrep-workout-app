@@ -5,9 +5,9 @@ struct ContentView: View {
     
     var body: some View {
         if isAuthenticated {
-            MainTabView()
+            Text("Authenticated - Main app to be implemented")
         } else {
-            AuthFlowView(isAuthenticated: $isAuthenticated)
+            AuthView(isAuthenticated: $isAuthenticated)
         }
     }
 }

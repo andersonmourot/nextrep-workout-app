@@ -12,11 +12,9 @@
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Models/LoginRequest.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Services/KeychainStore.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Services/APIClient.swift
-/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/AuthFlowView.swift
-/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/ProgramsListView.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Theme.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Utils.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Store/AppStore.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Models/Catalog.swift
-/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/MainTabView.swift
 /Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/ProgramDetailView.swift
+/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/AuthView.swift

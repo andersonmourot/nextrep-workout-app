@@ -1,13 +1,13 @@
 import Foundation
 
-struct Day: Codable, Identifiable {
+struct Day: Codable, Identifiable, Hashable {
     let id: String
     var name: String?
     var focus: String?
     var exercises: [DayExercise]
 }
 
-struct DayExercise: Codable, Identifiable {
+struct DayExercise: Codable, Identifiable, Hashable {
     let id = UUID()
     let exerciseId: String
     let sets: Int?

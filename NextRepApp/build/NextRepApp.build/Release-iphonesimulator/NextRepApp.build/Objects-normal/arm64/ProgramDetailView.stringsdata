@@ -7,7 +7,7 @@
         "key": "Program Details",
         "location": {
           "startingColumn": 26,
-          "startingLine": 93
+          "startingLine": 91
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Workout",
         "location": {
           "startingColumn": 26,
-          "startingLine": 151
+          "startingLine": 150
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Active Workout",
         "location": {
           "startingColumn": 18,
-          "startingLine": 133
+          "startingLine": 130
         }
       },
       {
@@ -55,15 +55,15 @@
         "key": "Program: %@",
         "location": {
           "startingColumn": 18,
-          "startingLine": 137
+          "startingLine": 134
         }
       },
       {
         "comment": "",
         "key": "Day: %@",
         "location": {
-          "startingColumn": 18,
-          "startingLine": 140
+          "startingColumn": 22,
+          "startingLine": 138
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Finish Workout",
         "location": {
           "startingColumn": 20,
-          "startingLine": 145
+          "startingLine": 144
         }
       }
     ]

@@ -1,6 +1,6 @@
 import Foundation
 
-struct Exercise: Codable, Identifiable {
+struct Exercise: Codable, Identifiable, Hashable {
     let id: String
     var name: String
     var primaryMuscle: String?

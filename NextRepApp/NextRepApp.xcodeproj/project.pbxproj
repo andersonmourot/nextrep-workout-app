@@ -21,14 +21,12 @@
 		AA0031 /* LoginRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0032 /* LoginRequest.swift */; };
 		AA0033 /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0034 /* KeychainStore.swift */; };
 		AA0035 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0036 /* APIClient.swift */; };
-		AA0037 /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0038 /* AuthFlowView.swift */; };
-		AA0039 /* ProgramsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0040 /* ProgramsListView.swift */; };
 		AA0044 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0045 /* Theme.swift */; };
 		AA0046 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0047 /* Utils.swift */; };
 		AA0048 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0049 /* AppStore.swift */; };
 		AA0053 /* Catalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0054 /* Catalog.swift */; };
-		AA0055 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0056 /* MainTabView.swift */; };
 		AA0057 /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0058 /* ProgramDetailView.swift */; };
+		AA0065 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0066 /* AuthView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -48,14 +46,12 @@
 		AA0032 /* LoginRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginRequest.swift; sourceTree = "<group>"; };
 		AA0034 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		AA0036 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
-		AA0038 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
-		AA0040 /* ProgramsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsListView.swift; sourceTree = "<group>"; };
 		AA0045 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Theme.swift; sourceTree = SOURCE_ROOT; };
 		AA0047 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Utils.swift; sourceTree = SOURCE_ROOT; };
 		AA0049 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Store/AppStore.swift; sourceTree = SOURCE_ROOT; };
 		AA0054 /* Catalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Models/Catalog.swift; sourceTree = SOURCE_ROOT; };
-		AA0056 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Views/MainTabView.swift; sourceTree = SOURCE_ROOT; };
 		AA0058 /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Views/ProgramDetailView.swift; sourceTree = SOURCE_ROOT; };
+		AA0066 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Views/AuthView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,9 +135,7 @@
 			isa = PBXGroup;
 			children = (
 				A2250C192FE0E17800076C9D /* ProgramHistoryView.swift */,
-				AA0038 /* AuthFlowView.swift */,
-				AA0040 /* ProgramsListView.swift */,
-				AA0056 /* MainTabView.swift */,
+				AA0066 /* AuthView.swift */,
 				AA0058 /* ProgramDetailView.swift */,
 			);
 			path = Views;
@@ -229,14 +223,12 @@
 				AA0031 /* LoginRequest.swift in Sources */,
 				AA0033 /* KeychainStore.swift in Sources */,
 				AA0035 /* APIClient.swift in Sources */,
-				AA0037 /* AuthFlowView.swift in Sources */,
-				AA0039 /* ProgramsListView.swift in Sources */,
 				AA0044 /* Theme.swift in Sources */,
 				AA0046 /* Utils.swift in Sources */,
 				AA0048 /* AppStore.swift in Sources */,
 				AA0053 /* Catalog.swift in Sources */,
-				AA0055 /* MainTabView.swift in Sources */,
 				AA0057 /* ProgramDetailView.swift in Sources */,
+				AA0065 /* AuthView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

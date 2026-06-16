@@ -1,6 +1,6 @@
 import Foundation
 
-struct Program: Codable, Identifiable {
+struct Program: Codable, Identifiable, Hashable {
     let id: String
     var name: String
     var category: String?

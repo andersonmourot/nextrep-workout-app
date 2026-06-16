@@ -41,10 +41,12 @@ struct ActiveWorkoutView: View {
         .navigationTitle("Workout")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
-        .navigationDestination(item: $finishedLog) { log in
-            WorkoutSummaryView(log: log, unit: store.appData.unit) {
-                finishedLog = nil
-                dismiss()
+        .navigationDestination(isPresented: summaryIsPresented) {
+            if let finishedLog {
+                WorkoutSummaryView(log: finishedLog, unit: store.appData.unit) {
+                    self.finishedLog = nil
+                    dismiss()
+                }
             }
         }
         .onAppear {
@@ -67,6 +69,17 @@ struct ActiveWorkoutView: View {
 
     private var accent: Color {
         Color(hex: program.accent)
+    }
+
+    private var summaryIsPresented: Binding<Bool> {
+        Binding(
+            get: { finishedLog != nil },
+            set: { isPresented in
+                if !isPresented {
+                    finishedLog = nil
+                }
+            }
+        )
     }
 
     private func header(active: ActiveWorkout) -> some View {

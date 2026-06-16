@@ -149,6 +149,7 @@ struct RootView: View {
             .environmentObject(activeWorkoutStore)
             .fullScreenCover(item: $activeWorkoutStore.currentSession) { session in
                 ActiveWorkoutView(program: session.program, day: session.day)
+                    .environmentObject(activeWorkoutStore)
             }
             .onAppear {
                 setupTabBarAppearance()

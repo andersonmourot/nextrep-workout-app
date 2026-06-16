@@ -5,13 +5,14 @@ import UserNotifications
 struct ActiveWorkoutView: View {
     let program: Program
     let day: Day
-    @StateObject private var activeWorkout = ActiveWorkoutStore.shared
+    @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
     @State private var selectedRoute: AppRoute?
     @State private var showSummary = false
     @State private var workoutSummary: ActiveWorkoutSummary?
     
     var body: some View {
-        ZStack {
+        print("🏋️ ActiveWorkoutView appeared - program: \(program.name), day: \(day.name ?? "Unknown")")
+        return ZStack {
             ScrollView {
                 VStack(spacing: 16) {
                     // Spacer for sticky header
@@ -92,7 +93,7 @@ struct ActiveWorkoutView: View {
             }
             
             // Floating rest bar
-            if activeWorkout.isResting {
+            if activeWorkoutStore.isResting {
                 VStack(spacing: 8) {
                     Text("Rest")
                         .font(.system(size: 11, weight: .semibold))
@@ -154,30 +155,30 @@ struct ActiveWorkoutView: View {
     }
     
     private var progress: Double {
-        let totalSets = activeWorkout.totalSets
+        let totalSets = activeWorkoutStore.totalSets
         guard totalSets > 0 else { return 0 }
-        let completedSets = activeWorkout.completedSets
+        let completedSets = activeWorkoutStore.completedSets
         return Double(completedSets) / Double(totalSets)
     }
     
     private var elapsedTimeString: String {
-        let elapsed = Int(Date().timeIntervalSince1970 - activeWorkout.startedAt)
+        let elapsed = Int(Date().timeIntervalSince1970 - activeWorkoutStore.startedAt)
         let minutes = elapsed / 60
         let seconds = elapsed % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
     
     private var restTimeString: String {
-        let remaining = max(0, Int(activeWorkout.restEndsAt - Date().timeIntervalSince1970))
+        let remaining = max(0, Int(activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970))
         let minutes = remaining / 60
         let seconds = remaining % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
     
     private var restProgress: Double {
-        guard activeWorkout.restDuration > 0 else { return 0 }
-        let elapsed = activeWorkout.restDuration - max(0, Int(activeWorkout.restEndsAt - Date().timeIntervalSince1970))
-        return Double(elapsed) / Double(activeWorkout.restDuration)
+        guard activeWorkoutStore.restDuration > 0 else { return 0 }
+        let elapsed = activeWorkoutStore.restDuration - max(0, Int(activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970))
+        return Double(elapsed) / Double(activeWorkoutStore.restDuration)
     }
     
     private func setupAudioSession() {
@@ -199,10 +200,10 @@ struct ActiveWorkoutView: View {
     
     private func startTimer() {
         Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            activeWorkout.tick()
-            if activeWorkout.isResting && Date().timeIntervalSince1970 >= activeWorkout.restEndsAt {
+            activeWorkoutStore.tick()
+            if activeWorkoutStore.isResting && Date().timeIntervalSince1970 >= activeWorkoutStore.restEndsAt {
                 playBell()
-                activeWorkout.clearRest()
+                activeWorkoutStore.clearRest()
             }
         }
     }
@@ -226,29 +227,29 @@ struct ActiveWorkoutView: View {
     }
     
     private func addRestTime(_ seconds: Int) {
-        activeWorkout.restEndsAt += Double(seconds)
-        activeWorkout.restDuration += seconds
+        activeWorkoutStore.restEndsAt += Double(seconds)
+        activeWorkoutStore.restDuration += seconds
     }
     
     private func skipRest() {
-        activeWorkout.clearRest()
+        activeWorkoutStore.clearRest()
     }
     
     private func finishWorkout() {
-        let totalVolume = activeWorkout.sets.flatMap { $0 }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
+        let totalVolume = activeWorkoutStore.sets.flatMap { $0 }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
         
         let log = ActiveWorkoutSummary(
             programId: program.id,
             programName: program.name,
             dayId: day.id,
             dayName: day.name ?? "Workout",
-            startedAt: activeWorkout.startedAt,
+            startedAt: activeWorkoutStore.startedAt,
             completedAt: Date().timeIntervalSince1970,
-            durationSeconds: Int(Date().timeIntervalSince1970 - activeWorkout.startedAt),
-            setsCompleted: activeWorkout.completedSets,
-            totalSets: activeWorkout.totalSets,
+            durationSeconds: Int(Date().timeIntervalSince1970 - activeWorkoutStore.startedAt),
+            setsCompleted: activeWorkoutStore.completedSets,
+            totalSets: activeWorkoutStore.totalSets,
             totalVolume: totalVolume,
-            sets: activeWorkout.sets
+            sets: activeWorkoutStore.sets
         )
         
         // TODO: Save to API using the existing WorkoutLog structure
@@ -261,6 +262,9 @@ struct ActiveWorkoutView: View {
 class ActiveWorkoutStore: ObservableObject {
     static let shared = ActiveWorkoutStore()
     
+    @Published var programId: String = ""
+    @Published var dayId: String = ""
+    @Published var week: Int?
     @Published var startedAt: Double = Date().timeIntervalSince1970
     @Published var sets: [[SetLog]] = []
     @Published var isResting = false
@@ -270,15 +274,23 @@ class ActiveWorkoutStore: ObservableObject {
     
     private init() {}
     
-    func startWorkout(exercises: [DayExercise]) {
-        startedAt = Date().timeIntervalSince1970
-        // Initialize sets for each exercise
-        sets = exercises.map { exercise in
+    func startWorkout(program: Program, day: Day, dayIndex: Int, week: Int? = nil) {
+        print("🏋️ startWorkout called - program: \(program.name), day: \(day.name ?? "Unknown"), dayIndex: \(dayIndex)")
+        
+        self.programId = program.id
+        self.dayId = day.id
+        self.week = week
+        self.startedAt = Date().timeIntervalSince1970
+        
+        // Initialize sets for each exercise in the day
+        self.sets = day.exercises.map { exercise in
             let setCount = exercise.sets ?? 3
             return (0..<setCount).map { _ in
                 SetLog(weight: 0, reps: 0, completed: false)
             }
         }
+        
+        print("🏋️ Workout initialized with \(day.exercises.count) exercises and \(self.sets.flatMap { $0 }.count) total sets")
     }
     
     func tick() {
@@ -304,6 +316,10 @@ class ActiveWorkoutStore: ObservableObject {
     var totalSets: Int {
         sets.flatMap { $0 }.count
     }
+    
+    var isActive: Bool {
+        !programId.isEmpty
+    }
 }
 
 struct ExerciseCard: View {
@@ -311,7 +327,7 @@ struct ExerciseCard: View {
     let exerciseIndex: Int
     let totalExercises: Int
     let exercises: [DayExercise]
-    @ObservedObject var activeWorkout = ActiveWorkoutStore.shared
+    @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -356,16 +372,16 @@ struct ExerciseCard: View {
                 .padding(.vertical, 8)
                 .background(Theme.surface2)
                 
-                ForEach(Array(activeWorkout.sets[exerciseIndex].enumerated()), id: \.element.id) { index, setLog in
+                ForEach(Array(activeWorkoutStore.sets[exerciseIndex].enumerated()), id: \.element.id) { index, setLog in
                     SetRow(
                         setLog: Binding(
-                            get: { activeWorkout.sets[exerciseIndex][index] },
-                            set: { activeWorkout.sets[exerciseIndex][index] = $0 }
+                            get: { activeWorkoutStore.sets[exerciseIndex][index] },
+                            set: { activeWorkoutStore.sets[exerciseIndex][index] = $0 }
                         ),
                         setNumber: index + 1,
                         exerciseIndex: exerciseIndex,
                         restSec: exercise.restSec,
-                        isLastInRound: index == (activeWorkout.sets[exerciseIndex].count - 1)
+                        isLastInRound: index == (activeWorkoutStore.sets[exerciseIndex].count - 1)
                     )
                 }
             }
@@ -395,7 +411,7 @@ struct ExerciseCard: View {
 }
 
 struct SetRow: View {
-    @ObservedObject var activeWorkout = ActiveWorkoutStore.shared
+    @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
     @Binding var setLog: SetLog
     let setNumber: Int
     let exerciseIndex: Int
@@ -434,7 +450,7 @@ struct SetRow: View {
             Button(action: {
                 setLog.completed.toggle()
                 if setLog.completed && isLastInRound, let rest = restSec, rest > 0 {
-                    activeWorkout.startRest(duration: rest)
+                    activeWorkoutStore.startRest(duration: rest)
                 }
             }) {
                 Image(systemName: setLog.completed ? "checkmark.circle.fill" : "circle")

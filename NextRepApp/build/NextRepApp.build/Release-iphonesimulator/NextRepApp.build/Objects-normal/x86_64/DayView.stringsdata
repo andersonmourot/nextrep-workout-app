@@ -7,7 +7,7 @@
         "key": "Day Detail",
         "location": {
           "startingColumn": 26,
-          "startingLine": 56
+          "startingLine": 79
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Start Workout",
         "location": {
           "startingColumn": 26,
-          "startingLine": 35
+          "startingLine": 55
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Exercises",
         "location": {
           "startingColumn": 26,
-          "startingLine": 42
+          "startingLine": 65
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "%llds rest",
         "location": {
           "startingColumn": 22,
-          "startingLine": 80
+          "startingLine": 103
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Exercise",
         "location": {
           "startingColumn": 22,
-          "startingLine": 68
+          "startingLine": 91
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "%lld sets × %@",
         "location": {
           "startingColumn": 22,
-          "startingLine": 72
+          "startingLine": 95
         }
       }
     ]

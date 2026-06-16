@@ -7,7 +7,7 @@
         "key": "Home",
         "location": {
           "startingColumn": 26,
-          "startingLine": 66
+          "startingLine": 74
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Welcome back!",
         "location": {
           "startingColumn": 26,
-          "startingLine": 12
+          "startingLine": 13
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Ready to train today?",
         "location": {
           "startingColumn": 26,
-          "startingLine": 15
+          "startingLine": 16
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Resume Workout",
         "location": {
           "startingColumn": 30,
-          "startingLine": 29
+          "startingLine": 37
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Recent Activity",
         "location": {
           "startingColumn": 26,
-          "startingLine": 51
+          "startingLine": 59
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "%@ • %@",
         "location": {
           "startingColumn": 22,
-          "startingLine": 97
+          "startingLine": 105
         }
       }
     ]

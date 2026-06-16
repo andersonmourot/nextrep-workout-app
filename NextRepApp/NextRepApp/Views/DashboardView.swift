@@ -3,6 +3,7 @@ import SwiftUI
 struct DashboardView: View {
     @State private var selectedRoute: AppRoute?
     @State private var selectedProgram: Program?
+    @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
     
     var body: some View {
         ScrollView {
@@ -21,7 +22,14 @@ struct DashboardView: View {
                 
                 // Resume workout banner
                 Button(action: {
-                    // TODO: Navigate to active workout
+                    print("🏋️ Resume button tapped - activeWorkoutStore.isActive: \(activeWorkoutStore.isActive)")
+                    
+                    if activeWorkoutStore.isActive {
+                        // TODO: Navigate to active workout with current session
+                        print("⚠️ Resume workout - need to implement navigation to active workout")
+                    } else {
+                        print("⚠️ No active workout to resume")
+                    }
                 }) {
                     HStack {
                         Image(systemName: "play.fill")

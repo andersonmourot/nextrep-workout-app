@@ -4,6 +4,8 @@ struct DayView: View {
     let program: Program
     let day: Day
     @State private var isActive = false
+    @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
+    @State private var navigateToWorkout = false
     
     var body: some View {
         ScrollView {
@@ -30,12 +32,33 @@ struct DayView: View {
                 
                 // Start workout button
                 Button(action: {
-                    // Navigate to active workout
+                    print("🏋️ Start button tapped for day: \(day.name ?? "Unknown")")
+                    
+                    // Find the day index in the program
+                    if let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) {
+                        print("🏋️ Day index found: \(dayIndex)")
+                        
+                        // Start the workout in the store
+                        activeWorkoutStore.startWorkout(
+                            program: program,
+                            day: day,
+                            dayIndex: dayIndex,
+                            week: nil
+                        )
+                        
+                        // Navigate to active workout
+                        navigateToWorkout = true
+                    } else {
+                        print("❌ Day index not found")
+                    }
                 }) {
                     Text("Start Workout")
                 }
                 .buttonStyle(PrimaryButton())
                 .padding(.horizontal)
+                .navigationDestination(isPresented: $navigateToWorkout) {
+                    ActiveWorkoutView(program: program, day: day)
+                }
                 
                 // Exercises list
                 VStack(alignment: .leading, spacing: 16) {

@@ -4,6 +4,7 @@ import Foundation
 struct RootView: View {
     @State private var selectedTab: Tab = .home
     @StateObject private var authState = AuthState.shared
+    @StateObject private var activeWorkoutStore = ActiveWorkoutStore.shared
     
     enum Tab: String, CaseIterable {
         case home = "Home"
@@ -145,6 +146,7 @@ struct RootView: View {
                 .tag(Tab.profile)
             }
             .preferredColorScheme(.dark)
+            .environmentObject(activeWorkoutStore)
             .onAppear {
                 setupTabBarAppearance()
             }

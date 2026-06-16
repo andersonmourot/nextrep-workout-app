@@ -298,8 +298,169 @@ the day views), matching the recently-shipped web behavior:
 
 ---
 
+# Batch 2 — Day review/edit, Exercises library, Exercise detail
+
+These build on §0 foundations and the §5 cue/notes controls. Reachable from
+Program detail (§3) and the Workout screen (§4).
+
+---
+
+## 6. Day review + Day edit — `src/pages/DayReview.tsx`
+
+Reached by tapping a day card in Program detail. The route carries a **0-based
+global day index** across weeks: `globalIdx`. Derive `dayLocalIdx = globalIdx %
+days.count` and `weekNum = floor(globalIdx / days.count) + 1`, then resolve the
+plan with `resolveProgramDay(program, dayLocalIdx, weekNum)`.
+
+This screen has **two modes**: a logging view (the default) and an inline plan
+editor (only for editable custom programs).
+
+### 6a. Logging view (default)
+1. **Back button** (icon-only arrow): pop the nav stack if possible, else go to
+   the program detail.
+2. **Header:** eyebrow `Week {weekNum} · Day {dayLocalIdx+1}` in the program's
+   accent; title = day `name` (Oswald); subtitle = `focus`. If the program is
+   editable (`isCustom && (isOwner || collaborative)`), show a small accent
+   **Edit** button on the right (enters edit mode — 6b).
+3. **Set state:** local `SetLog[][]`, pre-filled from the existing log for this
+   exact week+day slot (`programLogSlots(program, logs, anchor)[globalIdx]`) if
+   present, otherwise from the day template (each exercise → `sets` rows with
+   `weight 0`, `reps = parseReps(reps)`, `completed false`). `parseReps` =
+   leading integer of the rep string ("8-12" → 8).
+4. **Exercise cards** (one per exercise): eyebrow `Exercise {i+1} of {n}`, title
+   `exerciseLabel`, subtitle `{sets} sets × {reps} reps`, trailing cue + notes +
+   info controls (§5), then the cue subheader. Then a `Set | Weight ({unit}) |
+   Reps | Done` table. **Difference from §4:** each weight/reps cell here is a
+   **Stepper** (a −/+ control around the number; weight step 5, reps step 1),
+   not a free-type field. Done toggle + completed-row tint same as §4.
+5. **Save button** (only when at least one set is completed, hidden in edit
+   mode): full-width primary. Label = "Save Workout" (or "Update Workout" if a
+   log already exists; "Saved" + disabled right after saving). On save: build a
+   `WorkoutLog` keeping only **completed** sets (note: unlike §4 Finish, this
+   does not auto-include weighted-but-untapped sets), `totalVolume = Σ
+   weight*reps`, bind it to this week+day slot via `addLog`.
+
+### 6b. Edit-this-day mode (custom programs only)
+A card titled **"Edit this day"** with a subtitle explaining scope: Week 1 edits
+the base plan for the whole program; Week N>1 edits "from Week {N} onward"
+(earlier weeks keep the current plan). For each exercise in the `draft`:
+- A text field for the exercise name (type-ahead to the library; free text =
+  custom exercise). A small caption under it: `{primaryMuscle} · {equipment}` or
+  "Custom exercise".
+- Up/down reorder buttons (disabled at ends) and a cue button (§5) + a trash
+  button (disabled when only one exercise remains).
+- A 3-up row of fields: **Sets** (numeric), **Reps** (text, e.g. "8-12"),
+  **Rest** (numeric seconds).
+- An "add exercise" dashed outline button at the bottom.
+- Footer: **Cancel** (ghost) and **Save** (primary). Validation: at least one
+  exercise; every exercise must have a name. On save, apply a **per-week
+  override**: `withDayOverride(program, day.id, weekNum, draft)` then
+  `updateProgram`; if the program is shared/owned, also push via
+  `apiUpsertProgram`. Rebuild the local set state from the new plan and exit
+  edit mode.
+
+> CLI prompt — "Build Day review + Day edit per docs/ios-swiftui-screens.md §6.
+> Parse the global day index into local day + week, resolve the plan with
+> `resolveProgramDay`. Logging view: header with Week/Day eyebrow and an Edit
+> button for editable custom programs; per-exercise cards with cue/notes/info
+> and a Set|Weight|Reps|Done table using Stepper (−/+) controls (weight step 5,
+> reps step 1); a Save/Update button (visible once a set is completed) that
+> builds a WorkoutLog from completed sets bound to this week+day slot via addLog.
+> Edit mode (custom only): an editable draft of the day's exercises (name with
+> library type-ahead, reorder, cue, delete, Sets/Reps/Rest fields, add-exercise)
+> that saves via a per-week override (`withDayOverride` + updateProgram, and
+> apiUpsertProgram when shared), with the Week-1-vs-later scope note and
+> validation. Use the shared Theme. Build and run in the Simulator and show me."
+
+---
+
+## 7. Exercises library — `src/pages/Exercises.tsx`
+
+A flat, searchable list of all exercises (Search tab → later, but reachable now
+from Program editor and exercise pickers). Two routes use the same page; one
+shows a Back button.
+
+1. **Header:** title "Exercises" (Oswald). Right side: a manage toggle
+   (gear → "Done") and a primary `+` button (New exercise → opens the Exercise
+   form sheet, §7a). When managing and there are hidden/trashed items, show
+   "Hidden (n)" and a trash count button.
+2. **Search field** (leading icon, placeholder "Search").
+3. **Filter chips** (horizontal scroll): `All, Custom,` then the muscle list
+   (Chest, Back, Shoulders, Biceps, Triceps, Quads, Hamstrings, Glutes, Calves,
+   Core, Forearms, Full Body). Selected = accent fill + white; "Custom" filters
+   to user-created exercises. Selected-state styling as in §2.
+4. **Count line:** `{n} exercises`.
+5. **List source:** custom exercises (those whose name isn't a built-in) +
+   built-ins (with any local override applied), minus hidden, minus trashed.
+   Each row is a card: name (semibold) with a "Custom" pill when applicable; a
+   chip row `{primaryMuscle}` (accent) · `{equipment}` · `{difficulty}`. Tap →
+   Exercise detail (§8).
+6. **Manage mode:** each row gets an inline delete/hide affordance with a
+   confirm (custom → delete to Trash; built-in → hide). Plus a Hidden list and a
+   Trash list (restore / purge). This can be a later pass — ship the list +
+   search + New first.
+
+### 7a. Exercise form sheet (New / Edit) — `ExerciseModal`
+A sheet with fields: **Name**; **Primary muscle** (picker); **Equipment**
+(picker: Barbell, Dumbbell, Machine, Cable, Bodyweight, Kettlebell, Bands);
+**Difficulty** (Beginner/Intermediate/Advanced); **Secondary muscles**
+(multi-select chips, excluding the primary); **Instructions** (multiline, one
+step per line); **Coaching cues/tips** (multiline, one per line); optional
+**Photos** (up to two). Save creates/updates a custom exercise (or a local
+override of a built-in). Title = "New Exercise" / "Edit Exercise".
+
+> CLI prompt — "Build the Exercises library per docs/ios-swiftui-screens.md §7.
+> Header with title, a New (+) button opening the Exercise form sheet, and a
+> manage toggle; a search field; filter chips (All, Custom, then the 12 muscles)
+> with accent selection; a '{n} exercises' count; and the exercise list (custom
+> non-duplicates + built-ins with overrides, minus hidden/trashed) as cards with
+> name, optional Custom pill, and primaryMuscle/equipment/difficulty chips,
+> tapping into Exercise detail. Build the Exercise form sheet (§7a) with Name,
+> Primary muscle, Equipment, Difficulty, Secondary-muscle multi-select,
+> Instructions (one per line), Tips (one per line), and optional photos, saving
+> as a custom exercise / override. Defer manage/hidden/trash. Use the shared
+> Theme. Build and run in the Simulator and show me."
+
+---
+
+## 8. Exercise detail — `src/pages/ExerciseDetail.tsx`
+
+Resolve the exercise as: custom exercise by id, else a local override, else the
+built-in from the catalog. If missing, show a "not found" + back link.
+
+1. **Top bar:** Back (arrow) on the left; on the right an **Edit** button (opens
+   the §7a form) and a **Delete** button (two-tap confirm: Delete → Confirm /
+   Cancel; deleting returns to the library).
+2. **Title block:** eyebrow `{primaryMuscle}`; title `name` (Oswald 3xl); a chip
+   row `{equipment}` · `{difficulty}` · each secondary muscle.
+3. **Notes section:** a multiline text field bound to `exerciseNotes[id]` — the
+   **same private note** shown via the §5 pencil everywhere this exercise
+   appears (editing here updates those and vice versa). Placeholder: "Add notes
+   for this exercise — form cues, weights to try, reminders…".
+4. **Muscle visual:** a card with a soft accent radial-gradient circle showing
+   the primary muscle name.
+5. **How to perform:** a numbered list of `instructions` (accent number badges).
+6. **Coaching cues:** `tips` as cards with a lightbulb icon.
+7. **Photos:** a 2-column grid of `photos` if any.
+
+> CLI prompt — "Build Exercise detail per docs/ios-swiftui-screens.md §8.
+> Resolve the exercise (custom → override → catalog). Top bar with Back, an Edit
+> button (opens the §7a form sheet) and a two-tap Delete confirm (returns to the
+> library). Title block with primaryMuscle eyebrow, name, and
+> equipment/difficulty/secondary-muscle chips. A Notes text field bound to the
+> shared private exerciseNotes[id]. A muscle-visual card, a numbered How-to list
+> from instructions, a Coaching-cues list from tips (lightbulb icon), and a
+> 2-column photo grid when present. Use the shared Theme. Build and run in the
+> Simulator and show me."
+
+---
+
 ## Remaining screens (later batches — will detail on request)
-Day review / Day edit (`DayReview.tsx`), Exercises library + Exercise detail,
-Program/Exercise editors, Progress/Profile + history + body-weight, People/
-Search + following, Settings, Timer (standalone), Max tracker, Nutrition,
-Auth/forgot/reset, Legal, Admin (Users + Catalog).
+Program/Exercise **editors** (`ProgramEditor.tsx` — incl. supersets and admin
+catalog mode), Progress/Profile + history + body-weight (`Progress.tsx`,
+`WorkoutHistory.tsx`, `BodyWeightHistory.tsx`), People/Search + following
+(`People.tsx`), Settings (`Settings.tsx`), standalone Timer (`Timer.tsx`), Max
+tracker (`MaxTracker.tsx`/`MaxTrackerDetail.tsx`), Nutrition (`Nutrition.tsx`),
+Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`),
+Program history (`ProgramHistory.tsx`), Legal (`Legal.tsx`), Admin (Users +
+Catalog).

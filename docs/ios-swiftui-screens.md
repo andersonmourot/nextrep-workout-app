@@ -884,7 +884,159 @@ bound to the selected day.
 
 ---
 
-## Remaining screens (later batches — will detail on request)
-Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`),
-Legal (`Legal.tsx`), Admin Users + Catalog (`AdminUsers.tsx`,
-`AdminCatalog.tsx`).
+# Batch 6 — Auth, Legal, Admin (final batch)
+
+The unauthenticated entry screens, the static legal docs, and the two admin
+screens. After this batch, every web screen has a SwiftUI spec.
+
+---
+
+## 18. Auth — login / signup — `src/pages/Auth.tsx`
+
+A single screen with a `mode` of `login` or `signup`. If already authenticated
+(`token` present) redirect to the Dashboard.
+
+1. **Brand block:** a centered accent dumbbell tile, the wordmark "Next**Rep**"
+   (accent on "Rep", wide tracking), and a subtitle ("Create your account to
+   start training." for signup / "Welcome back. Log in to continue." for login).
+2. **Form card:**
+   - **Name** field (signup only).
+   - **Email** field (keyboard = email).
+   - **Password** field (secure, with a show/hide toggle = the `PasswordField`
+     component) + live **PasswordHints** (rule checklist). On login, a "Forgot
+     password?" link (→ §20) right-aligned beneath.
+   - An error banner when the call fails.
+   - Submit button: "Create account" / "Log in" (disabled + "Please wait…" while
+     busy). On success (`signUp(name,email,password)` / `login(email,password)`)
+     navigate to `/` (replace).
+3. **Footer link** toggling to the other mode ("Already have an account? Log in"
+   / "New here? Create an account").
+
+> CLI prompt — "Build the Auth screen per docs/ios-swiftui-screens.md §18 with a
+> login/signup mode (redirect to Dashboard if already authenticated). A centered
+> brand block (accent dumbbell tile, 'NextRep' wordmark with accent 'Rep',
+> mode-dependent subtitle); a form card with a Name field (signup only), an email
+> field, a secure password field with show/hide and live password-rule hints, a
+> right-aligned 'Forgot password?' link on login, an error banner, and a submit
+> button ('Create account'/'Log in', disabled + 'Please wait…' while busy) that
+> calls signUp/login and navigates to / on success; and a footer link toggling
+> between login and signup. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
+## 19. Reset password — `src/pages/ResetPassword.tsx`
+
+Reached from the emailed link (`/reset-password?token=…`); reads the `token`
+query param. Redirect to Dashboard if already authenticated.
+
+Same brand block ("Choose a new password."). Form: a new **Password** field
+(secure + hints) and a **Confirm** field. Validate length ≥6 and that the two
+match, then call `apiResetPassword(token, password)`. On success show a success
+card (check icon + "Your password has been reset. You can now log in…") with a
+"Back to log in" button; on failure show the error.
+
+## 20. Forgot password — `src/pages/ForgotPassword.tsx`
+
+Same brand block ("Reset your password."). A single **Email** field + "Send reset
+link" button → `apiForgotPassword(email)`. On success show a confirmation card
+(mail icon + "If an account exists for {email}, we've sent a link… expires in 1
+hour.") with "Back to log in". A footer "Remembered it? Log in" link.
+
+> CLI prompt — "Build the password-reset flow per docs/ios-swiftui-screens.md
+> §19–§20 (both redirect to Dashboard if authenticated, both use the NextRep
+> brand block). Forgot password: an email field + 'Send reset link' →
+> apiForgotPassword, then a confirmation card ('If an account exists for {email}
+> we've sent a link… expires in 1 hour') with 'Back to log in', and a 'Remembered
+> it? Log in' footer. Reset password: read the token query param, a new-password
+> field (secure + hints) + a confirm field, validate length ≥6 and match, call
+> apiResetPassword(token, password), then a success card (check + message + 'Back
+> to log in') or an error. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
+## 21. Legal — `src/pages/Legal.tsx`
+
+A static document screen with a `doc` of `privacy` / `terms` / `disclaimer`
+(reached from the Settings legal links). Back button; an `<h1>` title from a
+`TITLES` map; a "Last updated: {date}" line; and a card rendering the selected
+document's prose (headings, paragraphs, bullet lists, bold). Port the three
+documents' text verbatim from the web app (Privacy Policy, Terms of Service,
+Health & Fitness Disclaimer), keeping the app name and contact email.
+
+> CLI prompt — "Build the Legal screen per docs/ios-swiftui-screens.md §21: a
+> doc parameter (privacy/terms/disclaimer), a Back button, an h1 title from a
+> TITLES map, a 'Last updated: {date}' line, and a card rendering the selected
+> document's prose (headings/paragraphs/bullets/bold). Port the three documents'
+> text verbatim from src/pages/Legal.tsx (Privacy Policy, Terms of Service,
+> Health & Fitness Disclaimer), keeping the app name and contact email. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 22. Admin · Users — `src/pages/AdminUsers.tsx`
+
+Admin-only (redirect non-admins to `/`). Back button; eyebrow "🛡 Admin" + title
+"Users" + a "{n} registered users" count. Loads `apiAdminUsers(token)` →
+`[AdminUser]`. Each is a **UserCard**: name, "Joined {date}", email, "Last
+active: {datetime|Never}", and a collapsible **Reset password** control (a secure
+field, ≥6 chars, → `apiAdminResetPassword(token, userId, password)`, with a
+success/error message). Show a loading line and an error card as needed.
+
+> CLI prompt — "Build Admin · Users per docs/ios-swiftui-screens.md §22 (admin
+> only — redirect non-admins to /). Back button, '🛡 Admin' eyebrow + 'Users'
+> title + '{n} registered users' count; load apiAdminUsers → AdminUser list and
+> render a card per user (name, Joined {date}, email, Last active {datetime or
+> Never}) with a collapsible Reset-password control (secure field, ≥6 chars →
+> apiAdminResetPassword, success/error message); plus loading and error states.
+> Use the shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 23. Admin · Catalog — `src/pages/AdminCatalog.tsx`
+
+Admin-only (redirect non-admins). Edits the **shared built-in catalog** that
+every client reads from `GET /api/catalog`. Back button; eyebrow "🛡 Admin" +
+title "Catalog" + "Edit the built-in programs and exercises everyone sees.
+Changes go live immediately." Loads `apiGetCatalog()` → `{programs, exercises}`.
+
+1. **Programs section** ("Programs · {n}"): an **Add** button → the §9 Program
+   editor in **catalog mode** (new). Each program row → edit in catalog mode
+   (passing the program), plus a delete (two-tap confirm).
+2. **Exercises section** ("Exercises · {n}"): an inline **ExerciseForm**
+   (name; primary-muscle, equipment, difficulty pickers; secondary muscles
+   comma list; instructions + tips, one per line) for new/edit, and a row per
+   exercise with edit + delete (two-tap confirm). Ids are slugified from the
+   name.
+3. **Persist:** every add/edit/delete writes the whole catalog via
+   `apiAdminPutCatalog(token, {programs, exercises})`, then updates the in-memory
+   built-ins (`setBuiltInPrograms`/`setBuiltInExercises`) so the change is live
+   immediately. (See §9's catalog-mode save for the program path.)
+
+> CLI prompt — "Build Admin · Catalog per docs/ios-swiftui-screens.md §23 (admin
+> only — redirect non-admins). Back button, '🛡 Admin' eyebrow + 'Catalog' title
+> + the 'everyone sees / live immediately' subtitle; load apiGetCatalog →
+> {programs, exercises}. A Programs section ('Programs · {n}') with an Add button
+> opening the §9 Program editor in catalog mode (new) and rows that open it in
+> catalog mode for editing (pass the program), each with a two-tap delete. An
+> Exercises section ('Exercises · {n}') with an inline ExerciseForm (name;
+> primary-muscle / equipment / difficulty pickers; secondary muscles as a comma
+> list; instructions + tips one-per-line) for new/edit and rows with edit +
+> two-tap delete (ids slugified from the name). Every change persists the whole
+> catalog via apiAdminPutCatalog then updates the in-memory built-ins
+> (setBuiltInPrograms/setBuiltInExercises) so it's live immediately. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## All screens specified
+
+Batches 1–6 now cover every screen in the web app:
+Dashboard, Programs list, Program detail, Active Workout + rest timer, cue/notes
+(§1–5); Day review/edit, Exercises library, Exercise detail (§6–8); Program
+editor, standalone Timer (§9–10); Progress, history screens, Program history,
+Max tracker (§11–14); People, Settings, Nutrition (§15–17); Auth, password
+reset, Legal, Admin Users + Catalog (§18–23). Plus §0 foundations (theme, nav,
+shared helpers) and the API/data-model reference in
+`docs/ios-swiftui-handoff.md`.

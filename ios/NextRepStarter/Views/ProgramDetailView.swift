@@ -26,6 +26,7 @@ struct ProgramDetailView: View {
                                 program: program,
                                 day: day,
                                 dayNumber: index + 1,
+                                loggedSetCount: loggedSetCount(for: day),
                                 exerciseName: exerciseName
                             )
                         }
@@ -101,6 +102,23 @@ struct ProgramDetailView: View {
         let allExercises = store.catalog.exercises + store.appData.customExercises
         return allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
     }
+
+    private func latestLog(for day: ProgramDay) -> WorkoutLog? {
+        store.appData.logs
+            .filter { $0.programId == program.id && $0.dayId == day.id }
+            .sorted { programDetailLogDate($0) > programDetailLogDate($1) }
+            .first
+    }
+
+    private func loggedSetCount(for day: ProgramDay) -> Int {
+        latestLog(for: day).map(completedSetCount) ?? 0
+    }
+
+    private func completedSetCount(_ log: WorkoutLog) -> Int {
+        log.exercises.reduce(0) { total, exercise in
+            total + exercise.sets.count
+        }
+    }
 }
 
 private struct MetricTile: View {
@@ -131,6 +149,7 @@ private struct ProgramDayCard: View {
     let program: Program
     let day: ProgramDay
     let dayNumber: Int
+    let loggedSetCount: Int
     let exerciseName: (PlannedExercise) -> String
 
     var body: some View {
@@ -157,9 +176,22 @@ private struct ProgramDayCard: View {
                 Spacer()
 
                 NavigationLink {
+                    DayDetailView(program: program, day: day, dayNumber: dayNumber)
+                } label: {
+                    Text("View")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(accent.opacity(0.14))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
                     ActiveWorkoutView(program: program, day: day)
                 } label: {
-                    Text("Start")
+                    Text(loggedSetCount > 0 ? "Repeat" : "Start")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -168,6 +200,12 @@ private struct ProgramDayCard: View {
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
+            }
+
+            if loggedSetCount > 0 {
+                Label("\(loggedSetCount) set\(loggedSetCount == 1 ? "" : "s") logged", systemImage: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(accent)
             }
 
             if day.exercises.isEmpty {
@@ -195,6 +233,10 @@ private struct ProgramDayCard: View {
     private var accent: Color {
         Color(hex: program.accent)
     }
+}
+
+private func programDetailLogDate(_ log: WorkoutLog) -> Date {
+    ISO8601DateFormatter().date(from: log.date) ?? .distantPast
 }
 
 private struct ExercisePlanRow: View {

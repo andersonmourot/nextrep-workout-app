@@ -21,8 +21,9 @@ Observation, URLSession, and Keychain Services.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
 - `Views/*` with a minimal auth flow, Home dashboard, read-only Programs tab,
-  Program Detail navigation, and a first-pass Active Workout screen for set
-  logging and rest timing, Finish Workout history persistence, and a Profile
+  Program Detail + Day Detail navigation, Exercise Library search/detail,
+  Interval Timer basics, and a first-pass Active Workout screen for set logging
+  and rest timing, Finish Workout history persistence, and a Profile
   workout-history viewer with stat cards and logged set details.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
@@ -54,7 +55,8 @@ by the web app. Keep that behavior as you add native features.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
    - Progress charts and body-weight tracking
    - Rest-complete custom sound/background audio polish
-   - Day detail and edit flows
+   - Program/day edit flows
+   - Social people search/follow flows
 
 See `docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the
 complete migration specification.

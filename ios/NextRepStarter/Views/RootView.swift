@@ -47,14 +47,14 @@ struct AppShellView: View {
             }
 
             NavigationStack {
-                PlaceholderView(title: "Timer", systemImage: "timer")
+                IntervalTimerView()
             }
             .tabItem {
                 Label("Timer", systemImage: "timer")
             }
 
             NavigationStack {
-                PlaceholderView(title: "Search", systemImage: "magnifyingglass")
+                ExerciseLibraryView()
             }
             .tabItem {
                 Label("Search", systemImage: "magnifyingglass")

@@ -55,6 +55,17 @@ final class AppStore {
             }
     }
 
+    var allExercises: [Exercise] {
+        let hidden = Set(appData.hiddenExerciseIds)
+        let trashed = Set(appData.trashedExercises.map(\.exercise.id))
+
+        return (catalog.exercises + appData.customExercises)
+            .filter { !hidden.contains($0.id) && !trashed.contains($0.id) }
+            .sorted { lhs, rhs in
+                lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+    }
+
     func restoreSession() async {
         guard !hasAttemptedRestore else { return }
         hasAttemptedRestore = true

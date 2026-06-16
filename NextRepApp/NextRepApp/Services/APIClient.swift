@@ -3,12 +3,7 @@ import Foundation
 class APIClient {
     static let shared = APIClient()
     
-    // For local development, use localhost; for production, use the actual API URL
-    #if DEBUG
-    private let baseURL = "http://127.0.0.1:8000"
-    #else
-    private let baseURL = "https://your-production-api.com" // Replace with actual production URL
-    #endif
+    private let baseURL = "https://smellis-api.fly.dev"
     
     private init() {}
     
@@ -22,7 +17,7 @@ class APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         if requiresAuth, let token = KeychainStore.shared.getToken() {
-            request.setValue(token, forHTTPHeaderField: "X-Auth-Token")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         
         if let body = body {
@@ -125,7 +120,7 @@ class APIClient {
     // MARK: - User Endpoints
     
     func getCurrentUser() async throws -> User {
-        guard let request = createRequest(endpoint: "/me", method: "GET") else {
+        guard let request = createRequest(endpoint: "/api/users/me", method: "GET") else {
             throw APIError.invalidURL
         }
         

@@ -1,3 +1,4 @@
+import AudioToolbox
 import Foundation
 import SwiftUI
 
@@ -50,6 +51,9 @@ struct ActiveWorkoutView: View {
         }
         .onAppear {
             store.startWorkout(program: program, day: day)
+            Task {
+                await store.requestTimerNotificationPermission()
+            }
         }
         .alert("Finish Workout?", isPresented: $showingFinishConfirm) {
             Button("Cancel", role: .cancel) {}
@@ -165,11 +169,12 @@ struct ActiveWorkoutView: View {
                             exerciseIndex: exerciseIndex,
                             setIndex: setIndex,
                             completed: completed,
-                            restSec: planned.restSec
+                            restSec: planned.restSec,
+                            exerciseName: exerciseName(for: planned)
                         )
                     },
                     onStartRest: {
-                        store.startRest(seconds: planned.restSec)
+                        store.startRest(seconds: planned.restSec, exerciseName: exerciseName(for: planned))
                     }
                 )
             }
@@ -217,6 +222,7 @@ private struct RestTimerCard: View {
     let active: ActiveWorkout
     let accent: Color
     let onStop: () -> Void
+    @State private var didSignalCompletion = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -253,6 +259,15 @@ private struct RestTimerCard: View {
                 }
             }
             .cardStyle()
+            .onAppear {
+                signalCompletionIfNeeded(remaining: remaining)
+            }
+            .onChange(of: active.restEndsAt) { _ in
+                didSignalCompletion = false
+            }
+            .onChange(of: remaining) { newValue in
+                signalCompletionIfNeeded(remaining: newValue)
+            }
         }
     }
 
@@ -271,6 +286,15 @@ private struct RestTimerCard: View {
         }
 
         return 1 - (Double(remaining) / Double(active.restTotal))
+    }
+
+    private func signalCompletionIfNeeded(remaining: Int) {
+        guard active.restEndsAt != nil, active.restTotal > 0, remaining == 0, !didSignalCompletion else {
+            return
+        }
+
+        didSignalCompletion = true
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
     }
 }
 

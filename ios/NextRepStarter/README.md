@@ -17,6 +17,7 @@ Observation, URLSession, and Keychain Services.
 - `Models/JSONValue.swift` to round-trip unknown keys in the `/api/data` blob.
 - `Services/APIClient.swift` for the existing FastAPI backend.
 - `Services/KeychainStore.swift` for JWT persistence.
+- `Services/RestTimerNotifier.swift` for rest-complete local notifications.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
 - `Views/*` with a minimal auth flow, Home dashboard, read-only Programs tab,
@@ -25,6 +26,9 @@ Observation, URLSession, and Keychain Services.
   workout-history viewer with stat cards and logged set details.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
+- Active workouts request notification permission, schedule a rest-complete
+  local notification, cancel it when rest/workout ends, and vibrate in-app when
+  the visible countdown reaches zero.
 
 ## Backend assumptions
 
@@ -49,7 +53,7 @@ by the web app. Keep that behavior as you add native features.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
    - Progress charts and body-weight tracking
-   - Rest-complete sound/local notification behavior
+   - Rest-complete custom sound/background audio polish
    - Day detail and edit flows
 
 See `docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the

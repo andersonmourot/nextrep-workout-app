@@ -12,13 +12,19 @@ final class AppStore {
 
     private let apiClient: APIClient
     private let keychain: KeychainStore
+    @ObservationIgnored private var restNotifier: RestTimerNotifier
     private var sessionToken: String?
     private var hasAttemptedRestore = false
     @ObservationIgnored private var syncTask: Task<Void, Never>?
 
-    init(apiClient: APIClient = .production(), keychain: KeychainStore = KeychainStore()) {
+    init(
+        apiClient: APIClient = .production(),
+        keychain: KeychainStore = KeychainStore(),
+        restNotifier: RestTimerNotifier = RestTimerNotifier()
+    ) {
         self.apiClient = apiClient
         self.keychain = keychain
+        self.restNotifier = restNotifier
     }
 
     var allPrograms: [Program] {
@@ -87,6 +93,7 @@ final class AppStore {
 
     func logout() {
         syncTask?.cancel()
+        restNotifier.cancelRestComplete()
         try? keychain.deleteToken()
         sessionToken = nil
         user = nil
@@ -155,7 +162,13 @@ final class AppStore {
         scheduleSync()
     }
 
-    func setCompleted(exerciseIndex: Int, setIndex: Int, completed: Bool, restSec: Int) {
+    func setCompleted(
+        exerciseIndex: Int,
+        setIndex: Int,
+        completed: Bool,
+        restSec: Int,
+        exerciseName: String? = nil
+    ) {
         guard var active = appData.activeWorkout,
               active.sets.indices.contains(exerciseIndex),
               active.sets[exerciseIndex].indices.contains(setIndex) else {
@@ -166,13 +179,16 @@ final class AppStore {
         if completed && restSec > 0 {
             active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(restSec * 1000)
             active.restTotal = restSec
+            scheduleRestNotification(seconds: restSec, exerciseName: exerciseName)
+        } else if !completed {
+            restNotifier.cancelRestComplete()
         }
 
         appData.activeWorkout = active
         scheduleSync()
     }
 
-    func startRest(seconds: Int) {
+    func startRest(seconds: Int, exerciseName: String? = nil) {
         guard seconds > 0, var active = appData.activeWorkout else {
             return
         }
@@ -180,6 +196,7 @@ final class AppStore {
         active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(seconds * 1000)
         active.restTotal = seconds
         appData.activeWorkout = active
+        scheduleRestNotification(seconds: seconds, exerciseName: exerciseName)
         scheduleSync()
     }
 
@@ -191,11 +208,13 @@ final class AppStore {
         active.restEndsAt = nil
         active.restTotal = 0
         appData.activeWorkout = active
+        restNotifier.cancelRestComplete()
         scheduleSync()
     }
 
     func endWorkout() {
         appData.activeWorkout = nil
+        restNotifier.cancelRestComplete()
         scheduleSync()
     }
 
@@ -241,8 +260,13 @@ final class AppStore {
         appData.activeProgramId = program.id
         appData.logs.append(log)
         appData.activeWorkout = nil
+        restNotifier.cancelRestComplete()
         scheduleSync()
         return log
+    }
+
+    func requestTimerNotificationPermission() async {
+        await restNotifier.requestAuthorizationIfNeeded()
     }
 
     func syncNow() async {
@@ -330,6 +354,12 @@ final class AppStore {
                 return
             }
             await self?.uploadCurrentData()
+        }
+    }
+
+    private func scheduleRestNotification(seconds: Int, exerciseName: String?) {
+        Task {
+            await restNotifier.scheduleRestComplete(after: seconds, exerciseName: exerciseName)
         }
     }
 

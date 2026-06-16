@@ -20,61 +20,45 @@ struct ProgramsView: View {
     }
     
     var body: some View {
-        VStack {
-            if isLoading {
-                ProgressView()
-                    .padding()
-            } else if let error = errorMessage {
-                VStack {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 50))
-                        .foregroundStyle(.orange)
-                    Text("Error")
-                        .font(.headline)
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button("Retry") {
-                        loadAppData()
-                    }
-                    .buttonStyle(.bordered)
-                }
-                .padding()
-            } else if let programs = catalog?.programs, programs.isEmpty {
-                VStack {
-                    Image(systemName: "dumbbell")
-                        .font(.system(size: 50))
-                        .foregroundStyle(.green)
-                    Text("No Programs")
-                        .font(.headline)
-                    Text("You don't have any programs yet.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .padding()
-            } else {
-                List {
+        VStack(spacing: 0) {
+            // Search field
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(Theme.textDim)
+                TextField("Search programs...", text: $searchText)
+                    .foregroundColor(Theme.text)
+            }
+            .padding()
+            .background(Theme.surface2)
+            .cornerRadius(12)
+            .padding(.horizontal)
+            .padding(.top, 16)
+            
+            // Programs list
+            ScrollView {
+                VStack(spacing: 12) {
                     ForEach(filteredPrograms) { program in
                         Button(action: {
                             selectedProgram = program
                         }) {
-                            ProgramRowView(program: program)
+                            ProgramCardStyled(program: program)
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
-                .searchable(text: $searchText, prompt: "Search programs...")
+                .padding()
             }
+            .scrollContentBackground(.hidden)
         }
-        .background(Theme.bg)
         .navigationTitle("Programs")
+        .navigationBarTitleDisplayMode(.large)
         .navigationDestination(item: $selectedProgram) { program in
             ProgramDetailView(program: program)
         }
         .onAppear {
             loadAppData()
         }
+        .screenBackground()
     }
     
     private func loadAppData() {
@@ -98,54 +82,73 @@ struct ProgramsView: View {
     }
 }
 
-struct ProgramRowView: View {
+struct ProgramCardStyled: View {
     let program: Program
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(program.name)
-                    .font(.headline)
-                Spacer()
+        VStack(alignment: .leading, spacing: 12) {
+            // Eyebrow: category · level
+            HStack(spacing: 4) {
+                if let category = program.category {
+                    Text(category.uppercased())
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.accent)
+                }
+                if let category = program.category, program.level != nil {
+                    Text("·")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.textDim)
+                }
                 if let level = program.level {
                     Text(level)
-                        .font(.caption)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Theme.accent)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(Color.green.opacity(0.2))
-                        .foregroundStyle(.green)
-                        .cornerRadius(8)
+                        .background(Theme.accent.opacity(0.1))
+                        .cornerRadius(4)
                 }
             }
             
-            if let coach = program.coach {
-                Text(coach)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            // Title
+            Text(program.name)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(Theme.text)
             
-            HStack {
-                if let durationWeeks = program.durationWeeks {
-                    Label("\(durationWeeks) weeks", systemImage: "calendar")
+            // Meta info
+            VStack(alignment: .leading, spacing: 4) {
+                if let coach = program.coach {
+                    Text("Coach \(coach)")
+                        .font(.system(size: 14))
+                        .foregroundColor(Theme.textDim)
                 }
-                Spacer()
-                if let daysPerWeek = program.daysPerWeek {
-                    Label("\(daysPerWeek) days/week", systemImage: "figure.strengthtraining.traditional")
+                
+                HStack(spacing: 16) {
+                    if let durationWeeks = program.durationWeeks {
+                        Label("\(durationWeeks) weeks", systemImage: "calendar")
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.textDim)
+                    }
+                    if let daysPerWeek = program.daysPerWeek {
+                        Label("\(daysPerWeek) days/week", systemImage: "figure.strengthtraining.traditional")
+                            .font(.system(size: 12))
+                            .foregroundColor(Theme.textDim)
+                    }
                 }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            
-            if let category = program.category {
-                Text(category)
-                    .font(.caption)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.2))
-                    .foregroundStyle(.secondary)
-                    .cornerRadius(8)
             }
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .cardStyle()
+        .overlay(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Theme.accent.opacity(0.12),
+                    Color.clear
+                ]),
+                startPoint: UnitPoint(x: 0.0, y: 0.0),
+                endPoint: UnitPoint(x: cos(150 * .pi / 180), y: sin(150 * .pi / 180))
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

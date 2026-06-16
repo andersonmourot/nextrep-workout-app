@@ -31,7 +31,7 @@
         "key": "%llds rest",
         "location": {
           "startingColumn": 22,
-          "startingLine": 79
+          "startingLine": 80
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Exercise",
         "location": {
           "startingColumn": 22,
-          "startingLine": 67
+          "startingLine": 68
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "%lld sets × %@",
         "location": {
           "startingColumn": 22,
-          "startingLine": 71
+          "startingLine": 72
         }
       }
     ]

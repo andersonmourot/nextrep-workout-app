@@ -7,7 +7,7 @@
         "key": "Home",
         "location": {
           "startingColumn": 26,
-          "startingLine": 65
+          "startingLine": 66
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "%@ • %@",
         "location": {
           "startingColumn": 22,
-          "startingLine": 91
+          "startingLine": 93
         }
       }
     ]

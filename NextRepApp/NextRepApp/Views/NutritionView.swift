@@ -22,5 +22,6 @@ struct NutritionView: View {
         .padding()
         .navigationTitle("Nutrition")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }

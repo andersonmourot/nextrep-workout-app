@@ -89,8 +89,10 @@ struct ExerciseDetailView: View {
             .padding()
             .background(Theme.bg)
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Exercise Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }
 

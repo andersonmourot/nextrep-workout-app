@@ -6,7 +6,7 @@
         "comment": "",
         "key": "Sign Up",
         "location": {
-          "startingColumn": 37,
+          "startingColumn": 41,
           "startingLine": 73
         }
       },
@@ -14,7 +14,7 @@
         "comment": "",
         "key": "Login",
         "location": {
-          "startingColumn": 49,
+          "startingColumn": 53,
           "startingLine": 73
         }
       },

@@ -95,6 +95,7 @@ struct ProgramDetailView: View {
             .padding()
             .background(Theme.bg)
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Program Details")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $selectedRoute) { route in
@@ -110,6 +111,7 @@ struct ProgramDetailView: View {
         .navigationDestination(item: $selectedDay) { day in
             DayView(program: program, day: day)
         }
+        .screenBackground()
     }
 }
 

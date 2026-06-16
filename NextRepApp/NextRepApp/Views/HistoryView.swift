@@ -16,5 +16,6 @@ struct HistoryView: View {
         .padding()
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }

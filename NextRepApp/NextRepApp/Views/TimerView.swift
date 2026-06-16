@@ -16,6 +16,6 @@ struct TimerView: View {
         .padding()
         .navigationTitle("Timer")
         .navigationBarTitleDisplayMode(.inline)
-            .background(Theme.bg)
+        .screenBackground()
     }
 }

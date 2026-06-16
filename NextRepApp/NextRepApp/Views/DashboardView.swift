@@ -60,8 +60,9 @@ struct DashboardView: View {
                 
                 Spacer()
             }
-            .background(Theme.bg)
+            .padding()
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Home")
         .navigationBarTitleDisplayMode(.large)
         .navigationDestination(item: $selectedRoute) { route in
@@ -74,6 +75,7 @@ struct DashboardView: View {
                 EmptyView()
             }
         }
+        .screenBackground()
     }
 }
 

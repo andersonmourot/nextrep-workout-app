@@ -7,62 +7,46 @@
         "key": "Programs",
         "location": {
           "startingColumn": 26,
-          "startingLine": 71
+          "startingLine": 53
         }
       },
       {
         "comment": "",
         "key": "Search programs...",
         "location": {
-          "startingColumn": 56,
-          "startingLine": 67
+          "startingColumn": 27,
+          "startingLine": 28
         }
       },
       {
         "comment": "",
-        "key": "Error",
+        "key": "·",
         "location": {
           "startingColumn": 26,
-          "startingLine": 32
+          "startingLine": 98
         }
       },
       {
         "comment": "",
-        "key": "Retry",
-        "location": {
-          "startingColumn": 28,
-          "startingLine": 38
-        }
-      },
-      {
-        "comment": "",
-        "key": "No Programs",
+        "key": "Coach %@",
         "location": {
           "startingColumn": 26,
-          "startingLine": 49
-        }
-      },
-      {
-        "comment": "",
-        "key": "You don't have any programs yet.",
-        "location": {
-          "startingColumn": 26,
-          "startingLine": 51
+          "startingLine": 121
         }
       },
       {
         "comment": "",
         "key": "%lld weeks",
         "location": {
-          "startingColumn": 27,
-          "startingLine": 129
+          "startingColumn": 31,
+          "startingLine": 128
         }
       },
       {
         "comment": "",
         "key": "%lld days/week",
         "location": {
-          "startingColumn": 27,
+          "startingColumn": 31,
           "startingLine": 133
         }
       }

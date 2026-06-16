@@ -16,6 +16,6 @@ struct PeopleView: View {
         .padding()
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
-            .background(Theme.bg)
+        .screenBackground()
     }
 }

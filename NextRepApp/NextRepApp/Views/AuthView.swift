@@ -67,10 +67,10 @@ struct AuthView: View {
             }
             
             Spacer()
-        }
-        .padding()
-        .background(Theme.bg)
-        .navigationTitle(isSignup ? "Sign Up" : "Login")
+            }
+            .padding()
+            .background(Theme.bg)
+            .navigationTitle(isSignup ? "Sign Up" : "Login")
     }
     
     private func login() {

@@ -23,6 +23,7 @@ struct ProgressView: View {
             }
             .padding()
         }
+        .scrollContentBackground(.hidden)
         .background(Theme.bg)
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
@@ -47,6 +48,7 @@ struct ProgressView: View {
                 EmptyView()
             }
         }
+        .screenBackground()
     }
 }
 

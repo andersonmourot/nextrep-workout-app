@@ -55,6 +55,7 @@ struct DayView: View {
         }
         .navigationTitle("Day Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }
 

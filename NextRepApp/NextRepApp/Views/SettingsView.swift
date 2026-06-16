@@ -31,7 +31,9 @@ struct SettingsView: View {
                 Text("About")
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }

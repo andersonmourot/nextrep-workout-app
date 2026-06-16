@@ -22,5 +22,6 @@ struct MaxTrackerView: View {
         .padding()
         .navigationTitle("Max Tracker")
         .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }

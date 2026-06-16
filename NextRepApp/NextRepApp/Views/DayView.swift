@@ -5,7 +5,7 @@ struct DayView: View {
     let day: Day
     @State private var isActive = false
     @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
-    @State private var navigateToWorkout = false
+    @State private var selectedRoute: AppRoute?
     
     var body: some View {
         ScrollView {
@@ -46,8 +46,9 @@ struct DayView: View {
                             week: nil
                         )
                         
-                        // Navigate to active workout
-                        navigateToWorkout = true
+                        // Navigate to active workout using path-based navigation
+                        selectedRoute = .activeWorkout(program: program, day: day)
+                        print("🏋️ Set selectedRoute to .activeWorkout")
                     } else {
                         print("❌ Day index not found")
                     }
@@ -56,9 +57,6 @@ struct DayView: View {
                 }
                 .buttonStyle(PrimaryButton())
                 .padding(.horizontal)
-                .navigationDestination(isPresented: $navigateToWorkout) {
-                    ActiveWorkoutView(program: program, day: day)
-                }
                 
                 // Exercises list
                 VStack(alignment: .leading, spacing: 16) {
@@ -78,6 +76,18 @@ struct DayView: View {
         }
         .navigationTitle("Day Detail")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedRoute) { route in
+            switch route {
+            case .activeWorkout(let program, let day):
+                if let day = day {
+                    ActiveWorkoutView(program: program, day: day)
+                } else {
+                    EmptyView()
+                }
+            default:
+                EmptyView()
+            }
+        }
         .screenBackground()
     }
 }

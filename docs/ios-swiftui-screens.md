@@ -1040,3 +1040,276 @@ Max tracker (§11–14); People, Settings, Nutrition (§15–17); Auth, password
 reset, Legal, Admin Users + Catalog (§18–23). Plus §0 foundations (theme, nav,
 shared helpers) and the API/data-model reference in
 `docs/ios-swiftui-handoff.md`.
+
+---
+
+# §24 Polish pass — pixel-accurate to the web app
+
+These are the **exact** values from the web design system (`tailwind.config.js`
++ `src/index.css` + the page components). Apply them once the screens exist to
+get the SwiftUI build pixel-close to the web app. Everything below is a verbatim
+port of the CSS — not an approximation.
+
+## 24.1 Exact color tokens (dark theme)
+RGB triplets straight from `index.css` `:root`. Build these into `Theme`:
+
+| Token | Tailwind name | RGB | Hex | Use |
+|---|---|---|---|---|
+| ink-950 | `bg-ink-950` | 8 8 10 | `#08080A` | app background (true screen edge) |
+| ink-900 | `bg-ink-900` | 13 13 16 | `#0D0D10` | inputs, bottom nav bg |
+| ink-850 | `bg-ink-850` | 20 20 23 | `#141417` | **cards**, header icon button |
+| ink-800 | `bg-ink-800` | 27 27 31 | `#1B1B1F` | ghost buttons, chips |
+| ink-700 | `bg-ink-700` | 38 38 43 | `#26262B` | hover, scrollbar thumb |
+| ink-600 | — | 58 58 65 | `#3A3A41` | dividers (rare) |
+| zinc-50 | `text-zinc-50` | 250 250 250 | `#FAFAFA` | h1 titles |
+| zinc-100 | `text-zinc-100` | 244 244 245 | `#F4F4F5` | body default text |
+| zinc-200 | `text-zinc-200` | 228 228 231 | `#E4E4E7` | ghost-button text |
+| zinc-300 | `text-zinc-300` | 212 212 216 | `#D4D4D8` | labels, chip text |
+| zinc-400 | `text-zinc-400` | 161 161 170 | `#A1A1AA` | secondary text |
+| zinc-500 | `text-zinc-500` | 113 113 122 | `#71717A` | placeholders, inactive nav |
+| zinc-600 | `text-zinc-600` | 82 82 91 | `#52525B` | faint footer text |
+| accent | `gold` | 53 94 59 | `#355E3B` | accent base (user-selectable) |
+| accent-400 | `gold-400` | 76 138 85 | `#4C8A55` | accent hover / glow |
+| accent-600 | `gold-600` | 40 74 48 | `#284A30` | accent pressed |
+
+Note the accent is **user-selectable** (stored as `themeColor`), so read it from
+the store and override the three accent values at runtime; `#355E3B` is the
+default. There is also a **light theme** (see §24.7).
+
+## 24.2 Typography (exact)
+- Fonts via Google Fonts: **Inter** weights 400/500/600/700, **Oswald** weights
+  500/600/700. Bundle the matching `.ttf`s (PostScript names `Inter-Regular`/
+  `-Medium`/`-SemiBold`/`-Bold`, `Oswald-Medium`/`-SemiBold`/`-Bold`).
+- `.heading` = Oswald, **uppercase**, `tracking-wide` (≈ +0.5pt letter spacing).
+- `.label-eyebrow` = Inter, **11pt**, weight 600, **uppercase**,
+  `tracking-[0.2em]` (≈ +2.2pt at 11pt), color = accent at **80% opacity**.
+- Page title (h1): `heading text-3xl font-bold` → Oswald **30pt**, weight 700,
+  uppercase, color `zinc-50`.
+- Section title (h2): `heading text-lg font-bold` → Oswald **18pt**, weight 700,
+  uppercase, color `zinc-50`.
+- Program card title: `heading text-xl font-bold` → Oswald **20pt**.
+- Body text: Inter **16pt** (`text-base`) / **14pt** (`text-sm`) / **11–12pt** for
+  meta. iOS note: keep text fields at **16pt** so iOS doesn't zoom on focus.
+
+## 24.3 Shape, spacing, shadow (exact)
+- **Card:** `rounded-2xl` = **16pt** corner radius; border `white @ 5%` 1pt; bg
+  `ink-850`; shadow `card` = inset top hairline `white @ 4%` + drop
+  `0 8 24 (-12 spread) black @ 80%`. SwiftUI: a `RoundedRectangle(cornerRadius:
+  16, style: .continuous)` fill `#141417`, `.overlay(stroke white.opacity(0.05))`,
+  `.shadow(color: .black.opacity(0.55), radius: 12, y: 8)`, plus a 1pt top
+  highlight (`LinearGradient` white 0.04 → clear, or a top-edge overlay line).
+- **Buttons / inputs / chips-search:** `rounded-xl` = **12pt**. Chips
+  (`.chip`): `rounded-full` (pill).
+- **Button padding:** `.btn` = `px-4 py-2.5` → **16pt h / 10pt v**, `text-sm`
+  (14pt) weight 600, `gap-2` (8pt) icon-text gap, `rounded-xl` (12pt). Pressed:
+  `active:scale-[0.98]`. Disabled: `opacity-40`.
+- **Card padding:** most cards use `p-5` = **20pt**; tighter list-row cards use
+  `p-4` = **16pt**; nav-row cards use `p-2` (8pt) with inner rows `px-3 py-2.5`.
+- **Input padding:** `.input` = `px-3 py-2.5` → **12pt h / 10pt v**, border
+  `white @ 10%`, focus border = accent @ 60%, bg `ink-900`, placeholder
+  `zinc-500`.
+- **Vertical rhythm:** page content wrappers use `space-y-5` (20pt) or
+  `space-y-6` (24pt) between sections; list stacks use `space-y-3` (12pt) or
+  `space-y-2` (8pt). Match these exactly per screen.
+- **Eyebrow→title gap:** title sits directly under the eyebrow; title→subtitle is
+  `mt-1` (4pt); subtitle is `text-sm text-zinc-400`.
+
+## 24.4 App shell (exact)
+- **Content width:** `.container-app` = centered, `max-w-md` (**448pt** max),
+  horizontal padding `px-4` (**16pt**). On iPhone this just means 16pt side
+  insets; keep the 448pt cap for iPad.
+- **Top header:** height **56pt** (`h-14`), bg `ink-950 @ 80%` + blur, bottom
+  border `white @ 5%`, respects the top safe area. Left = NextRep logo (→ Home),
+  right = a 36×36pt (`h-9 w-9`) rounded-lg (8pt) icon button, bg `ink-850`,
+  border `white @ 5%`, icon `zinc-400` → accent on press (→ Settings).
+- **Main content:** wrapped in `container-app py-5` (**20pt** top/bottom).
+- **Resume-workout banner** (when a session is live and you're not on /workout):
+  sticky under the header, `py-2`, a full-width `btn-gold` "▶ Resume workout".
+- **Bottom tab bar** (§0 nav): bg `ink-900 @ 90%` + blur, top border `white @
+  5%`, respects bottom safe area. 5 tabs (Home, Programs, Timer, Search,
+  Profile), each `flex-1`, `py-2.5` (10pt), icon **20pt** (`h-5 w-5`) + label
+  **11pt** weight 500. Active = accent with an icon `drop-shadow` glow
+  `0 0 6 accent-400 @ 60%`; inactive = `zinc-500` (→ `zinc-300` on press).
+
+## 24.5 Component recipes (exact)
+- **`.btn-gold`** (primary): bg accent, text white, hover bg accent-400.
+- **`.btn-ghost`**: bg `ink-800`, text `zinc-200`, border `white @ 5%`, hover bg
+  `ink-700`.
+- **`.btn-outline`**: transparent, border accent @ 40%, text accent, hover bg
+  accent @ 10%.
+- **`.chip`**: pill, border `white @ 10%`, bg `ink-800`, `px-2.5 py-1`, **11pt**
+  weight 500, text `zinc-300`.
+- **`.label-eyebrow`**: see §24.2.
+- **Search field** (Programs/Exercises/People): same as `.input` but `pl-9`
+  (36pt left) to clear the leading 16pt magnifier icon (`zinc-500`), placed at
+  `left-3 top-1/2 -translate-y-1/2`.
+- **Program card gradient:** `linear-gradient(150deg, {accent}1F, transparent
+  60%)` over the card — i.e. the program's accent at **~12% opacity (hex 1F)**
+  fading to transparent by 60%. SwiftUI: a `LinearGradient` at ~150° from
+  `Color(accent).opacity(0.12)` to `.clear`, on top of the normal card.
+- **Page enter animation:** `animate-fade-in` = 350ms ease-out, opacity 0→1 +
+  translateY 6pt→0. Apply to each screen's root on appear.
+
+## 24.6 The polished `Theme.swift` (drop-in)
+Replace the earlier theme with this so the tokens match exactly:
+
+```swift
+import SwiftUI
+
+extension Color {
+    init(hex: UInt) {
+        self.init(.sRGB,
+            red:   Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8)  & 0xFF) / 255,
+            blue:  Double(hex & 0xFF) / 255, opacity: 1)
+    }
+}
+
+enum Theme {
+    // Surfaces
+    static let bg       = Color(hex: 0x08080A)  // ink-950
+    static let input    = Color(hex: 0x0D0D10)  // ink-900
+    static let surface  = Color(hex: 0x141417)  // ink-850 (cards)
+    static let surface2 = Color(hex: 0x1B1B1F)  // ink-800 (ghost/chips)
+    static let hover    = Color(hex: 0x26262B)  // ink-700
+    // Text
+    static let text     = Color(hex: 0xFAFAFA)  // zinc-50 (titles)
+    static let text2    = Color(hex: 0xF4F4F5)  // zinc-100 (body)
+    static let dim      = Color(hex: 0xA1A1AA)  // zinc-400
+    static let faint    = Color(hex: 0x71717A)  // zinc-500 (placeholder)
+    // Accent (override base/lt/dk at runtime from themeColor)
+    static var accent   = Color(hex: 0x355E3B)
+    static var accentLt = Color(hex: 0x4C8A55)
+    static var accentDk = Color(hex: 0x284A30)
+
+    static func display(_ s: CGFloat, _ w: Font.Weight = .bold) -> Font {
+        .custom(w == .bold ? "Oswald-Bold" : "Oswald-SemiBold", size: s)
+    }
+    static func body(_ s: CGFloat, _ w: Font.Weight = .regular) -> Font {
+        let n = w == .bold ? "Inter-Bold" : w == .semibold ? "Inter-SemiBold"
+              : w == .medium ? "Inter-Medium" : "Inter-Regular"
+        return .custom(n, size: s)
+    }
+}
+
+struct CardStyle: ViewModifier {
+    var padding: CGFloat = 20            // p-5; pass 16 for p-4 rows
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1))
+            .overlay(alignment: .top,                       // inset top hairline
+                content: { Rectangle().fill(Color.white.opacity(0.04)).frame(height: 1) }
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous)))
+            .shadow(color: .black.opacity(0.55), radius: 12, x: 0, y: 8)
+    }
+}
+extension View {
+    func cardStyle(_ padding: CGFloat = 20) -> some View { modifier(CardStyle(padding: padding)) }
+    func eyebrow() -> some View {                            // .label-eyebrow
+        self.font(Theme.body(11, .semibold)).textCase(.uppercase)
+            .tracking(2.2).foregroundStyle(Theme.accent.opacity(0.8))
+    }
+    func screenTitle() -> some View {                        // h1
+        self.font(Theme.display(30)).textCase(.uppercase)
+            .tracking(0.5).foregroundStyle(Theme.text)
+    }
+    func sectionTitle() -> some View {                       // h2
+        self.font(Theme.display(18)).textCase(.uppercase)
+            .tracking(0.5).foregroundStyle(Theme.text)
+    }
+}
+
+struct PrimaryButton: ButtonStyle {        // .btn-gold
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.body(14, .semibold)).foregroundStyle(.white)
+            .padding(.horizontal, 16).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background(configuration.isPressed ? Theme.accentLt : Theme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+}
+struct GhostButton: ButtonStyle {          // .btn-ghost
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.body(14, .semibold)).foregroundStyle(Theme.text2)
+            .padding(.horizontal, 16).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background(configuration.isPressed ? Theme.hover : Theme.surface2)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.05), lineWidth: 1))
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
+    }
+}
+struct OutlineButton: ButtonStyle {        // .btn-outline
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Theme.body(14, .semibold)).foregroundStyle(Theme.accent)
+            .padding(.horizontal, 16).padding(.vertical, 10).frame(maxWidth: .infinity)
+            .background((configuration.isPressed ? Theme.accent.opacity(0.1) : .clear))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Theme.accent.opacity(0.4), lineWidth: 1))
+    }
+}
+
+struct ChipStyle: ViewModifier {           // .chip
+    func body(content: Content) -> some View {
+        content.font(Theme.body(11, .medium)).foregroundStyle(Theme.text.opacity(0.84))
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Theme.surface2)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+}
+extension View { func chip() -> some View { modifier(ChipStyle()) } }
+
+struct AppTextFieldStyle: ViewModifier {   // .input
+    func body(content: Content) -> some View {
+        content.font(Theme.body(16)).foregroundStyle(Theme.text2)
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .background(Theme.input)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.1), lineWidth: 1))
+    }
+}
+extension View { func appField() -> some View { modifier(AppTextFieldStyle()) } }
+```
+
+Root wrapper (every screen): `ZStack { Theme.bg.ignoresSafeArea()` + the
+top-glow `RadialGradient(Theme.accent.opacity(0.12) → .clear, center: .top)`
+`; content }`. The web background uses **two** radial glows: `80rem×40rem at
+50% -10%` accent @ 12%, and `60rem×30rem at 100% 0%` accent @ 7% — add the
+second, weaker glow in the top-right for an exact match.
+
+## 24.7 Light theme (optional, matches Settings toggle)
+If you implement the Light/Dark/System toggle (§16), invert the scales per
+`index.css :root.light`: surfaces ink-950 `#F5F6F8`, ink-900/850 `#FFFFFF`,
+ink-800 `#F1F2F5`, ink-700 `#E4E5E9`; text zinc-50 `#18181B`, zinc-100
+`#27272A`, zinc-400 `#71717A`, zinc-500 `#82828A`; and swap `white@x%`
+hairlines for `black@~x%`. Drive it with a `@Environment(\.colorScheme)` or the
+stored `themeMode`.
+
+> CLI prompt — "Do a polish pass per docs/ios-swiftui-screens.md §24 to make the
+> app pixel-accurate to the web design system. Update Theme.swift to the exact
+> drop-in in §24.6 (exact ink/zinc/accent tokens from §24.1, Oswald/Inter at the
+> §24.2 sizes/weights/tracking, the card 16pt-radius + 1pt white@5% border +
+> inset top hairline + black@55% y8 r12 shadow, the .btn-gold/.btn-ghost/
+> .btn-outline px16/py10 12pt-radius styles, .chip pills, and the .input 12pt-
+> radius white@10% border / accent@60% focus). Apply the app shell from §24.4:
+> 448pt max-width content with 16pt side padding and 20pt vertical padding, the
+> 56pt blurred top header with the 36pt settings icon button, the resume-workout
+> sticky banner, and the bottom tab bar (ink-900@90% blur, 20pt icons + 11pt
+> labels, active accent with a drop-shadow glow). Use the §24.3 spacing rhythm
+> (space-y-5/6 between sections, space-y-2/3 in lists), the §24.2 eyebrow/h1/h2
+> styles, the program-card 150° accent@12%→clear gradient, the two top radial
+> glows, and the 350ms fade-in on each screen's appear. Read the accent from the
+> stored themeColor and override the three accent values at runtime. Then rebuild
+> and run in the iOS Simulator and show me each main screen (Dashboard, Programs,
+> Program detail, Workout) side-by-side with the web app so I can confirm the
+> match."

@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ProgramsListView: View {
-    @Binding var isAuthenticated: Bool
     @State private var catalog: Catalog?
     @State private var isLoading = true
     @State private var errorMessage: String?
@@ -55,19 +54,16 @@ struct ProgramsListView: View {
                     }
                     .padding()
                 } else {
-                    List {
-                        ForEach(filteredPrograms) { program in
-                            ProgramRowView(program: program)
+                    NavigationStack {
+                        List {
+                            ForEach(filteredPrograms) { program in
+                                NavigationLink(destination: ProgramDetailView(program: program)) {
+                                    ProgramRowView(program: program)
+                                }
+                            }
                         }
-                    }
-                    .searchable(text: $searchText, prompt: "Search programs...")
-                }
-            }
-            .navigationTitle("Programs")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Logout") {
-                        logout()
+                        .searchable(text: $searchText, prompt: "Search programs...")
+                        .navigationTitle("Programs")
                     }
                 }
             }
@@ -96,15 +92,6 @@ struct ProgramsListView: View {
             }
         }
     }
-    
-    private func logout() {
-        APIClient.shared.logout()
-        isAuthenticated = false
-    }
-}
-
-#Preview {
-    ProgramsListView(isAuthenticated: .constant(true))
 }
 
 struct ProgramRowView: View {
@@ -157,8 +144,4 @@ struct ProgramRowView: View {
         }
         .padding(.vertical, 4)
     }
-}
-
-#Preview {
-    ProgramsListView(isAuthenticated: .constant(true))
 }

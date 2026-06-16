@@ -26,3 +26,9 @@ func formatDate(_ iso: String) -> String {
     
     return displayFormatter.string(from: date)
 }
+
+extension Color {
+    init(hex: String) {
+        self = hexToColor(hex)
+    }
+}

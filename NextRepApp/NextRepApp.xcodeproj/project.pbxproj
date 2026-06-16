@@ -27,6 +27,8 @@
 		AA0046 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0047 /* Utils.swift */; };
 		AA0048 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0049 /* AppStore.swift */; };
 		AA0053 /* Catalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0054 /* Catalog.swift */; };
+		AA0055 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0056 /* MainTabView.swift */; };
+		AA0057 /* ProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0058 /* ProgramDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -52,6 +54,8 @@
 		AA0047 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Utils.swift; sourceTree = SOURCE_ROOT; };
 		AA0049 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Store/AppStore.swift; sourceTree = SOURCE_ROOT; };
 		AA0054 /* Catalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Models/Catalog.swift; sourceTree = SOURCE_ROOT; };
+		AA0056 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Views/MainTabView.swift; sourceTree = SOURCE_ROOT; };
+		AA0058 /* ProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Views/ProgramDetailView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -137,6 +141,8 @@
 				A2250C192FE0E17800076C9D /* ProgramHistoryView.swift */,
 				AA0038 /* AuthFlowView.swift */,
 				AA0040 /* ProgramsListView.swift */,
+				AA0056 /* MainTabView.swift */,
+				AA0058 /* ProgramDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -229,6 +235,8 @@
 				AA0046 /* Utils.swift in Sources */,
 				AA0048 /* AppStore.swift in Sources */,
 				AA0053 /* Catalog.swift in Sources */,
+				AA0055 /* MainTabView.swift in Sources */,
+				AA0057 /* ProgramDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

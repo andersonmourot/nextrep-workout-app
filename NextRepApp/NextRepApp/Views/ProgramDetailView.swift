@@ -1,0 +1,154 @@
+import SwiftUI
+
+struct ProgramDetailView: View {
+    let program: Program
+    @State private var isActive = false
+    @StateObject private var store = AppStore()
+    
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Hero card
+                VStack(alignment: .leading, spacing: 16) {
+                    // Category pill
+                    if let category = program.category {
+                        Text(category.uppercased())
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Theme.accent)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Theme.accent.opacity(0.1))
+                            .cornerRadius(12)
+                    }
+                    
+                    // Title
+                    Text(program.name)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(Theme.text)
+                    
+                    // Meta info
+                    HStack(spacing: 16) {
+                        if let coach = program.coach {
+                            Label(coach, systemImage: "person.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.textDim)
+                        }
+                        if let level = program.level {
+                            Label(level, systemImage: "star.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Theme.textDim)
+                        }
+                    }
+                    
+                    // Description
+                    if let description = program.description {
+                        Text(description)
+                            .font(.system(size: 14))
+                            .foregroundColor(Theme.textDim)
+                            .lineLimit(3)
+                    }
+                    
+                    // Set as Active button
+                    if isActive {
+                        HStack {
+                            Image(systemName: "checkmark")
+                                .font(.caption)
+                            Text("Active Program")
+                        }
+                        .buttonStyle(GhostButton())
+                        .disabled(true)
+                    } else {
+                        Button(action: {
+                            Task {
+                                // TODO: await store.setActiveProgram(program.id)
+                                isActive = true
+                            }
+                        }) {
+                            Text("Set as Active Program")
+                        }
+                        .buttonStyle(PrimaryButton())
+                    }
+                }
+                .padding(16)
+                .cardStyle()
+                
+                // Days section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Workout Days")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Theme.text)
+                    
+                    VStack(spacing: 12) {
+                        ForEach(program.days) { day in
+                            NavigationLink(destination: ActiveWorkoutView(program: program, day: day)) {
+                                DayCard(day: day)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Program Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .background(Theme.bg)
+    }
+}
+
+struct DayCard: View {
+    let day: Day
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(day.name ?? "Workout")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Theme.text)
+                
+                if let focus = day.focus {
+                    Text(focus)
+                        .font(.system(size: 12))
+                        .foregroundColor(Theme.textDim)
+                }
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14))
+                .foregroundColor(Theme.textDim)
+        }
+        .padding(16)
+        .cardStyle()
+    }
+}
+
+struct ActiveWorkoutView: View {
+    let program: Program
+    let day: Day
+    
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Active Workout")
+                .font(.title)
+                .padding()
+            
+            Text("Program: \(program.name)")
+                .font(.headline)
+            
+            Text("Day: \(day.name ?? "Workout")")
+                .font(.subheadline)
+            
+            Spacer()
+            
+            Button("Finish Workout") {
+                // TODO: Implement finish workout
+            }
+            .buttonStyle(PrimaryButton())
+            .padding()
+        }
+        .navigationTitle("Workout")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}

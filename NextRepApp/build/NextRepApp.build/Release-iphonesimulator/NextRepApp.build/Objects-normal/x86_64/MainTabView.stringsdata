@@ -1,0 +1,80 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/MainTabView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Home",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "Dashboard",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 97
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start Workout",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timer",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 123
+        }
+      },
+      {
+        "comment": "",
+        "key": "Timer",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 118
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 137
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search People",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 132
+        }
+      },
+      {
+        "comment": "",
+        "key": "Profile",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 151
+        }
+      },
+      {
+        "comment": "",
+        "key": "Progress",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 146
+        }
+      }
+    ]
+  },
+  "version": 1
+}

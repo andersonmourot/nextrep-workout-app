@@ -248,56 +248,6 @@ struct TopHeader: View {
     }
 }
 
-struct BottomTabBar: View {
-    @Binding var selectedTab: Int
-    let onTabTap: (Int) -> Void
-    
-    let tabs: [(icon: String, label: String)] = [
-        ("house.fill", "Home"),
-        ("dumbbell.fill", "Programs"),
-        ("timer", "Timer"),
-        ("magnifyingglass", "Search"),
-        ("person.fill", "Profile")
-    ]
-    
-    init(selectedTab: Binding<Int>, onTabTap: @escaping (Int) -> Void = { _ in }) {
-        self._selectedTab = selectedTab
-        self.onTabTap = onTabTap
-    }
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<tabs.count, id: \.self) { index in
-                Button(action: { onTabTap(index) }) {
-                    VStack(spacing: 4) {
-                        Image(systemName: tabs[index].icon)
-                            .font(.system(size: 20))
-                            .foregroundColor(selectedTab == index ? Theme.accent : Theme.faint)
-                            .shadow(
-                                color: Theme.accentLt.opacity(0.6),
-                                radius: selectedTab == index ? 6 : 0
-                            )
-                        
-                        Text(tabs[index].label)
-                            .font(Theme.body(11, .medium))
-                            .foregroundColor(selectedTab == index ? Theme.accent : Theme.faint)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-        }
-        .background(Color(hex: 0x0D0D10).opacity(0.9))
-        .overlay(
-            Rectangle()
-                .fill(Color.white.opacity(0.05))
-                .frame(height: 1),
-            alignment: .top
-        )
-    }
-}
-
 struct ResumeWorkoutBanner: View {
     let onResume: () -> Void
     

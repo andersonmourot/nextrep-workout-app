@@ -4,26 +4,10 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "Programs",
-        "location": {
-          "startingColumn": 30,
-          "startingLine": 66
-        }
-      },
-      {
-        "comment": "",
         "key": "Loading programs...",
         "location": {
           "startingColumn": 34,
-          "startingLine": 26
-        }
-      },
-      {
-        "comment": "",
-        "key": "Search programs...",
-        "location": {
-          "startingColumn": 60,
-          "startingLine": 63
+          "startingLine": 25
         }
       },
       {
@@ -31,7 +15,7 @@
         "key": "Error",
         "location": {
           "startingColumn": 30,
-          "startingLine": 33
+          "startingLine": 32
         }
       },
       {
@@ -39,7 +23,7 @@
         "key": "Retry",
         "location": {
           "startingColumn": 32,
-          "startingLine": 39
+          "startingLine": 38
         }
       },
       {
@@ -47,7 +31,7 @@
         "key": "No Programs",
         "location": {
           "startingColumn": 30,
-          "startingLine": 50
+          "startingLine": 49
         }
       },
       {
@@ -55,15 +39,23 @@
         "key": "You don't have any programs yet.",
         "location": {
           "startingColumn": 30,
-          "startingLine": 52
+          "startingLine": 51
         }
       },
       {
         "comment": "",
-        "key": "Logout",
+        "key": "Search programs...",
         "location": {
-          "startingColumn": 28,
-          "startingLine": 69
+          "startingColumn": 64,
+          "startingLine": 65
+        }
+      },
+      {
+        "comment": "",
+        "key": "Programs",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 66
         }
       },
       {
@@ -71,7 +63,7 @@
         "key": "%lld weeks",
         "location": {
           "startingColumn": 27,
-          "startingLine": 138
+          "startingLine": 125
         }
       },
       {
@@ -79,7 +71,7 @@
         "key": "%lld days/week",
         "location": {
           "startingColumn": 27,
-          "startingLine": 142
+          "startingLine": 129
         }
       }
     ]

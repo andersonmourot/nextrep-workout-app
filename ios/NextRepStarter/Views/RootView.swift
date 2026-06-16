@@ -82,7 +82,7 @@ struct PlaceholderView: View {
                 .foregroundStyle(Theme.accentLight)
 
             Text(title)
-                .font(.system(.largeTitle, design: .condensed, weight: .semibold))
+                .font(.system(.largeTitle, design: .default, weight: .semibold))
                 .foregroundStyle(Theme.text)
 
             Text("This screen is mapped in docs/ios-swiftui-screens.md and is ready for the next phase.")

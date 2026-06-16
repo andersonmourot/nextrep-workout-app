@@ -12,7 +12,7 @@ struct AuthView: View {
             VStack(alignment: .leading, spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("NextRep")
-                        .font(.system(size: 42, weight: .bold, design: .condensed))
+                        .font(.system(size: 42, weight: .bold, design: .default))
                         .textCase(.uppercase)
                         .foregroundStyle(Theme.text)
 

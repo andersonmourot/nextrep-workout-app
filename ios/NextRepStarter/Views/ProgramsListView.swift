@@ -49,7 +49,7 @@ struct ProgramsListView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Programs")
-                .font(.system(size: 34, weight: .bold, design: .condensed))
+                .font(.system(size: 34, weight: .bold, design: .default))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
 
@@ -134,7 +134,7 @@ struct ProgramCard: View {
                         .foregroundStyle(accent)
 
                     Text(program.name)
-                        .font(.system(.title2, design: .condensed, weight: .bold))
+                        .font(.system(.title2, design: .default, weight: .bold))
                         .foregroundStyle(Theme.text)
                 }
 

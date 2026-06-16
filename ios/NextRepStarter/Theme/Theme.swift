@@ -88,6 +88,7 @@ extension View {
                 )
                 .ignoresSafeArea()
             }
+            .allowsHitTesting(false)
         }
     }
 }

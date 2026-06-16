@@ -33,7 +33,11 @@ struct RootView: View {
                             case .dashboard:
                                 DashboardView()
                             case .activeWorkout(let program, let day):
-                                ActiveWorkoutView(program: program, day: day)
+                                if let day = day {
+                                    ActiveWorkoutView(program: program, day: day)
+                                } else {
+                                    EmptyView()
+                                }
                             case .programDetail(let program):
                                 ProgramDetailView(program: program)
                             case .dayDetail(let program, let day):
@@ -61,7 +65,11 @@ struct RootView: View {
                             case .dayDetail(let program, let day):
                                 DayView(program: program, day: day)
                             case .activeWorkout(let program, let day):
-                                ActiveWorkoutView(program: program, day: day)
+                                if let day = day {
+                                    ActiveWorkoutView(program: program, day: day)
+                                } else {
+                                    EmptyView()
+                                }
                             case .dashboard:
                                 DashboardView()
                             case .exerciseDetail(let exercise):

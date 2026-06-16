@@ -68,7 +68,11 @@ struct DashboardView: View {
         .navigationDestination(item: $selectedRoute) { route in
             switch route {
             case .activeWorkout(let program, let day):
-                ActiveWorkoutView(program: program, day: day)
+                if let day = day {
+                    ActiveWorkoutView(program: program, day: day)
+                } else {
+                    EmptyView()
+                }
             case .programDetail(let program):
                 ProgramDetailView(program: program)
             default:

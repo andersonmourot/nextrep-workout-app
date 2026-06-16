@@ -101,7 +101,11 @@ struct ProgramDetailView: View {
         .navigationDestination(item: $selectedRoute) { route in
             switch route {
             case .activeWorkout(let program, let day):
-                ActiveWorkoutView(program: program, day: day)
+                if let day = day {
+                    ActiveWorkoutView(program: program, day: day)
+                } else {
+                    EmptyView()
+                }
             case .dayDetail(let program, let day):
                 DayView(program: program, day: day)
             default:
@@ -140,36 +144,5 @@ struct DayCard: View {
         }
         .padding(16)
         .cardStyle()
-    }
-}
-
-struct ActiveWorkoutView: View {
-    let program: Program
-    let day: Day?
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Active Workout")
-                .font(.title)
-                .padding()
-            
-            Text("Program: \(program.name)")
-                .font(.headline)
-            
-            if let day = day {
-                Text("Day: \(day.name ?? "Workout")")
-                    .font(.subheadline)
-            }
-            
-            Spacer()
-            
-            Button("Finish Workout") {
-                // TODO: Implement finish workout
-            }
-            .buttonStyle(PrimaryButton())
-            .padding()
-        }
-        .navigationTitle("Workout")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }

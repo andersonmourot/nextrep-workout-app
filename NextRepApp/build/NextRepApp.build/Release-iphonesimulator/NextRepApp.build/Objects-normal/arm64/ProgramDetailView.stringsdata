@@ -33,46 +33,6 @@
           "startingColumn": 26,
           "startingLine": 79
         }
-      },
-      {
-        "comment": "",
-        "key": "Workout",
-        "location": {
-          "startingColumn": 26,
-          "startingLine": 172
-        }
-      },
-      {
-        "comment": "",
-        "key": "Active Workout",
-        "location": {
-          "startingColumn": 18,
-          "startingLine": 152
-        }
-      },
-      {
-        "comment": "",
-        "key": "Program: %@",
-        "location": {
-          "startingColumn": 18,
-          "startingLine": 156
-        }
-      },
-      {
-        "comment": "",
-        "key": "Day: %@",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 160
-        }
-      },
-      {
-        "comment": "",
-        "key": "Finish Workout",
-        "location": {
-          "startingColumn": 20,
-          "startingLine": 166
-        }
       }
     ]
   },

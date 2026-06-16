@@ -20,7 +20,8 @@ Observation, URLSession, and Keychain Services.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
 - `Views/*` with a minimal auth flow, read-only Programs tab, Program Detail
-  navigation, and an Active Workout placeholder.
+  navigation, and a first-pass Active Workout screen for set logging and rest
+  timing.
 
 ## Backend assumptions
 
@@ -44,8 +45,8 @@ by the web app. Keep that behavior as you add native features.
 3. Verify login against the production backend.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
-   - Active workout set/rep/weight logging
-   - Rest timer persistence and sync
+   - Finish-workout history logging and summary
+   - Rest-complete sound/local notification behavior
    - Day detail and edit flows
 
 See `docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the

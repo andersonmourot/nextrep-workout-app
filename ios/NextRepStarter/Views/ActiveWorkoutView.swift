@@ -1,13 +1,58 @@
+import Foundation
 import SwiftUI
 
 struct ActiveWorkoutView: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let program: Program
     let day: ProgramDay
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
+            if let active = store.appData.activeWorkout {
+                VStack(alignment: .leading, spacing: 20) {
+                    header(active: active)
+
+                    RestTimerCard(active: active, accent: accent) {
+                        store.stopRest()
+                    }
+
+                    exercisesList(active: active)
+
+                    Button(role: .destructive) {
+                        store.endWorkout()
+                        dismiss()
+                    } label: {
+                        Text("End Workout")
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                }
+                .padding(16)
+                .frame(maxWidth: 448)
+                .frame(maxWidth: .infinity)
+            } else {
+                emptySession
+                    .padding(16)
+                    .frame(maxWidth: 448)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .navigationTitle("Workout")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+        .onAppear {
+            store.startWorkout(program: program, day: day)
+        }
+    }
+
+    private var accent: Color {
+        Color(hex: program.accent)
+    }
+
+    private func header(active: ActiveWorkout) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Active Workout")
                         .font(.system(size: 34, weight: .bold, design: .default))
                         .textCase(.uppercase)
@@ -28,30 +73,342 @@ struct ActiveWorkoutView: View {
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("Workout player coming next", systemImage: "figure.strengthtraining.traditional")
+                Spacer()
+
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Image(systemName: "timer")
+                            .foregroundStyle(accent)
+                        Text(elapsedText(active: active, now: context.date))
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(Theme.textDim)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+
+            Text("\(completedSets(active)) of \(totalSets(active)) sets complete")
+                .font(.footnote)
+                .foregroundStyle(Theme.textDim)
+        }
+    }
+
+    private func exercisesList(active: ActiveWorkout) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            ForEach(Array(day.exercises.enumerated()), id: \.offset) { exerciseIndex, planned in
+                WorkoutExerciseCard(
+                    accent: accent,
+                    name: exerciseName(for: planned),
+                    planned: planned,
+                    unit: store.appData.unit,
+                    rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
+                    onWeightChange: { setIndex, delta in
+                        guard active.sets.indices.contains(exerciseIndex),
+                              active.sets[exerciseIndex].indices.contains(setIndex) else {
+                            return
+                        }
+                        let current = active.sets[exerciseIndex][setIndex].weight
+                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: current + delta)
+                    },
+                    onRepsChange: { setIndex, delta in
+                        guard active.sets.indices.contains(exerciseIndex),
+                              active.sets[exerciseIndex].indices.contains(setIndex) else {
+                            return
+                        }
+                        let current = active.sets[exerciseIndex][setIndex].reps
+                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: current + delta)
+                    },
+                    onToggleCompleted: { setIndex, completed in
+                        store.setCompleted(
+                            exerciseIndex: exerciseIndex,
+                            setIndex: setIndex,
+                            completed: completed,
+                            restSec: planned.restSec
+                        )
+                    },
+                    onStartRest: {
+                        store.startRest(seconds: planned.restSec)
+                    }
+                )
+            }
+        }
+    }
+
+    private var emptySession: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("No active session", systemImage: "exclamationmark.circle")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            Text("Go back and tap Start again to create a workout session.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textDim)
+        }
+        .cardStyle()
+    }
+
+    private func exerciseName(for planned: PlannedExercise) -> String {
+        if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return name
+        }
+
+        let allExercises = store.catalog.exercises + store.appData.customExercises
+        return allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+    }
+
+    private func completedSets(_ active: ActiveWorkout) -> Int {
+        active.sets.flatMap { $0 }.filter(\.completed).count
+    }
+
+    private func totalSets(_ active: ActiveWorkout) -> Int {
+        active.sets.reduce(0) { $0 + $1.count }
+    }
+
+    private func elapsedText(active: ActiveWorkout, now: Date) -> String {
+        let startedAt = Date(timeIntervalSince1970: active.startedAt / 1000)
+        let elapsed = max(0, Int(now.timeIntervalSince(startedAt)))
+        return formatClock(elapsed)
+    }
+}
+
+private struct RestTimerCard: View {
+    let active: ActiveWorkout
+    let accent: Color
+    let onStop: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = remainingSeconds(now: context.date)
+
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Rest Timer", systemImage: "bell")
                         .font(.headline)
                         .foregroundStyle(Theme.text)
 
-                    Text("This placeholder confirms navigation from Program Detail. The next pass will add set, rep, weight, and rest-timer logging.")
+                    Spacer()
+
+                    if active.restEndsAt != nil {
+                        Button("Stop") {
+                            onStop()
+                        }
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(accent)
+                    }
+                }
+
+                if active.restEndsAt == nil {
+                    Text("Complete a set or tap Start Rest on an exercise to begin.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textDim)
-                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(remaining > 0 ? formatClock(remaining) : "Rest complete")
+                        .font(.system(size: 30, weight: .bold, design: .default).monospacedDigit())
+                        .foregroundStyle(remaining > 0 ? Theme.text : accent)
+
+                    ProgressView(value: progress(remaining: remaining))
+                        .tint(accent)
                 }
-                .cardStyle()
-
-                Spacer(minLength: 0)
             }
-            .padding(16)
-            .frame(maxWidth: 448)
-            .frame(maxWidth: .infinity)
+            .cardStyle()
         }
-        .navigationTitle("Workout")
-        .navigationBarTitleDisplayMode(.inline)
-        .screenBackground()
     }
 
-    private var accent: Color {
-        Color(hex: program.accent)
+    private func remainingSeconds(now: Date) -> Int {
+        guard let restEndsAt = active.restEndsAt else {
+            return 0
+        }
+
+        let seconds = (restEndsAt / 1000) - now.timeIntervalSince1970
+        return max(0, Int(ceil(seconds)))
     }
+
+    private func progress(remaining: Int) -> Double {
+        guard active.restTotal > 0 else {
+            return 0
+        }
+
+        return 1 - (Double(remaining) / Double(active.restTotal))
+    }
+}
+
+private struct WorkoutExerciseCard: View {
+    let accent: Color
+    let name: String
+    let planned: PlannedExercise
+    let unit: String
+    let rows: [SetLog]
+    let onWeightChange: (Int, Double) -> Void
+    let onRepsChange: (Int, Int) -> Void
+    let onToggleCompleted: (Int, Bool) -> Void
+    let onStartRest: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(name)
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Text("\(planned.sets) x \(planned.reps) · \(planned.restSec)s rest")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                }
+
+                Spacer()
+
+                Button("Start Rest") {
+                    onStartRest()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { index, set in
+                    WorkoutSetRow(
+                        index: index,
+                        set: set,
+                        accent: accent,
+                        unit: unit,
+                        onWeightChange: { onWeightChange(index, $0) },
+                        onRepsChange: { onRepsChange(index, $0) },
+                        onToggleCompleted: { onToggleCompleted(index, $0) }
+                    )
+                }
+            }
+        }
+        .cardStyle()
+    }
+}
+
+private struct WorkoutSetRow: View {
+    let index: Int
+    let set: SetLog
+    let accent: Color
+    let unit: String
+    let onWeightChange: (Double) -> Void
+    let onRepsChange: (Int) -> Void
+    let onToggleCompleted: (Bool) -> Void
+
+    var body: some View {
+        VStack(spacing: 10) {
+            HStack {
+                Text("Set \(index + 1)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                Button {
+                    onToggleCompleted(!set.completed)
+                } label: {
+                    Label(set.completed ? "Done" : "Mark Done", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(set.completed ? accent : Theme.textDim)
+            }
+
+            HStack(spacing: 10) {
+                SetValueControl(
+                    title: "Weight",
+                    value: formatWeight(set.weight),
+                    unit: unit,
+                    minusAction: { onWeightChange(-5) },
+                    plusAction: { onWeightChange(5) }
+                )
+
+                SetValueControl(
+                    title: "Reps",
+                    value: "\(set.reps)",
+                    unit: "",
+                    minusAction: { onRepsChange(-1) },
+                    plusAction: { onRepsChange(1) }
+                )
+            }
+        }
+        .padding(12)
+        .background(set.completed ? accent.opacity(0.14) : Theme.inputBg.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(set.completed ? accent.opacity(0.45) : .white.opacity(0.06), lineWidth: 1)
+        }
+    }
+}
+
+private struct SetValueControl: View {
+    let title: String
+    let value: String
+    let unit: String
+    let minusAction: () -> Void
+    let plusAction: () -> Void
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .foregroundStyle(Theme.textFaint)
+
+            HStack(spacing: 8) {
+                Button(action: minusAction) {
+                    Image(systemName: "minus")
+                }
+                .buttonStyle(SetStepperButtonStyle())
+
+                VStack(spacing: 1) {
+                    Text(value)
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(Theme.text)
+
+                    if !unit.isEmpty {
+                        Text(unit)
+                            .font(.caption2)
+                            .foregroundStyle(Theme.textFaint)
+                    }
+                }
+                .frame(minWidth: 42)
+
+                Button(action: plusAction) {
+                    Image(systemName: "plus")
+                }
+                .buttonStyle(SetStepperButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+private struct SetStepperButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.text)
+            .frame(width: 28, height: 28)
+            .background(configuration.isPressed ? Theme.surface3 : Theme.surface)
+            .clipShape(Circle())
+    }
+}
+
+private func formatClock(_ seconds: Int) -> String {
+    let minutes = seconds / 60
+    let remainder = seconds % 60
+    return String(format: "%d:%02d", minutes, remainder)
+}
+
+private func formatWeight(_ weight: Double) -> String {
+    if weight.rounded() == weight {
+        return "\(Int(weight))"
+    }
+
+    return String(format: "%.1f", weight)
 }

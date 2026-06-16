@@ -6,7 +6,6 @@ struct ActiveWorkoutView: View {
     let program: Program
     let day: Day
     @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
-    @State private var selectedRoute: AppRoute?
     @State private var showSummary = false
     @State private var workoutSummary: ActiveWorkoutSummary?
     
@@ -45,8 +44,8 @@ struct ActiveWorkoutView: View {
             VStack(spacing: 0) {
                 HStack {
                     Button(action: {
-                        // Leave session live, pop back
-                        selectedRoute = nil
+                        // Leave session live, dismiss the full-screen cover
+                        activeWorkoutStore.currentSession = nil
                     }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .semibold))
@@ -140,14 +139,11 @@ struct ActiveWorkoutView: View {
         .onDisappear {
             stopTimer()
         }
-        .navigationDestination(item: $selectedRoute) { route in
-            EmptyView()
-        }
         .sheet(isPresented: $showSummary) {
             if let summary = workoutSummary {
                 WorkoutSummaryView(summary: summary) {
-                    // Navigate back to dashboard
-                    selectedRoute = .dashboard
+                    // Clear session and dismiss
+                    activeWorkoutStore.currentSession = nil
                 }
             }
         }
@@ -162,14 +158,20 @@ struct ActiveWorkoutView: View {
     }
     
     private var elapsedTimeString: String {
-        let elapsed = Int(Date().timeIntervalSince1970 - activeWorkoutStore.startedAt)
+        guard let session = activeWorkoutStore.currentSession else {
+            return "0:00"
+        }
+        let start = session.startedAt
+        let raw = Date().timeIntervalSince1970 - start
+        let elapsed = (raw.isFinite && raw > 0) ? Int(raw) : 0
         let minutes = elapsed / 60
         let seconds = elapsed % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
     
     private var restTimeString: String {
-        let remaining = max(0, Int(activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970))
+        let raw = activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970
+        let remaining = (raw.isFinite && raw > 0) ? Int(raw) : 0
         let minutes = remaining / 60
         let seconds = remaining % 60
         return String(format: "%d:%02d", minutes, seconds)
@@ -177,7 +179,9 @@ struct ActiveWorkoutView: View {
     
     private var restProgress: Double {
         guard activeWorkoutStore.restDuration > 0 else { return 0 }
-        let elapsed = activeWorkoutStore.restDuration - max(0, Int(activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970))
+        let raw = activeWorkoutStore.restEndsAt - Date().timeIntervalSince1970
+        let remaining = (raw.isFinite && raw > 0) ? Int(raw) : 0
+        let elapsed = activeWorkoutStore.restDuration - remaining
         return Double(elapsed) / Double(activeWorkoutStore.restDuration)
     }
     
@@ -236,16 +240,25 @@ struct ActiveWorkoutView: View {
     }
     
     private func finishWorkout() {
+        guard let session = activeWorkoutStore.currentSession else {
+            print("❌ No session available to finish workout")
+            return
+        }
+        
         let totalVolume = activeWorkoutStore.sets.flatMap { $0 }.reduce(0.0) { $0 + ($1.weight * Double($1.reps)) }
         
+        let now = Date().timeIntervalSince1970
+        let rawDuration = now - session.startedAt
+        let durationSeconds = (rawDuration.isFinite && rawDuration > 0) ? Int(rawDuration) : 0
+        
         let log = ActiveWorkoutSummary(
-            programId: program.id,
-            programName: program.name,
-            dayId: day.id,
-            dayName: day.name ?? "Workout",
-            startedAt: activeWorkoutStore.startedAt,
-            completedAt: Date().timeIntervalSince1970,
-            durationSeconds: Int(Date().timeIntervalSince1970 - activeWorkoutStore.startedAt),
+            programId: session.programId,
+            programName: session.program.name,
+            dayId: session.dayId,
+            dayName: session.day.name ?? "Workout",
+            startedAt: session.startedAt,
+            completedAt: now,
+            durationSeconds: durationSeconds,
             setsCompleted: activeWorkoutStore.completedSets,
             totalSets: activeWorkoutStore.totalSets,
             totalVolume: totalVolume,
@@ -259,13 +272,20 @@ struct ActiveWorkoutView: View {
     }
 }
 
+struct ActiveWorkoutSession: Identifiable {
+    let id = UUID()
+    let programId: String
+    let dayId: String
+    let week: Int?
+    let startedAt: Double
+    let program: Program
+    let day: Day
+}
+
 class ActiveWorkoutStore: ObservableObject {
     static let shared = ActiveWorkoutStore()
     
-    @Published var programId: String = ""
-    @Published var dayId: String = ""
-    @Published var week: Int?
-    @Published var startedAt: Double = Date().timeIntervalSince1970
+    @Published var currentSession: ActiveWorkoutSession?
     @Published var sets: [[SetLog]] = []
     @Published var isResting = false
     @Published var restEndsAt: Double = 0
@@ -277,10 +297,7 @@ class ActiveWorkoutStore: ObservableObject {
     func startWorkout(program: Program, day: Day, dayIndex: Int, week: Int? = nil) {
         print("🏋️ startWorkout called - program: \(program.name), day: \(day.name ?? "Unknown"), dayIndex: \(dayIndex)")
         
-        self.programId = program.id
-        self.dayId = day.id
-        self.week = week
-        self.startedAt = Date().timeIntervalSince1970
+        let now = Date().timeIntervalSince1970
         
         // Initialize sets for each exercise in the day
         self.sets = day.exercises.map { exercise in
@@ -292,9 +309,17 @@ class ActiveWorkoutStore: ObservableObject {
         
         print("🏋️ Workout initialized with \(day.exercises.count) exercises and \(self.sets.flatMap { $0 }.count) total sets")
         
-        // Post notification to trigger full-screen cover
-        NotificationCenter.default.post(name: .startWorkout, object: nil, userInfo: ["program": program, "day": day])
-        print("🏋️ Posted startWorkout notification")
+        // Create the session with real timestamp
+        self.currentSession = ActiveWorkoutSession(
+            programId: program.id,
+            dayId: day.id,
+            week: week,
+            startedAt: now,
+            program: program,
+            day: day
+        )
+        
+        print("🏋️ Session created with startedAt: \(now)")
     }
     
     func tick() {
@@ -322,7 +347,7 @@ class ActiveWorkoutStore: ObservableObject {
     }
     
     var isActive: Bool {
-        !programId.isEmpty
+        currentSession != nil
     }
 }
 

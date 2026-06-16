@@ -7,7 +7,7 @@
         "key": "",
         "location": {
           "startingColumn": 26,
-          "startingLine": 132
+          "startingLine": 131
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "Finish Workout",
         "location": {
           "startingColumn": 30,
-          "startingLine": 33
+          "startingLine": 32
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Rest",
         "location": {
           "startingColumn": 26,
-          "startingLine": 98
+          "startingLine": 97
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "+15s",
         "location": {
           "startingColumn": 34,
-          "startingLine": 110
+          "startingLine": 109
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Skip",
         "location": {
           "startingColumn": 34,
-          "startingLine": 115
+          "startingLine": 114
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Exercise %lld of %lld",
         "location": {
           "startingColumn": 18,
-          "startingLine": 339
+          "startingLine": 364
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "%lld sets × %@ reps",
         "location": {
           "startingColumn": 22,
-          "startingLine": 350
+          "startingLine": 375
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "Set",
         "location": {
           "startingColumn": 26,
-          "startingLine": 358
+          "startingLine": 383
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "Weight (lbs)",
         "location": {
           "startingColumn": 26,
-          "startingLine": 362
+          "startingLine": 387
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "Reps",
         "location": {
           "startingColumn": 26,
-          "startingLine": 366
+          "startingLine": 391
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "Done",
         "location": {
           "startingColumn": 26,
-          "startingLine": 370
+          "startingLine": 395
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 18,
-          "startingLine": 428
+          "startingLine": 453
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "",
         "location": {
           "startingColumn": 23,
-          "startingLine": 436
+          "startingLine": 461
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "",
         "location": {
           "startingColumn": 23,
-          "startingLine": 445
+          "startingLine": 470
         }
       },
       {
@@ -119,7 +119,7 @@
         "key": "Workout Complete!",
         "location": {
           "startingColumn": 18,
-          "startingLine": 485
+          "startingLine": 510
         }
       },
       {
@@ -127,7 +127,7 @@
         "key": "Done",
         "location": {
           "startingColumn": 20,
-          "startingLine": 499
+          "startingLine": 524
         }
       }
     ]

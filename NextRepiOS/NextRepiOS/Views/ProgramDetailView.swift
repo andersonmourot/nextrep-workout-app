@@ -104,26 +104,14 @@ struct ProgramDetailView: View {
             // Eyebrow with category · level + custom/following pill
             HStack(spacing: 8) {
                 Text("\(program.category) · \(program.level)")
-                    .font(Theme.body(11))
-                    .foregroundColor(accentColor.opacity(0.8))
-                    .tracking(2)
+                    .eyebrow()
                 
                 if isCustom {
                     Text("Custom")
-                        .font(Theme.body(10))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.surface2)
-                        .cornerRadius(12)
+                        .chip()
                 } else if program.collaborative == true {
                     Text("Following")
-                        .font(Theme.body(10))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Theme.surface2)
-                        .cornerRadius(12)
+                        .chip()
                 }
             }
             
@@ -148,49 +136,27 @@ struct ProgramDetailView: View {
             }
             
             // Set as Active Program button
-            Button(action: {
-                Task {
-                    if isActive {
-                        // Already active - do nothing
-                    } else {
+            if isActive {
+                HStack {
+                    Image(systemName: "checkmark")
+                        .font(.caption)
+                    Text("Active Program")
+                }
+                .buttonStyle(GhostButton())
+                .disabled(true)
+            } else {
+                Button(action: {
+                    Task {
                         await store.setActiveProgram(program.id)
                     }
+                }) {
+                    Text("Set as Active Program")
                 }
-            }) {
-                HStack {
-                    if isActive {
-                        Image(systemName: "checkmark")
-                            .font(.caption)
-                    }
-                    Text(isActive ? "Active Program" : "Set as Active Program")
-                        .font(Theme.body(14))
-                        .fontWeight(.semibold)
-                }
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isActive ? Theme.surface2 : Theme.accent)
-                .cornerRadius(12)
+                .buttonStyle(PrimaryButton())
             }
-            .disabled(isActive)
         }
-        .padding(20)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    accentColor.opacity(0.3),
-                    Theme.surface
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.6), radius: 12, x: 0, y: 8)
+        .cardStyle()
+        .programCardGradient()
     }
     
     private func metaTile(title: String, value: String) -> some View {
@@ -205,9 +171,7 @@ struct ProgramDetailView: View {
                 .tracking(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(Theme.surface2)
-        .cornerRadius(12)
+        .cardStyle(12)
     }
     
     // MARK: - Week Pager
@@ -245,10 +209,7 @@ struct ProgramDetailView: View {
             }
             .disabled(selectedWeek >= program.durationWeeks)
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .background(Theme.surface)
-        .cornerRadius(12)
+        .cardStyle(12)
     }
     
     // MARK: - Day List
@@ -275,9 +236,7 @@ struct ProgramDetailView: View {
             dayHeader(day: day, index: index, isUpNext: isUpNext, isLogged: isLogged, isActiveWorkoutDay: isActiveWorkoutDay, accentColor: accentColor)
             exerciseList(day: day)
         }
-        .padding(16)
-        .background(Theme.surface)
-        .cornerRadius(16)
+        .cardStyle()
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(isUpNext ? accentColor.opacity(0.5) : Color.white.opacity(0.05), lineWidth: isUpNext ? 2 : 1)

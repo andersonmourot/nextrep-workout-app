@@ -23,6 +23,22 @@ struct WorkoutHistoryView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Profile")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+    }
+
+    private var sortedLogs: [WorkoutLog] {
+        store.appData.logs.sorted { lhs, rhs in
+            logDate(lhs) > logDate(rhs)
+        }
+    }
 
     private var profileStats: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
@@ -64,7 +80,36 @@ struct WorkoutHistoryView: View {
     private var profileStreak: Int {
         computeProfileStreak(logs: store.appData.logs)
     }
-                }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Workout History")
+                .font(.system(size: 34, weight: .bold, design: .default))
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.text)
+
+            Text("\(store.appData.logs.count) completed")
+                .font(.caption)
+                .textCase(.uppercase)
+                .tracking(1.5)
+                .foregroundStyle(Theme.accentLight)
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("No workouts yet", systemImage: "clock.arrow.circlepath")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            Text("Finished workouts will appear here with the weight and reps you logged.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textDim)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+    }
+}
 
 private struct ProfileStatTile: View {
     let icon: String
@@ -97,51 +142,6 @@ private struct ProfileStatTile: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(.white.opacity(0.05), lineWidth: 1)
         }
-    }
-}
-            }
-            .padding(16)
-            .frame(maxWidth: 448)
-            .frame(maxWidth: .infinity)
-        }
-        .navigationTitle("Profile")
-        .navigationBarTitleDisplayMode(.inline)
-        .screenBackground()
-    }
-
-    private var sortedLogs: [WorkoutLog] {
-        store.appData.logs.sorted { lhs, rhs in
-            logDate(lhs) > logDate(rhs)
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Workout History")
-                .font(.system(size: 34, weight: .bold, design: .default))
-                .textCase(.uppercase)
-                .foregroundStyle(Theme.text)
-
-            Text("\(store.appData.logs.count) completed")
-                .font(.caption)
-                .textCase(.uppercase)
-                .tracking(1.5)
-                .foregroundStyle(Theme.accentLight)
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("No workouts yet", systemImage: "clock.arrow.circlepath")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
-
-            Text("Finished workouts will appear here with the weight and reps you logged.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.textDim)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cardStyle()
     }
 }
 

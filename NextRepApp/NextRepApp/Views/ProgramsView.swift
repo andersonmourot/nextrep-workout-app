@@ -67,6 +67,7 @@ struct ProgramsView: View {
                 .searchable(text: $searchText, prompt: "Search programs...")
             }
         }
+        .background(Theme.bg)
         .navigationTitle("Programs")
         .navigationDestination(item: $selectedProgram) { program in
             ProgramDetailView(program: program)

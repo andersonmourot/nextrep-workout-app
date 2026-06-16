@@ -23,6 +23,7 @@ struct ProgressView: View {
             }
             .padding()
         }
+        .background(Theme.bg)
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

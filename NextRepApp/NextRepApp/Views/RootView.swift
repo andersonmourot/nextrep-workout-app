@@ -136,8 +136,22 @@ struct RootView: View {
                 }
                 .tag(Tab.profile)
             }
+            .preferredColorScheme(.dark)
+            .onAppear {
+                setupTabBarAppearance()
+            }
         } else {
             AuthView()
+        }
+    }
+    
+    private func setupTabBarAppearance() {
+        let tabAppearance = UITabBarAppearance()
+        tabAppearance.backgroundColor = UIColor(Theme.bg)
+        
+        UITabBar.appearance().standardAppearance = tabAppearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabAppearance
         }
     }
 }

@@ -295,4 +295,38 @@ struct ProgramCardGradient: ViewModifier {
 
 extension View {
     func programCardGradient() -> some View { modifier(ProgramCardGradient()) }
+    
+    func screenBackground() -> some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+            
+            // Top-left radial glow
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Theme.accent.opacity(0.15),
+                    Theme.accent.opacity(0.05),
+                    Color.clear
+                ]),
+                center: UnitPoint(x: 0.1, y: -0.2),
+                startRadius: 50,
+                endRadius: 300
+            )
+            .ignoresSafeArea()
+            
+            // Top-right radial glow
+            RadialGradient(
+                gradient: Gradient(colors: [
+                    Theme.accent.opacity(0.12),
+                    Theme.accent.opacity(0.04),
+                    Color.clear
+                ]),
+                center: UnitPoint(x: 0.9, y: -0.2),
+                startRadius: 50,
+                endRadius: 300
+            )
+            .ignoresSafeArea()
+            
+            self
+        }
+    }
 }

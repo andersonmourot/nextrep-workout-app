@@ -4,6 +4,8 @@ struct ProgramDetailView: View {
     let program: Program
     @State private var isActive = false
     @StateObject private var store = AppStore()
+    @State private var selectedRoute: AppRoute?
+    @State private var selectedDay: Day?
     
     var body: some View {
         ScrollView {
@@ -80,7 +82,12 @@ struct ProgramDetailView: View {
                     
                     VStack(spacing: 12) {
                         ForEach(program.days) { day in
-                            DayCard(day: day)
+                            Button(action: {
+                                selectedDay = day
+                            }) {
+                                DayCard(day: day)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
@@ -90,6 +97,19 @@ struct ProgramDetailView: View {
         }
         .navigationTitle("Program Details")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(item: $selectedRoute) { route in
+            switch route {
+            case .activeWorkout(let program, let day):
+                ActiveWorkoutView(program: program, day: day)
+            case .dayDetail(let program, let day):
+                DayView(program: program, day: day)
+            default:
+                EmptyView()
+            }
+        }
+        .navigationDestination(item: $selectedDay) { day in
+            DayView(program: program, day: day)
+        }
     }
 }
 

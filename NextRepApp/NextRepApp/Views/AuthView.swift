@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AuthView: View {
-    @Binding var isAuthenticated: Bool
+    @StateObject private var authState = AuthState.shared
     @State private var email = ""
     @State private var password = ""
     @State private var isSignup = false
@@ -81,7 +81,7 @@ struct AuthView: View {
             do {
                 _ = try await APIClient.shared.login(email: email, password: password)
                 await MainActor.run {
-                    isAuthenticated = true
+                    authState.login()
                     isLoading = false
                 }
             } catch {
@@ -101,7 +101,7 @@ struct AuthView: View {
             do {
                 _ = try await APIClient.shared.signup(name: email, email: email, password: password)
                 await MainActor.run {
-                    isAuthenticated = true
+                    authState.login()
                     isLoading = false
                 }
             } catch {

@@ -15,7 +15,12 @@ struct ProgramsListView: View {
                 } else {
                     LazyVStack(spacing: 12) {
                         ForEach(filteredPrograms) { program in
-                            ProgramCard(program: program, isActive: program.id == store.appData.activeProgramId)
+                            NavigationLink {
+                                ProgramDetailView(program: program)
+                            } label: {
+                                ProgramCard(program: program, isActive: program.id == store.appData.activeProgramId)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -144,6 +149,10 @@ struct ProgramCard: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(accent)
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textFaint)
             }
 
             Text(program.summary)

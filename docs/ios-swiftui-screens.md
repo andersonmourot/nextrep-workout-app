@@ -600,10 +600,147 @@ selected mode persists (`timerMode` in the store).
 
 ---
 
+# Batch 4 — Progress hub, history screens, Max tracker
+
+The Progress tab (Profile) and the screens it links to: full workout/body-weight
+history, completed-program archive, and the personal-records Max tracker.
+
+---
+
+## 11. Progress / Profile (Profile tab) — `src/pages/Progress.tsx`
+
+The hub for stats, body weight, trackers, and recent history.
+
+1. **Title:** "Progress" (Oswald).
+2. **Stat row** (3 cards): Workouts = `logs.count`; Day streak =
+   `computeStreak(logs)`; Volume = `(totalVolume(logs)/1000)` shown as `{x.x}k`
+   with label `Volume ({unit})`.
+3. **Trackers** (two nav rows → list/detail): "Nutrition" (→ § Nutrition, later
+   batch) and "Max Tracker" (→ §14), each a card with an accent icon tile.
+4. **Body Weight card:**
+   - Header "Body Weight" + `{unit}`.
+   - **Trend chart:** a line+area sparkline of all entries (x = index, y =
+     weight, normalized to min/max). Show the latest weight big and the delta
+     "since start" (green if down, accent if up). If <2 entries, show a dashed
+     empty box ("Log your weight to start a trend line." / "Log one more entry
+     to see your trend.").
+   - **Add row:** decimal weight input (placeholder `Today's weight ({unit})`,
+     Enter submits) + a "Log" button → append a `BodyWeightEntry` (id, date =
+     today, weight, createdAt = now) via `addBodyWeight`.
+   - **Recent list:** last 5 entries (newest first); each row shows date/time +
+     `{weight} {unit}` + a delete trash. A "Show More" link → §12 body-weight
+     history when >5 entries.
+5. **Workout History section:** header + "Show More" (→ §12) when >5 logs. List
+   the 5 most recent logs as **WorkoutHistoryItem** cards: day name, `{program}
+   · {date}`, then a meta row of duration, set count, and `↗ {totalVolume}
+   {unit}` in accent; tapping opens that program; a delete trash removes the log.
+   Empty state: "No workouts logged yet. Finish a session to see it here."
+
+> CLI prompt — "Build the Progress/Profile tab per docs/ios-swiftui-screens.md
+> §11. Title 'Progress'; a 3-stat row (Workouts = logs count, Day streak =
+> computeStreak, Volume = totalVolume/1000 as '{x.x}k Volume ({unit})'); two
+> tracker nav rows (Nutrition, Max Tracker); a Body Weight card with an
+> all-entries line+area trend sparkline (latest value big + delta since start,
+> green down / accent up, dashed empty state under 2 entries), a decimal
+> add-weight input + Log button that appends a BodyWeightEntry via addBodyWeight,
+> and a last-5 recent list (date/time + weight + delete) with a 'Show More' link
+> to body-weight history when >5; and a Workout History section showing the 5
+> most recent logs as cards (day name, program · date, duration / set count / ↗
+> volume in accent, tap → program, delete trash) with a 'Show More' link when >5
+> and the empty state. Use the shared Theme. Build and run in the iOS Simulator
+> and show me."
+
+---
+
+## 12. Workout history + Body-weight history — `src/pages/ProgressHistory.tsx`
+
+Two simple "show more" list screens, each with a Back link to Progress.
+
+- **Workout history** (`/progress/history`): title "Workout History", subtitle
+  "Your 20 most recent finished workouts.", a list of the 20 most recent logs
+  reusing the **WorkoutHistoryItem** card from §11. Empty state with a dumbbell
+  icon: "No workouts logged yet."
+- **Body-weight history** (`/progress/weight`): title "Body Weight", subtitle
+  "Every logged entry, newest first.", the full list reusing the **body-weight
+  row** from §11 (date/time + weight + delete). Empty state with a scale icon:
+  "No weight entries yet."
+
+> CLI prompt — "Build the two history screens per docs/ios-swiftui-screens.md
+> §12. Workout History (/progress/history): Back link to Progress, title +
+> 'Your 20 most recent finished workouts.' subtitle, and a list of the 20 most
+> recent logs reusing the WorkoutHistoryItem card from §11 (with empty state).
+> Body Weight history (/progress/weight): Back link, title + 'Every logged entry,
+> newest first.' subtitle, and the full list of entries reusing the §11
+> body-weight row (with empty state). Use the shared Theme. Build and run in the
+> iOS Simulator and show me."
+
+---
+
+## 13. Program history — `src/pages/ProgramHistory.tsx`
+
+An archive of fully **completed** programs (`completedPrograms`), each a
+snapshot of the program plus every workout logged during that run. Reached from
+Programs (and/or Progress).
+
+1. **List view:** Back link to Programs, title "Program History" + subtitle
+   "Completed programs are saved here." Entries sorted newest-first by
+   `completedAt`; each row card shows the program name, completion date, a count
+   of logged workouts, and a chevron; a delete (two-tap confirm) removes it via
+   `removeCompletedProgram`. Empty state (dumbbell icon): "No completed programs
+   yet." + "Finish every week of a program and it'll be archived here."
+2. **Detail view** (selecting an entry): Back to the list, the program name +
+   completed date, then its archived workout logs grouped/ordered by day —
+   showing the weights × reps actually performed on each day of that run. Theme
+   the screen with the program's `accent`.
+
+> CLI prompt — "Build Program History per docs/ios-swiftui-screens.md §13. List
+> view: Back to Programs, title + 'Completed programs are saved here.' subtitle,
+> the completedPrograms sorted newest-first by completedAt as cards (name,
+> completion date, logged-workout count, chevron, two-tap delete via
+> removeCompletedProgram), and the empty state. Selecting an entry opens a detail
+> view (Back to list) showing the program name + completed date and its archived
+> workout logs by day with the weights×reps performed, themed with the program
+> accent. Use the shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 14. Max tracker + detail — `src/pages/MaxTracker.tsx`, `MaxTrackerDetail.tsx`
+
+Personal-records tracker: one card per lift, each holding dated max records.
+
+**List (`/max`):** Back, eyebrow "Personal records" + title "Max Tracker", and a
+"New" button. New opens an inline form card (Exercise name; Max weight ({unit})
++ Reps, two-up; Save/Cancel) with required-field validation (name non-empty,
+weight ≥0, reps >0); Save calls `addMaxRecord(name, record)` where record =
+{id, date today, weight, reps} (creating the lift card if new). A search field
+(when any exist) filters by name. List each lift as a card → `/max/{id}`, showing
+the name and its latest record `{weight} {unit} × {reps}`. Empty state
+(dumbbell): "No lifts tracked yet. Tap 'New' to log your first max."
+
+**Detail (`/max/:id`):** Back; the lift name + "Best: {max weight} {unit}". A
+**Trend** card charting each record's weight over time (themed accent; empty /
+one-more labels like the body-weight chart). A "Log a max" card (Weight ({unit})
++ Reps, two-up, validated) → `addMaxRecord`. A "History" list of all records
+(newest first: date + `{weight} {unit} × {reps}` + two-tap delete via
+`deleteMaxRecord`). A red-bordered "Delete tracker" card (two-tap confirm) →
+`deleteMaxTracker` then back to `/max`.
+
+> CLI prompt — "Build the Max tracker per docs/ios-swiftui-screens.md §14. List
+> (/max): Back, 'Personal records' eyebrow + 'Max Tracker' title, a New button
+> opening an inline form (Exercise name; Max weight ({unit}) + Reps; Save/Cancel)
+> with validation (name, weight≥0, reps>0) that calls addMaxRecord(name, {id,
+> date, weight, reps}); a name search when any exist; a card per lift → /max/{id}
+> showing name + latest '{weight} {unit} × {reps}'; and the empty state. Detail
+> (/max/:id): Back, lift name + 'Best: {max} {unit}', a Trend chart of record
+> weights over time (accent, empty/one-more labels), a 'Log a max' card
+> (Weight + Reps, validated) → addMaxRecord, a History list (newest first, date +
+> weight×reps + two-tap delete via deleteMaxRecord), and a red 'Delete tracker'
+> card (two-tap confirm) → deleteMaxTracker then back to /max. Use the shared
+> Theme. Build and run in the iOS Simulator and show me."
+
+---
+
 ## Remaining screens (later batches — will detail on request)
-Progress/Profile + history + body-weight (`Progress.tsx`, `WorkoutHistory.tsx`,
-`BodyWeightHistory.tsx`), Program history (`ProgramHistory.tsx`), People/Search
-+ following (`People.tsx`), Settings (`Settings.tsx`), Max tracker
-(`MaxTracker.tsx`/`MaxTrackerDetail.tsx`), Nutrition (`Nutrition.tsx`),
-Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`),
-Legal (`Legal.tsx`), Admin Users + Catalog.
+People/Search + following (`People.tsx`), Settings (`Settings.tsx`), Nutrition
+(`Nutrition.tsx`), Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`,
+`ResetPassword.tsx`), Legal (`Legal.tsx`), Admin Users + Catalog.

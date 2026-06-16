@@ -308,13 +308,7 @@ struct ActiveWorkoutView: View {
                 }
             }
         }
-        .padding(16)
-        .background(Theme.surface)
-        .cornerRadius(16)
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
-        )
+        .cardStyle()
     }
     
     // MARK: - Superset Card
@@ -449,9 +443,7 @@ struct ActiveWorkoutView: View {
                 }
             }
         }
-        .padding(16)
-        .background(Theme.surface)
-        .cornerRadius(16)
+        .cardStyle()
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(accentColor.opacity(0.5), lineWidth: 2)
@@ -659,14 +651,8 @@ struct ActiveWorkoutView: View {
             finishWorkout()
         }) {
             Text("Finish Workout")
-                .font(Theme.body(14))
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Theme.accent)
-                .cornerRadius(12)
         }
+        .buttonStyle(PrimaryButton())
         .padding(.top, 20)
     }
     
@@ -707,14 +693,8 @@ struct ActiveWorkoutView: View {
                     skipRest()
                 }) {
                     Text("Skip")
-                        .font(Theme.body(12))
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Theme.accent)
-                        .cornerRadius(12)
                 }
+                .buttonStyle(PrimaryButton())
             }
             
             // Progress bar
@@ -959,14 +939,8 @@ struct WorkoutSummaryView: View {
             // Done button
             Button(action: onDone) {
                 Text("Done")
-                    .font(Theme.body(14))
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Theme.accent)
-                    .cornerRadius(12)
             }
+            .buttonStyle(PrimaryButton())
         }
         .padding()
         .background(Theme.bg)
@@ -984,9 +958,7 @@ struct WorkoutSummaryView: View {
                 .tracking(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(12)
-        .background(Theme.surface)
-        .cornerRadius(12)
+        .cardStyle(12)
     }
     
     private var completedSetsCount: Int {

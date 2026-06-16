@@ -44,8 +44,7 @@ struct ActiveWorkoutView: View {
         .navigationDestination(isPresented: summaryIsPresented) {
             if let finishedLog {
                 WorkoutSummaryView(log: finishedLog, unit: store.appData.unit) {
-                    self.finishedLog = nil
-                    dismiss()
+                    closeSummaryAndWorkout()
                 }
             }
         }
@@ -80,6 +79,13 @@ struct ActiveWorkoutView: View {
                 }
             }
         )
+    }
+
+    private func closeSummaryAndWorkout() {
+        finishedLog = nil
+        DispatchQueue.main.async {
+            dismiss()
+        }
     }
 
     private func header(active: ActiveWorkout) -> some View {

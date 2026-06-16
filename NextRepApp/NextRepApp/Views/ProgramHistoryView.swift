@@ -169,8 +169,8 @@ struct ProgramHistoryDetailView: View {
     @StateObject private var store = AppStore()
     
     private var programLogs: [WorkoutLog] {
-        store.appData.logs.filter { $0.programId == completedProgram.program.id }
-            .sorted { $0.date > $1.date }
+        let filtered = store.appData.logs.filter { $0.programId == completedProgram.program.id }
+        return filtered.sorted { $0.date > $1.date }
     }
     
     private var accentColor: Color {
@@ -252,17 +252,20 @@ struct ProgramHistoryDetailView: View {
     private func workoutLogCard(log: WorkoutLog) -> some View {
         let day = completedProgram.program.days.first { $0.id == log.dayId }
         
+        let dayName = day?.name ?? "Workout"
+        let dateStr = formatDate(log.date)
+        
         return VStack(alignment: .leading, spacing: 12) {
             // Day name + date
             HStack {
-                Text(day?.name ?? "Workout")
+                Text(dayName)
                     .font(Theme.body(14))
                     .fontWeight(.semibold)
                     .foregroundColor(accentColor)
                 
                 Spacer()
                 
-                Text(formatDate(log.date))
+                Text(dateStr)
                     .font(Theme.body(10))
                     .foregroundColor(Theme.textDim)
             }
@@ -270,25 +273,7 @@ struct ProgramHistoryDetailView: View {
             // Exercise logs with weights × reps
             VStack(spacing: 8) {
                 ForEach(log.exercises) { exerciseLog in
-                    let exercise = store.allExercises.first { $0.id == exerciseLog.exerciseId }
-                    
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(exercise?.name ?? "Exercise")
-                            .font(Theme.body(12))
-                            .fontWeight(.semibold)
-                            .foregroundColor(Theme.text)
-                        
-                        HStack(spacing: 8) {
-                            ForEach(exerciseLog.sets) { set in
-                                Text("\(Int(set.weight))×\(set.reps)")
-                                    .font(Theme.body(10))
-                                    .foregroundColor(Theme.textDim)
-                            }
-                        }
-                    }
-                    .padding(8)
-                    .background(Theme.surface2)
-                    .cornerRadius(8)
+                    exerciseLogRow(exerciseLog: exerciseLog)
                 }
             }
         }
@@ -299,5 +284,28 @@ struct ProgramHistoryDetailView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(accentColor.opacity(0.3), lineWidth: 1)
         )
+    }
+    
+    private func exerciseLogRow(exerciseLog: ExerciseLog) -> some View {
+        let exercise = store.allExercises.first { $0.id == exerciseLog.exerciseId }
+        let exerciseName = exercise?.name ?? "Exercise"
+        
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(exerciseName)
+                .font(Theme.body(12))
+                .fontWeight(.semibold)
+                .foregroundColor(Theme.text)
+            
+            HStack(spacing: 8) {
+                ForEach(exerciseLog.sets) { set in
+                    Text("\(Int(set.weight))×\(set.reps)")
+                        .font(Theme.body(10))
+                        .foregroundColor(Theme.textDim)
+                }
+            }
+        }
+        .padding(8)
+        .background(Theme.surface2)
+        .cornerRadius(8)
     }
 }

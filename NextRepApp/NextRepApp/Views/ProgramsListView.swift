@@ -150,5 +150,5 @@ struct ProgramRowView: View {
 }
 
 #Preview {
-    ProgramsListView()
+    ProgramsListView(isAuthenticated: .constant(true))
 }

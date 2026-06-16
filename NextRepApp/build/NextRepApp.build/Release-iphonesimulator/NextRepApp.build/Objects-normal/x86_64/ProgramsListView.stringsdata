@@ -1,0 +1,88 @@
+{
+  "source": "/Users/andersonmourot/nextrep-workout-app/NextRepApp/NextRepApp/Views/ProgramsListView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Programs",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 66
+        }
+      },
+      {
+        "comment": "",
+        "key": "Loading programs...",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 26
+        }
+      },
+      {
+        "comment": "",
+        "key": "Search programs...",
+        "location": {
+          "startingColumn": 60,
+          "startingLine": 63
+        }
+      },
+      {
+        "comment": "",
+        "key": "Error",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 33
+        }
+      },
+      {
+        "comment": "",
+        "key": "Retry",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 39
+        }
+      },
+      {
+        "comment": "",
+        "key": "No Programs",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "You don't have any programs yet.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 52
+        }
+      },
+      {
+        "comment": "",
+        "key": "Logout",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 69
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld weeks",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 133
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld days/week",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 135
+        }
+      }
+    ]
+  },
+  "version": 1
+}

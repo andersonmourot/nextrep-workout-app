@@ -14,4 +14,5 @@ struct Program: Codable, Identifiable {
     var collaborative: Bool?
     var version: Int?
     var weekOverrides: [String: String]?
+    var accent: String?
 }

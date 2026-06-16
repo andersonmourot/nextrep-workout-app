@@ -23,6 +23,9 @@
 		AA0035 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0036 /* APIClient.swift */; };
 		AA0037 /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0038 /* AuthFlowView.swift */; };
 		AA0039 /* ProgramsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0040 /* ProgramsListView.swift */; };
+		AA0044 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0045 /* Theme.swift */; };
+		AA0046 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0047 /* Utils.swift */; };
+		AA0048 /* AppStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0049 /* AppStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +47,9 @@
 		AA0036 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		AA0038 /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
 		AA0040 /* ProgramsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsListView.swift; sourceTree = "<group>"; };
+		AA0045 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Theme.swift; sourceTree = SOURCE_ROOT; };
+		AA0047 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Utils.swift; sourceTree = SOURCE_ROOT; };
+		AA0049 /* AppStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextRepApp/Store/AppStore.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -70,8 +76,11 @@
 			children = (
 				AA0002 /* NextRepApp.swift */,
 				AA0004 /* ContentView.swift */,
+				AA0045 /* Theme.swift */,
+				AA0047 /* Utils.swift */,
 				AA0041 /* Models */,
 				AA0042 /* Services */,
+				AA0050 /* Store */,
 				AA0043 /* Views */,
 				AA0005 /* Info.plist */,
 			);
@@ -109,6 +118,14 @@
 				AA0036 /* APIClient.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		AA0050 /* Store */ = {
+			isa = PBXGroup;
+			children = (
+				AA0049 /* AppStore.swift */,
+			);
+			path = Store;
 			sourceTree = "<group>";
 		};
 		AA0043 /* Views */ = {
@@ -205,6 +222,9 @@
 				AA0035 /* APIClient.swift in Sources */,
 				AA0037 /* AuthFlowView.swift in Sources */,
 				AA0039 /* ProgramsListView.swift in Sources */,
+				AA0044 /* Theme.swift in Sources */,
+				AA0046 /* Utils.swift in Sources */,
+				AA0048 /* AppStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

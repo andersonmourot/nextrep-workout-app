@@ -8,6 +8,8 @@ struct AppData: Codable {
     var exerciseNotes: [String: String]
     var exerciseSubheaders: [String: String]
     var history: [WorkoutHistoryEntry]
+    var completedPrograms: [CompletedProgram]
+    var logs: [WorkoutLog]
     
     // Handle unknown keys for round-tripping
     private var additionalProperties: [String: Any] = [:]
@@ -20,6 +22,8 @@ struct AppData: Codable {
         case exerciseNotes
         case exerciseSubheaders
         case history
+        case completedPrograms
+        case logs
     }
     
     init(from decoder: Decoder) throws {
@@ -31,9 +35,12 @@ struct AppData: Codable {
         exerciseNotes = try container.decodeIfPresent([String: String].self, forKey: .exerciseNotes) ?? [:]
         exerciseSubheaders = try container.decodeIfPresent([String: String].self, forKey: .exerciseSubheaders) ?? [:]
         history = try container.decodeIfPresent([WorkoutHistoryEntry].self, forKey: .history) ?? []
+        completedPrograms = try container.decodeIfPresent([CompletedProgram].self, forKey: .completedPrograms) ?? []
+        logs = try container.decodeIfPresent([WorkoutLog].self, forKey: .logs) ?? []
         
         // Store unknown keys for round-tripping
-        let additionalKeys = container.allKeys.filter { !CodingKeys.allCases.contains($0) }
+        let knownKeys: Set<String> = ["themeColor", "customPrograms", "customExercises", "activeWorkout", "exerciseNotes", "exerciseSubheaders", "history", "completedPrograms", "logs"]
+        let additionalKeys = container.allKeys.filter { !knownKeys.contains($0.stringValue) }
         for key in additionalKeys {
             // We'll need to handle this more carefully in a real implementation
             // For now, we'll just note that we should preserve these
@@ -49,6 +56,8 @@ struct AppData: Codable {
         try container.encode(exerciseNotes, forKey: .exerciseNotes)
         try container.encode(exerciseSubheaders, forKey: .exerciseSubheaders)
         try container.encode(history, forKey: .history)
+        try container.encode(completedPrograms, forKey: .completedPrograms)
+        try container.encode(logs, forKey: .logs)
     }
     
     init() {
@@ -59,6 +68,8 @@ struct AppData: Codable {
         exerciseNotes = [:]
         exerciseSubheaders = [:]
         history = []
+        completedPrograms = []
+        logs = []
     }
 }
 
@@ -67,4 +78,36 @@ struct WorkoutHistoryEntry: Codable {
     var dayId: String
     var completedAt: Double
     var duration: Int
+}
+
+struct ExerciseLog: Codable, Identifiable {
+    let id: String
+    let exerciseId: String
+    let sets: [SetLog]
+}
+
+struct WorkoutLog: Codable, Identifiable {
+    let id: String
+    let programId: String
+    let dayId: String
+    let week: Int?
+    let date: String
+    let totalVolume: Double
+    let exercises: [ExerciseLog]
+}
+
+struct CompletedProgram: Codable, Identifiable {
+    var id: String
+    var programId: String
+    var program: Program
+    var completedAt: String
+    var loggedWorkoutCount: Int
+    
+    var name: String {
+        program.name
+    }
+    
+    var accent: String? {
+        program.accent
+    }
 }

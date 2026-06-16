@@ -270,6 +270,9 @@ class ActiveWorkoutStore: ObservableObject {
     @Published var isResting = false
     @Published var restEndsAt: Double = 0
     @Published var restDuration: Int = 0
+    @Published var showActiveWorkout = false
+    @Published var activeWorkoutProgram: Program?
+    @Published var activeWorkoutDay: Day?
     private var timer: Timer?
     
     private init() {}
@@ -281,6 +284,8 @@ class ActiveWorkoutStore: ObservableObject {
         self.dayId = day.id
         self.week = week
         self.startedAt = Date().timeIntervalSince1970
+        self.activeWorkoutProgram = program
+        self.activeWorkoutDay = day
         
         // Initialize sets for each exercise in the day
         self.sets = day.exercises.map { exercise in
@@ -291,6 +296,9 @@ class ActiveWorkoutStore: ObservableObject {
         }
         
         print("🏋️ Workout initialized with \(day.exercises.count) exercises and \(self.sets.flatMap { $0 }.count) total sets")
+        
+        // Show the workout screen
+        self.showActiveWorkout = true
     }
     
     func tick() {

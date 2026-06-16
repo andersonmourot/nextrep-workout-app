@@ -147,6 +147,13 @@ struct RootView: View {
             }
             .preferredColorScheme(.dark)
             .environmentObject(activeWorkoutStore)
+            .fullScreenCover(isPresented: $activeWorkoutStore.showActiveWorkout) {
+                if let program = activeWorkoutStore.activeWorkoutProgram, let day = activeWorkoutStore.activeWorkoutDay {
+                    ActiveWorkoutView(program: program, day: day)
+                } else {
+                    EmptyView()
+                }
+            }
             .onAppear {
                 setupTabBarAppearance()
             }

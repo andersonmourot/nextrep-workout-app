@@ -5,7 +5,6 @@ struct DayView: View {
     let day: Day
     @State private var isActive = false
     @EnvironmentObject var activeWorkoutStore: ActiveWorkoutStore
-    @State private var selectedRoute: AppRoute?
     
     var body: some View {
         ScrollView {
@@ -38,17 +37,13 @@ struct DayView: View {
                     if let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) {
                         print("🏋️ Day index found: \(dayIndex)")
                         
-                        // Start the workout in the store
+                        // Start the workout in the store (this will trigger the full-screen cover)
                         activeWorkoutStore.startWorkout(
                             program: program,
                             day: day,
                             dayIndex: dayIndex,
                             week: nil
                         )
-                        
-                        // Navigate to active workout using path-based navigation
-                        selectedRoute = .activeWorkout(program: program, day: day)
-                        print("🏋️ Set selectedRoute to .activeWorkout")
                     } else {
                         print("❌ Day index not found")
                     }
@@ -76,18 +71,6 @@ struct DayView: View {
         }
         .navigationTitle("Day Detail")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(item: $selectedRoute) { route in
-            switch route {
-            case .activeWorkout(let program, let day):
-                if let day = day {
-                    ActiveWorkoutView(program: program, day: day)
-                } else {
-                    EmptyView()
-                }
-            default:
-                EmptyView()
-            }
-        }
         .screenBackground()
     }
 }

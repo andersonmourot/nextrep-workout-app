@@ -740,7 +740,151 @@ one-more labels like the body-weight chart). A "Log a max" card (Weight ({unit})
 
 ---
 
+# Batch 5 — People, Settings, Nutrition
+
+The social tab, the settings hub, and the nutrition tracker. All reuse §0.
+
+---
+
+## 15. People / Search + following (Search tab) — `src/pages/People.tsx`
+
+Find other athletes, follow them, and add their shared programs/exercises. All
+calls require auth (`getToken()`); the screen needs sign-in to work.
+
+1. **Header:** eyebrow "Train together" + title "People", subtitle "Find other
+   athletes by name, follow them, and add their programs."
+2. **Search card:** a search field (leading magnifier). **Debounce** input ~350ms
+   then call `apiSearchUsers(token, q)` → `[DiscoverUser]` (each has id, name,
+   `following` bool, shared program/exercise counts). Show "Searching…" while in
+   flight, an empty "no results" line when a completed search returns none, else
+   a list of **SearchResultCard**s: name, a Follow/Following toggle button
+   (`apiFollow`/`apiUnfollow`, optimistic), and — when the user has shared
+   content — an expandable **SharedContent** section (see §15a).
+3. **Following section:** a Users icon + "Following ({n})". Sorted (favorites
+   first). Each is a **FollowingCard**: name, an Unfollow button, a favorite star
+   (`favoriteUserIds`, max 5 — disabled when full & not already a favorite), and
+   the same expandable SharedContent. Empty state: "You're not following anyone
+   yet. Search above to find athletes and follow them."
+
+### 15a. SharedContent (a user's shared programs/exercises)
+Lazy-loads on expand via `apiUserPrograms(token, userId)` /
+`apiUserExercises(token, userId)`. Lists each shared **program** with an **Add**
+button that opens a **Follow vs Duplicate** choice:
+- **Follow** — `apiAddProgram(token, p.id)`: keeps it linked to the creator
+  (stays read-only; their future edits sync in).
+- **Duplicate** — a standalone owned copy (fresh id) you can edit/share.
+Either way, backfill referenced custom-exercise names/imports so nothing shows a
+raw `custom-…` id. An **Add** on each shared **exercise** imports it via
+`addCustomExercise`. Added items show a **Remove** that undoes the add
+(`deleteProgram` / removes the custom exercise). Track added ids so the buttons
+reflect state.
+
+> CLI prompt — "Build the People/Search tab per docs/ios-swiftui-screens.md §15
+> (auth required). Header eyebrow 'Train together' + 'People' title + subtitle. A
+> search field that debounces ~350ms and calls apiSearchUsers → DiscoverUser
+> list, with a 'Searching…' state, a no-results line, and SearchResultCards
+> (name, Follow/Following toggle via apiFollow/apiUnfollow optimistic, and an
+> expandable shared-content section when the user has shares). A Following
+> section (Users icon + count, favorites-first sort) of FollowingCards (name,
+> Unfollow, favorite star with favoriteUserIds max 5, expandable shared content)
+> with its empty state. SharedContent (§15a) lazy-loads via apiUserPrograms /
+> apiUserExercises and lets you Add each program with a Follow (apiAddProgram,
+> stays linked/read-only) vs Duplicate (standalone owned copy) choice —
+> backfilling referenced custom-exercise names — and Add each exercise via
+> addCustomExercise, each with a Remove that undoes it; track added ids for
+> button state. Use the shared Theme. Build and run in the iOS Simulator and show
+> me."
+
+---
+
+## 16. Settings — `src/pages/Settings.tsx`
+
+A stack of cards. Subtitle line at the very bottom: "NextRep · Train with
+intent."
+
+1. **Title** "Settings".
+2. **Display name** card: a text field bound to `name` (`setName`).
+3. **Admin card** (only when `account.is_admin`): two nav rows — "Users" (→
+   `/admin/users`, "Admin · view registered users") and "Catalog" (→
+   `/admin/catalog`, "Admin · edit built-in programs & exercises").
+4. **Appearance** card: **Theme color** swatches (`THEME_COLORS`, selected has a
+   ring + check), **Theme** mode segmented (Light / Dark / System), and **Weight
+   unit** segmented (kg / lb) bound to `unit` (`setUnit`).
+5. **Active Program** card: if set, show its name with "View" + "Change" links;
+   else a "Browse Programs" button.
+6. **Account** card (when signed in): name + email; a **Change Password** control
+   (current + new password fields → API); and a **Log out** button (two-tap
+   confirm → `logout` + go to `/login`).
+7. **Install app** card: a PWA install prompt (native prompt when available, else
+   an "Add to Home Screen" instructions sheet) — on iOS native this can be
+   omitted/replaced with nothing since it's already an installed app.
+8. **Data Reset** card (red border): explains it clears active program, history,
+   and body-weight; a two-tap "Reset All Data" → `resetAll`.
+9. **Legal** card: nav rows to Privacy Policy, Terms of Service, and Health &
+   Fitness Disclaimer (→ §Legal, later batch).
+
+> CLI prompt — "Build Settings per docs/ios-swiftui-screens.md §16. A stack of
+> cards: title 'Settings'; a Display name field bound to name/setName; an
+> admin-only card (account.is_admin) with Users → /admin/users and Catalog →
+> /admin/catalog rows; an Appearance card with THEME_COLORS swatches (ring +
+> check on selected), a Light/Dark/System theme-mode segmented control, and a
+> kg/lb weight-unit segmented control bound to unit/setUnit; an Active Program
+> card (name + View/Change, or Browse Programs); an Account card (name + email, a
+> Change Password control hitting the API, and a two-tap Log out → logout +
+> /login); a Data Reset card (red, two-tap 'Reset All Data' → resetAll, with the
+> warning copy); and a Legal card linking Privacy / Terms / Disclaimer. Footer
+> 'NextRep · Train with intent.' Omit the PWA install card on native iOS. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 17. Nutrition — `src/pages/Nutrition.tsx`
+
+A per-day food/macro/hydration log. State: `nutritionLog` (entries keyed by
+`date`), `nutritionGoals`, and a selected `date` (defaults today). The current
+entry = the log row for `date` or a zeroed `{calories, protein, carbs, fat,
+water, photos}`.
+
+1. **Header:** eyebrow "Daily fuel" + title "Nutrition", subtitle "Log your daily
+   calories, macros, and hydration."
+2. **Date picker:** a date field (max = today) selecting which day to view/edit; a
+   collapsible **History** list (each past day → date + `{cal} kcal ·
+   {p}/{c}/{f}g · {water} 💧`, tap to jump to that date, current day ringed).
+3. **Calories card:** a circular **Ring** (current/goal) + an **AddField** ("Add
+   calories": a number input that *adds* its value to the running total on
+   submit). All adds clamp at ≥0.
+4. **Macros card:** three **MacroRow**s (Protein, Carbs, Fat) each showing
+   value/goal + an add input (`add(field, v)`).
+5. **Water card:** a row of glass buttons (count = max(goal, current)); tapping
+   glass i sets water to i+1 (or i if already exactly that) — a fill-to-here
+   toggle.
+6. **Goals editor:** an expandable card; a draft of calories/protein/carbs/fat/
+   water number fields + a "Save Goals" button (→ `setNutritionGoals`, shows
+   "Saved" briefly).
+7. **Day photos:** up to 3 progress photos per day (compressed to small JPEGs),
+   stored on the entry.
+
+All edits go through `setNutritionEntry({...entry, [field], date})` so they're
+bound to the selected day.
+
+> CLI prompt — "Build Nutrition per docs/ios-swiftui-screens.md §17. State:
+> nutritionLog (entries by date), nutritionGoals, a selected date defaulting to
+> today; the current entry = that day's row or a zeroed one. Header eyebrow
+> 'Daily fuel' + 'Nutrition' + subtitle. A date picker (max today) plus a
+> collapsible History list (date + '{cal} kcal · {p}/{c}/{f}g · {water} 💧', tap
+> to jump, current day ringed). A Calories card with a circular Ring
+> (current/goal) and an AddField that adds its value to the total. A Macros card
+> with Protein/Carbs/Fat rows (value/goal + add input). A Water card of glass
+> buttons (count = max(goal, current)) where tapping glass i sets water to i+1 or
+> i (fill-to-here toggle). An expandable Goals editor (calories/protein/carbs/fat/
+> water draft fields + 'Save Goals' → setNutritionGoals, brief 'Saved'). And up
+> to 3 compressed day photos. All edits clamp ≥0 and go through setNutritionEntry
+> bound to the selected date. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
 ## Remaining screens (later batches — will detail on request)
-People/Search + following (`People.tsx`), Settings (`Settings.tsx`), Nutrition
-(`Nutrition.tsx`), Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`,
-`ResetPassword.tsx`), Legal (`Legal.tsx`), Admin Users + Catalog.
+Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`),
+Legal (`Legal.tsx`), Admin Users + Catalog (`AdminUsers.tsx`,
+`AdminCatalog.tsx`).

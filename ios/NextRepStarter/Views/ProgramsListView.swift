@@ -8,7 +8,6 @@ struct ProgramsListView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                exerciseLibraryButton
                 searchField
 
                 if filteredPrograms.isEmpty {
@@ -33,10 +32,18 @@ struct ProgramsListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    Task { await store.reload() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
+                HStack(spacing: 14) {
+                    NavigationLink {
+                        ExerciseLibraryView()
+                    } label: {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                    }
+
+                    Button {
+                        Task { await store.reload() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
                 }
                 .tint(Theme.accentLight)
             }
@@ -65,20 +72,6 @@ struct ProgramsListView: View {
                 .tracking(1.5)
                 .foregroundStyle(Theme.accentLight)
         }
-    }
-
-    private var exerciseLibraryButton: some View {
-        NavigationLink {
-            ExerciseLibraryView()
-        } label: {
-            HStack {
-                Label("Exercise Library", systemImage: "figure.strengthtraining.traditional")
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-            }
-        }
-        .buttonStyle(GhostButtonStyle())
     }
 
     private var searchField: some View {

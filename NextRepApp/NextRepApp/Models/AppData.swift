@@ -41,7 +41,7 @@ struct AppData: Codable {
         // Store unknown keys for round-tripping
         let knownKeys: Set<String> = ["themeColor", "customPrograms", "customExercises", "activeWorkout", "exerciseNotes", "exerciseSubheaders", "history", "completedPrograms", "logs"]
         let additionalKeys = container.allKeys.filter { !knownKeys.contains($0.stringValue) }
-        for key in additionalKeys {
+        for _ in additionalKeys {
             // We'll need to handle this more carefully in a real implementation
             // For now, we'll just note that we should preserve these
         }

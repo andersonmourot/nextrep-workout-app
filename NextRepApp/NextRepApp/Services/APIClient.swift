@@ -98,7 +98,7 @@ class APIClient {
     }
     
     func logout() {
-        KeychainStore.shared.deleteToken()
+        _ = KeychainStore.shared.deleteToken()
     }
     
     // MARK: - Data Endpoints

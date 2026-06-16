@@ -21,7 +21,7 @@ Observation, URLSession, and Keychain Services.
   loading, and manual sync.
 - `Views/*` with a minimal auth flow, read-only Programs tab, Program Detail
   navigation, and a first-pass Active Workout screen for set logging and rest
-  timing.
+  timing, plus Finish Workout history persistence.
 
 ## Backend assumptions
 
@@ -45,7 +45,7 @@ by the web app. Keep that behavior as you add native features.
 3. Verify login against the production backend.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
-   - Finish-workout history logging and summary
+   - Finish-workout summary screen
    - Rest-complete sound/local notification behavior
    - Day detail and edit flows
 

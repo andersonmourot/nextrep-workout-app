@@ -199,7 +199,59 @@ final class AppStore {
         scheduleSync()
     }
 
+    @discardableResult
+    func finishWorkout(program: Program, day: ProgramDay) -> WorkoutLog? {
+        guard let active = appData.activeWorkout else {
+            return nil
+        }
+
+        let loggedExercises = day.exercises.enumerated().map { index, planned in
+            let rows = active.sets.indices.contains(index) ? active.sets[index] : []
+            let loggedSets = rows
+                .filter { $0.completed || $0.weight > 0 }
+                .map { set in
+                    SetLog(weight: set.weight, reps: set.reps, completed: true)
+                }
+
+            return LoggedExercise(exerciseId: planned.exerciseId, sets: loggedSets)
+        }
+
+        let totalVolume = loggedExercises.reduce(0) { total, exercise in
+            total + exercise.sets.reduce(0) { subtotal, set in
+                subtotal + (set.weight * Double(set.reps))
+            }
+        }
+
+        let startedAt = Date(timeIntervalSince1970: active.startedAt / 1000)
+        let durationSec = max(0, Int(Date().timeIntervalSince(startedAt)))
+        let log = WorkoutLog(
+            id: UUID().uuidString,
+            date: ISO8601DateFormatter().string(from: Date()),
+            programId: program.id,
+            programName: program.name,
+            dayId: day.id,
+            dayName: day.name,
+            week: active.week,
+            durationSec: durationSec,
+            exercises: loggedExercises,
+            totalVolume: totalVolume,
+            notes: nil
+        )
+
+        appData.activeProgramId = program.id
+        appData.logs.append(log)
+        appData.activeWorkout = nil
+        scheduleSync()
+        return log
+    }
+
     func syncNow() async {
+        syncTask?.cancel()
+        syncTask = nil
+        await uploadCurrentData()
+    }
+
+    private func uploadCurrentData() async {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
             return
@@ -277,7 +329,7 @@ final class AppStore {
             guard !Task.isCancelled else {
                 return
             }
-            await self?.syncNow()
+            await self?.uploadCurrentData()
         }
     }
 

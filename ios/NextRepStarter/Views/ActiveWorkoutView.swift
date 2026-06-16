@@ -4,6 +4,7 @@ import SwiftUI
 struct ActiveWorkoutView: View {
     @Environment(AppStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @State private var showingFinishConfirm = false
     let program: Program
     let day: ProgramDay
 
@@ -19,11 +20,10 @@ struct ActiveWorkoutView: View {
 
                     exercisesList(active: active)
 
-                    Button(role: .destructive) {
-                        store.endWorkout()
-                        dismiss()
+                    Button {
+                        showingFinishConfirm = true
                     } label: {
-                        Text("End Workout")
+                        Text("Finish Workout")
                     }
                     .buttonStyle(GhostButtonStyle())
                 }
@@ -42,6 +42,18 @@ struct ActiveWorkoutView: View {
         .screenBackground()
         .onAppear {
             store.startWorkout(program: program, day: day)
+        }
+        .alert("Finish Workout?", isPresented: $showingFinishConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Finish", role: .destructive) {
+                store.finishWorkout(program: program, day: day)
+                Task {
+                    await store.syncNow()
+                }
+                dismiss()
+            }
+        } message: {
+            Text("This will save completed sets to workout history and clear the active session.")
         }
     }
 

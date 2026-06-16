@@ -740,7 +740,303 @@ one-more labels like the body-weight chart). A "Log a max" card (Weight ({unit})
 
 ---
 
-## Remaining screens (later batches — will detail on request)
-People/Search + following (`People.tsx`), Settings (`Settings.tsx`), Nutrition
-(`Nutrition.tsx`), Auth/forgot/reset (`Auth.tsx`, `ForgotPassword.tsx`,
-`ResetPassword.tsx`), Legal (`Legal.tsx`), Admin Users + Catalog.
+# Batch 5 — People, Settings, Nutrition
+
+The social tab, the settings hub, and the nutrition tracker. All reuse §0.
+
+---
+
+## 15. People / Search + following (Search tab) — `src/pages/People.tsx`
+
+Find other athletes, follow them, and add their shared programs/exercises. All
+calls require auth (`getToken()`); the screen needs sign-in to work.
+
+1. **Header:** eyebrow "Train together" + title "People", subtitle "Find other
+   athletes by name, follow them, and add their programs."
+2. **Search card:** a search field (leading magnifier). **Debounce** input ~350ms
+   then call `apiSearchUsers(token, q)` → `[DiscoverUser]` (each has id, name,
+   `following` bool, shared program/exercise counts). Show "Searching…" while in
+   flight, an empty "no results" line when a completed search returns none, else
+   a list of **SearchResultCard**s: name, a Follow/Following toggle button
+   (`apiFollow`/`apiUnfollow`, optimistic), and — when the user has shared
+   content — an expandable **SharedContent** section (see §15a).
+3. **Following section:** a Users icon + "Following ({n})". Sorted (favorites
+   first). Each is a **FollowingCard**: name, an Unfollow button, a favorite star
+   (`favoriteUserIds`, max 5 — disabled when full & not already a favorite), and
+   the same expandable SharedContent. Empty state: "You're not following anyone
+   yet. Search above to find athletes and follow them."
+
+### 15a. SharedContent (a user's shared programs/exercises)
+Lazy-loads on expand via `apiUserPrograms(token, userId)` /
+`apiUserExercises(token, userId)`. Lists each shared **program** with an **Add**
+button that opens a **Follow vs Duplicate** choice:
+- **Follow** — `apiAddProgram(token, p.id)`: keeps it linked to the creator
+  (stays read-only; their future edits sync in).
+- **Duplicate** — a standalone owned copy (fresh id) you can edit/share.
+Either way, backfill referenced custom-exercise names/imports so nothing shows a
+raw `custom-…` id. An **Add** on each shared **exercise** imports it via
+`addCustomExercise`. Added items show a **Remove** that undoes the add
+(`deleteProgram` / removes the custom exercise). Track added ids so the buttons
+reflect state.
+
+> CLI prompt — "Build the People/Search tab per docs/ios-swiftui-screens.md §15
+> (auth required). Header eyebrow 'Train together' + 'People' title + subtitle. A
+> search field that debounces ~350ms and calls apiSearchUsers → DiscoverUser
+> list, with a 'Searching…' state, a no-results line, and SearchResultCards
+> (name, Follow/Following toggle via apiFollow/apiUnfollow optimistic, and an
+> expandable shared-content section when the user has shares). A Following
+> section (Users icon + count, favorites-first sort) of FollowingCards (name,
+> Unfollow, favorite star with favoriteUserIds max 5, expandable shared content)
+> with its empty state. SharedContent (§15a) lazy-loads via apiUserPrograms /
+> apiUserExercises and lets you Add each program with a Follow (apiAddProgram,
+> stays linked/read-only) vs Duplicate (standalone owned copy) choice —
+> backfilling referenced custom-exercise names — and Add each exercise via
+> addCustomExercise, each with a Remove that undoes it; track added ids for
+> button state. Use the shared Theme. Build and run in the iOS Simulator and show
+> me."
+
+---
+
+## 16. Settings — `src/pages/Settings.tsx`
+
+A stack of cards. Subtitle line at the very bottom: "NextRep · Train with
+intent."
+
+1. **Title** "Settings".
+2. **Display name** card: a text field bound to `name` (`setName`).
+3. **Admin card** (only when `account.is_admin`): two nav rows — "Users" (→
+   `/admin/users`, "Admin · view registered users") and "Catalog" (→
+   `/admin/catalog`, "Admin · edit built-in programs & exercises").
+4. **Appearance** card: **Theme color** swatches (`THEME_COLORS`, selected has a
+   ring + check), **Theme** mode segmented (Light / Dark / System), and **Weight
+   unit** segmented (kg / lb) bound to `unit` (`setUnit`).
+5. **Active Program** card: if set, show its name with "View" + "Change" links;
+   else a "Browse Programs" button.
+6. **Account** card (when signed in): name + email; a **Change Password** control
+   (current + new password fields → API); and a **Log out** button (two-tap
+   confirm → `logout` + go to `/login`).
+7. **Install app** card: a PWA install prompt (native prompt when available, else
+   an "Add to Home Screen" instructions sheet) — on iOS native this can be
+   omitted/replaced with nothing since it's already an installed app.
+8. **Data Reset** card (red border): explains it clears active program, history,
+   and body-weight; a two-tap "Reset All Data" → `resetAll`.
+9. **Legal** card: nav rows to Privacy Policy, Terms of Service, and Health &
+   Fitness Disclaimer (→ §Legal, later batch).
+
+> CLI prompt — "Build Settings per docs/ios-swiftui-screens.md §16. A stack of
+> cards: title 'Settings'; a Display name field bound to name/setName; an
+> admin-only card (account.is_admin) with Users → /admin/users and Catalog →
+> /admin/catalog rows; an Appearance card with THEME_COLORS swatches (ring +
+> check on selected), a Light/Dark/System theme-mode segmented control, and a
+> kg/lb weight-unit segmented control bound to unit/setUnit; an Active Program
+> card (name + View/Change, or Browse Programs); an Account card (name + email, a
+> Change Password control hitting the API, and a two-tap Log out → logout +
+> /login); a Data Reset card (red, two-tap 'Reset All Data' → resetAll, with the
+> warning copy); and a Legal card linking Privacy / Terms / Disclaimer. Footer
+> 'NextRep · Train with intent.' Omit the PWA install card on native iOS. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 17. Nutrition — `src/pages/Nutrition.tsx`
+
+A per-day food/macro/hydration log. State: `nutritionLog` (entries keyed by
+`date`), `nutritionGoals`, and a selected `date` (defaults today). The current
+entry = the log row for `date` or a zeroed `{calories, protein, carbs, fat,
+water, photos}`.
+
+1. **Header:** eyebrow "Daily fuel" + title "Nutrition", subtitle "Log your daily
+   calories, macros, and hydration."
+2. **Date picker:** a date field (max = today) selecting which day to view/edit; a
+   collapsible **History** list (each past day → date + `{cal} kcal ·
+   {p}/{c}/{f}g · {water} 💧`, tap to jump to that date, current day ringed).
+3. **Calories card:** a circular **Ring** (current/goal) + an **AddField** ("Add
+   calories": a number input that *adds* its value to the running total on
+   submit). All adds clamp at ≥0.
+4. **Macros card:** three **MacroRow**s (Protein, Carbs, Fat) each showing
+   value/goal + an add input (`add(field, v)`).
+5. **Water card:** a row of glass buttons (count = max(goal, current)); tapping
+   glass i sets water to i+1 (or i if already exactly that) — a fill-to-here
+   toggle.
+6. **Goals editor:** an expandable card; a draft of calories/protein/carbs/fat/
+   water number fields + a "Save Goals" button (→ `setNutritionGoals`, shows
+   "Saved" briefly).
+7. **Day photos:** up to 3 progress photos per day (compressed to small JPEGs),
+   stored on the entry.
+
+All edits go through `setNutritionEntry({...entry, [field], date})` so they're
+bound to the selected day.
+
+> CLI prompt — "Build Nutrition per docs/ios-swiftui-screens.md §17. State:
+> nutritionLog (entries by date), nutritionGoals, a selected date defaulting to
+> today; the current entry = that day's row or a zeroed one. Header eyebrow
+> 'Daily fuel' + 'Nutrition' + subtitle. A date picker (max today) plus a
+> collapsible History list (date + '{cal} kcal · {p}/{c}/{f}g · {water} 💧', tap
+> to jump, current day ringed). A Calories card with a circular Ring
+> (current/goal) and an AddField that adds its value to the total. A Macros card
+> with Protein/Carbs/Fat rows (value/goal + add input). A Water card of glass
+> buttons (count = max(goal, current)) where tapping glass i sets water to i+1 or
+> i (fill-to-here toggle). An expandable Goals editor (calories/protein/carbs/fat/
+> water draft fields + 'Save Goals' → setNutritionGoals, brief 'Saved'). And up
+> to 3 compressed day photos. All edits clamp ≥0 and go through setNutritionEntry
+> bound to the selected date. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
+# Batch 6 — Auth, Legal, Admin (final batch)
+
+The unauthenticated entry screens, the static legal docs, and the two admin
+screens. After this batch, every web screen has a SwiftUI spec.
+
+---
+
+## 18. Auth — login / signup — `src/pages/Auth.tsx`
+
+A single screen with a `mode` of `login` or `signup`. If already authenticated
+(`token` present) redirect to the Dashboard.
+
+1. **Brand block:** a centered accent dumbbell tile, the wordmark "Next**Rep**"
+   (accent on "Rep", wide tracking), and a subtitle ("Create your account to
+   start training." for signup / "Welcome back. Log in to continue." for login).
+2. **Form card:**
+   - **Name** field (signup only).
+   - **Email** field (keyboard = email).
+   - **Password** field (secure, with a show/hide toggle = the `PasswordField`
+     component) + live **PasswordHints** (rule checklist). On login, a "Forgot
+     password?" link (→ §20) right-aligned beneath.
+   - An error banner when the call fails.
+   - Submit button: "Create account" / "Log in" (disabled + "Please wait…" while
+     busy). On success (`signUp(name,email,password)` / `login(email,password)`)
+     navigate to `/` (replace).
+3. **Footer link** toggling to the other mode ("Already have an account? Log in"
+   / "New here? Create an account").
+
+> CLI prompt — "Build the Auth screen per docs/ios-swiftui-screens.md §18 with a
+> login/signup mode (redirect to Dashboard if already authenticated). A centered
+> brand block (accent dumbbell tile, 'NextRep' wordmark with accent 'Rep',
+> mode-dependent subtitle); a form card with a Name field (signup only), an email
+> field, a secure password field with show/hide and live password-rule hints, a
+> right-aligned 'Forgot password?' link on login, an error banner, and a submit
+> button ('Create account'/'Log in', disabled + 'Please wait…' while busy) that
+> calls signUp/login and navigates to / on success; and a footer link toggling
+> between login and signup. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
+## 19. Reset password — `src/pages/ResetPassword.tsx`
+
+Reached from the emailed link (`/reset-password?token=…`); reads the `token`
+query param. Redirect to Dashboard if already authenticated.
+
+Same brand block ("Choose a new password."). Form: a new **Password** field
+(secure + hints) and a **Confirm** field. Validate length ≥6 and that the two
+match, then call `apiResetPassword(token, password)`. On success show a success
+card (check icon + "Your password has been reset. You can now log in…") with a
+"Back to log in" button; on failure show the error.
+
+## 20. Forgot password — `src/pages/ForgotPassword.tsx`
+
+Same brand block ("Reset your password."). A single **Email** field + "Send reset
+link" button → `apiForgotPassword(email)`. On success show a confirmation card
+(mail icon + "If an account exists for {email}, we've sent a link… expires in 1
+hour.") with "Back to log in". A footer "Remembered it? Log in" link.
+
+> CLI prompt — "Build the password-reset flow per docs/ios-swiftui-screens.md
+> §19–§20 (both redirect to Dashboard if authenticated, both use the NextRep
+> brand block). Forgot password: an email field + 'Send reset link' →
+> apiForgotPassword, then a confirmation card ('If an account exists for {email}
+> we've sent a link… expires in 1 hour') with 'Back to log in', and a 'Remembered
+> it? Log in' footer. Reset password: read the token query param, a new-password
+> field (secure + hints) + a confirm field, validate length ≥6 and match, call
+> apiResetPassword(token, password), then a success card (check + message + 'Back
+> to log in') or an error. Use the shared Theme. Build and run in the iOS
+> Simulator and show me."
+
+---
+
+## 21. Legal — `src/pages/Legal.tsx`
+
+A static document screen with a `doc` of `privacy` / `terms` / `disclaimer`
+(reached from the Settings legal links). Back button; an `<h1>` title from a
+`TITLES` map; a "Last updated: {date}" line; and a card rendering the selected
+document's prose (headings, paragraphs, bullet lists, bold). Port the three
+documents' text verbatim from the web app (Privacy Policy, Terms of Service,
+Health & Fitness Disclaimer), keeping the app name and contact email.
+
+> CLI prompt — "Build the Legal screen per docs/ios-swiftui-screens.md §21: a
+> doc parameter (privacy/terms/disclaimer), a Back button, an h1 title from a
+> TITLES map, a 'Last updated: {date}' line, and a card rendering the selected
+> document's prose (headings/paragraphs/bullets/bold). Port the three documents'
+> text verbatim from src/pages/Legal.tsx (Privacy Policy, Terms of Service,
+> Health & Fitness Disclaimer), keeping the app name and contact email. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 22. Admin · Users — `src/pages/AdminUsers.tsx`
+
+Admin-only (redirect non-admins to `/`). Back button; eyebrow "🛡 Admin" + title
+"Users" + a "{n} registered users" count. Loads `apiAdminUsers(token)` →
+`[AdminUser]`. Each is a **UserCard**: name, "Joined {date}", email, "Last
+active: {datetime|Never}", and a collapsible **Reset password** control (a secure
+field, ≥6 chars, → `apiAdminResetPassword(token, userId, password)`, with a
+success/error message). Show a loading line and an error card as needed.
+
+> CLI prompt — "Build Admin · Users per docs/ios-swiftui-screens.md §22 (admin
+> only — redirect non-admins to /). Back button, '🛡 Admin' eyebrow + 'Users'
+> title + '{n} registered users' count; load apiAdminUsers → AdminUser list and
+> render a card per user (name, Joined {date}, email, Last active {datetime or
+> Never}) with a collapsible Reset-password control (secure field, ≥6 chars →
+> apiAdminResetPassword, success/error message); plus loading and error states.
+> Use the shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## 23. Admin · Catalog — `src/pages/AdminCatalog.tsx`
+
+Admin-only (redirect non-admins). Edits the **shared built-in catalog** that
+every client reads from `GET /api/catalog`. Back button; eyebrow "🛡 Admin" +
+title "Catalog" + "Edit the built-in programs and exercises everyone sees.
+Changes go live immediately." Loads `apiGetCatalog()` → `{programs, exercises}`.
+
+1. **Programs section** ("Programs · {n}"): an **Add** button → the §9 Program
+   editor in **catalog mode** (new). Each program row → edit in catalog mode
+   (passing the program), plus a delete (two-tap confirm).
+2. **Exercises section** ("Exercises · {n}"): an inline **ExerciseForm**
+   (name; primary-muscle, equipment, difficulty pickers; secondary muscles
+   comma list; instructions + tips, one per line) for new/edit, and a row per
+   exercise with edit + delete (two-tap confirm). Ids are slugified from the
+   name.
+3. **Persist:** every add/edit/delete writes the whole catalog via
+   `apiAdminPutCatalog(token, {programs, exercises})`, then updates the in-memory
+   built-ins (`setBuiltInPrograms`/`setBuiltInExercises`) so the change is live
+   immediately. (See §9's catalog-mode save for the program path.)
+
+> CLI prompt — "Build Admin · Catalog per docs/ios-swiftui-screens.md §23 (admin
+> only — redirect non-admins). Back button, '🛡 Admin' eyebrow + 'Catalog' title
+> + the 'everyone sees / live immediately' subtitle; load apiGetCatalog →
+> {programs, exercises}. A Programs section ('Programs · {n}') with an Add button
+> opening the §9 Program editor in catalog mode (new) and rows that open it in
+> catalog mode for editing (pass the program), each with a two-tap delete. An
+> Exercises section ('Exercises · {n}') with an inline ExerciseForm (name;
+> primary-muscle / equipment / difficulty pickers; secondary muscles as a comma
+> list; instructions + tips one-per-line) for new/edit and rows with edit +
+> two-tap delete (ids slugified from the name). Every change persists the whole
+> catalog via apiAdminPutCatalog then updates the in-memory built-ins
+> (setBuiltInPrograms/setBuiltInExercises) so it's live immediately. Use the
+> shared Theme. Build and run in the iOS Simulator and show me."
+
+---
+
+## All screens specified
+
+Batches 1–6 now cover every screen in the web app:
+Dashboard, Programs list, Program detail, Active Workout + rest timer, cue/notes
+(§1–5); Day review/edit, Exercises library, Exercise detail (§6–8); Program
+editor, standalone Timer (§9–10); Progress, history screens, Program history,
+Max tracker (§11–14); People, Settings, Nutrition (§15–17); Auth, password
+reset, Legal, Admin Users + Catalog (§18–23). Plus §0 foundations (theme, nav,
+shared helpers) and the API/data-model reference in
+`docs/ios-swiftui-handoff.md`.

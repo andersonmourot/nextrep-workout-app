@@ -8,6 +8,7 @@ struct ProgramsListView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                restoreHiddenButton
                 searchField
 
                 if filteredPrograms.isEmpty {
@@ -71,6 +72,18 @@ struct ProgramsListView: View {
                 .textCase(.uppercase)
                 .tracking(1.5)
                 .foregroundStyle(Theme.accentLight)
+        }
+    }
+
+    @ViewBuilder
+    private var restoreHiddenButton: some View {
+        if !store.appData.hiddenProgramIds.isEmpty {
+            Button {
+                store.restoreHiddenPrograms()
+            } label: {
+                Label("Restore Hidden Programs", systemImage: "eye")
+            }
+            .buttonStyle(GhostButtonStyle())
         }
     }
 

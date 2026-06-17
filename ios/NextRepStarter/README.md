@@ -25,15 +25,15 @@ Observation, URLSession, and Keychain Services.
   people discovery/social sharing, Interval Timer basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history
   persistence, and a Profile workout-history viewer with stat cards,
-  body-weight tracking, and logged set details.
+  body-weight/volume trend tracking, and logged set details.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
-  creation and editing.
+  creation and editing, including superset group labels.
 - `ExerciseEditorView.swift` supports first-pass custom exercise creation and
   editing.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
-- Custom Program and Exercise detail screens include share actions backed by the
-  existing shared-content API.
+- Custom Program and Exercise detail screens include share/unshare/remove flows
+  backed by the existing shared-content API.
 - Active workouts request notification permission, schedule a rest-complete
   local notification, cancel it when rest/workout ends, and vibrate in-app when
   the visible countdown reaches zero.
@@ -60,11 +60,11 @@ by the web app. Keep that behavior as you add native features.
 3. Verify login against the production backend.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
-   - Progress charts
    - Exercise photos and richer custom exercise editing
    - Rest-complete custom sound/background audio polish
-   - Superset and per-week program edit flows
-   - Social remove/unshare flows
+   - Superset workout sequencing beyond group labels
+   - Per-week program edit flows
+   - Full App Store/TestFlight polish pass
 
 See `docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the
 complete migration specification.

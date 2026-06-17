@@ -188,6 +188,16 @@ private struct DayExerciseCard: View {
                     Text("\(planned.sets) x \(planned.reps) · \(planned.restSec)s rest")
                         .font(.caption)
                         .foregroundStyle(Theme.textDim)
+
+                    if let groupId = planned.groupId, !groupId.isEmpty {
+                        Text("Superset \(groupId)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Theme.accent.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
                 }
 
                 Spacer(minLength: 0)

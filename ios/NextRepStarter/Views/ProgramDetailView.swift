@@ -2,13 +2,17 @@ import SwiftUI
 
 struct ProgramDetailView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     @State private var shareMessage: String?
+    @State private var showingDeleteConfirm = false
+    @State private var showingHideConfirm = false
     let program: Program
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 heroCard
+                managementActions
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Workout Days")
@@ -64,6 +68,24 @@ struct ProgramDetailView: View {
             }
         }
         .screenBackground()
+        .alert("Delete Program?", isPresented: $showingDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                store.deleteCustomProgram(id: program.id)
+                dismiss()
+            }
+        } message: {
+            Text("This removes the custom program from your synced data.")
+        }
+        .alert("Hide Program?", isPresented: $showingHideConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Hide", role: .destructive) {
+                store.hideProgram(id: program.id)
+                dismiss()
+            }
+        } message: {
+            Text("This hides the program from your Programs list. You can restore hidden programs from the Programs screen.")
+        }
         .overlay(alignment: .bottom) {
             if let shareMessage {
                 Text(shareMessage)
@@ -133,6 +155,34 @@ struct ProgramDetailView: View {
 
     private var accent: Color {
         Color(hex: program.accent)
+    }
+
+    private var managementActions: some View {
+        HStack(spacing: 10) {
+            Button {
+                _ = store.duplicateProgram(program)
+                shareMessage = "Program duplicated"
+            } label: {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            .buttonStyle(GhostButtonStyle())
+
+            if store.isCustomProgram(program) {
+                Button(role: .destructive) {
+                    showingDeleteConfirm = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(GhostButtonStyle())
+            } else {
+                Button(role: .destructive) {
+                    showingHideConfirm = true
+                } label: {
+                    Label("Hide", systemImage: "eye.slash")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+        }
     }
 
     private func exerciseName(for planned: PlannedExercise) -> String {
@@ -300,6 +350,16 @@ private struct ExercisePlanRow: View {
                 Text("\(planned.sets) x \(planned.reps) · \(planned.restSec)s rest")
                     .font(.caption)
                     .foregroundStyle(Theme.textDim)
+
+                if let groupId = planned.groupId, !groupId.isEmpty {
+                    Text("Superset \(groupId)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.accentLight)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.accent.opacity(0.14))
+                        .clipShape(Capsule())
+                }
 
                 if let notes = planned.notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Text(notes)

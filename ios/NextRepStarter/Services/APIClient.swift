@@ -127,6 +127,14 @@ final class APIClient {
         return response.program
     }
 
+    func removeProgramMember(token: String, programId: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/programs/\(programId)/member",
+            method: "DELETE",
+            token: token
+        )
+    }
+
     func addExercise(token: String, exerciseId: String) async throws -> Exercise {
         let response: ExerciseResponse = try await request(
             "/api/exercises/\(exerciseId)/add",
@@ -134,6 +142,14 @@ final class APIClient {
             token: token
         )
         return response.exercise
+    }
+
+    func removeExerciseMember(token: String, exerciseId: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/exercises/\(exerciseId)/member",
+            method: "DELETE",
+            token: token
+        )
     }
 
     func upsertProgram(token: String, program: Program) async throws -> Program {

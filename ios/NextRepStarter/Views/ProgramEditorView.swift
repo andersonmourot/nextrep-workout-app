@@ -190,6 +190,10 @@ struct ProgramEditorView: View {
                 value: $draft.days[dayIndex].exercises[exerciseIndex].restSec,
                 emptyWhenZero: true
             )
+            field("Superset Group (optional)", text: Binding(
+                get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
+                set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+            ))
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }

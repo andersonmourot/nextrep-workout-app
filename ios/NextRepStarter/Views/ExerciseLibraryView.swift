@@ -177,12 +177,17 @@ struct ExerciseDetailView: View {
                         }
 
                         Button {
-                            Task {
-                                await store.shareExercise(exercise)
-                                shareMessage = "Exercise shared"
+                            if exercise.shared == true {
+                                store.unshareExercise(exercise)
+                                shareMessage = "Exercise unshared"
+                            } else {
+                                Task {
+                                    await store.shareExercise(exercise)
+                                    shareMessage = "Exercise shared"
+                                }
                             }
                         } label: {
-                            Image(systemName: "square.and.arrow.up")
+                            Image(systemName: exercise.shared == true ? "xmark.circle" : "square.and.arrow.up")
                         }
                     }
                     .tint(Theme.accentLight)

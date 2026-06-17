@@ -232,9 +232,56 @@ final class AppStore {
         }
     }
 
+    func removeSharedProgram(id: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            try await apiClient.removeProgramMember(token: token, programId: id)
+            appData.customPrograms.removeAll { $0.id == id }
+            if appData.activeProgramId == id {
+                appData.activeProgramId = nil
+            }
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    func removeSharedExercise(id: String) async {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return
+        }
+
+        do {
+            try await apiClient.removeExerciseMember(token: token, exerciseId: id)
+            appData.customExercises.removeAll { $0.id == id }
+            scheduleSync()
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
     func saveCustomProgram(_ program: Program) {
         upsertCustomProgram(program)
         scheduleSync()
+    }
+
+    @discardableResult
+    func duplicateProgram(_ program: Program) -> Program {
+        var copy = program
+        copy.id = "ios-copy-\(UUID().uuidString)"
+        copy.name = "\(program.name) Copy"
+        copy.ownerId = nil
+        copy.ownerName = nil
+        copy.collaborative = false
+        copy.version = nil
+        upsertCustomProgram(copy)
+        scheduleSync()
+        return copy
     }
 
     func deleteCustomProgram(id: String) {
@@ -242,6 +289,21 @@ final class AppStore {
         if appData.activeProgramId == id {
             appData.activeProgramId = nil
         }
+        scheduleSync()
+    }
+
+    func hideProgram(id: String) {
+        if !appData.hiddenProgramIds.contains(id) {
+            appData.hiddenProgramIds.append(id)
+        }
+        if appData.activeProgramId == id {
+            appData.activeProgramId = nil
+        }
+        scheduleSync()
+    }
+
+    func restoreHiddenPrograms() {
+        appData.hiddenProgramIds = []
         scheduleSync()
     }
 
@@ -308,6 +370,13 @@ final class AppStore {
         } catch {
             authError = error.localizedDescription
         }
+    }
+
+    func unshareExercise(_ exercise: Exercise) {
+        var updated = exercise
+        updated.shared = false
+        upsertCustomExercise(updated)
+        scheduleSync()
     }
 
     func startWorkout(program: Program, day: ProgramDay, week: Int = 1) {

@@ -205,7 +205,13 @@ struct SharedUserDetailView: View {
             } else {
                 ForEach(programs) { program in
                     SharedProgramCard(program: program, isAdded: store.allPrograms.contains(where: { $0.id == program.id })) {
-                        Task { await store.addSharedProgram(id: program.id) }
+                        Task {
+                            if store.allPrograms.contains(where: { $0.id == program.id }) {
+                                await store.removeSharedProgram(id: program.id)
+                            } else {
+                                await store.addSharedProgram(id: program.id)
+                            }
+                        }
                     }
                 }
             }
@@ -227,7 +233,13 @@ struct SharedUserDetailView: View {
             } else {
                 ForEach(exercises) { exercise in
                     SharedExerciseCard(exercise: exercise, isAdded: store.allExercises.contains(where: { $0.id == exercise.id })) {
-                        Task { await store.addSharedExercise(id: exercise.id) }
+                        Task {
+                            if store.allExercises.contains(where: { $0.id == exercise.id }) {
+                                await store.removeSharedExercise(id: exercise.id)
+                            } else {
+                                await store.addSharedExercise(id: exercise.id)
+                            }
+                        }
                     }
                 }
             }
@@ -293,7 +305,7 @@ private struct DiscoverUserRow: View {
 private struct SharedProgramCard: View {
     let program: Program
     let isAdded: Bool
-    let onAdd: () -> Void
+    let onToggle: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -312,11 +324,11 @@ private struct SharedProgramCard: View {
 
                 Spacer()
 
-                Button(isAdded ? "Added" : "Add") {
-                    if !isAdded { onAdd() }
+                Button(isAdded ? "Remove" : "Add") {
+                    onToggle()
                 }
                 .font(.caption.weight(.bold))
-                .foregroundStyle(isAdded ? Theme.textDim : .white)
+                .foregroundStyle(isAdded ? .red.opacity(0.9) : .white)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(isAdded ? Theme.surface2 : Color(hex: program.accent))
@@ -335,7 +347,7 @@ private struct SharedProgramCard: View {
 private struct SharedExerciseCard: View {
     let exercise: Exercise
     let isAdded: Bool
-    let onAdd: () -> Void
+    let onToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -357,11 +369,11 @@ private struct SharedExerciseCard: View {
 
             Spacer()
 
-            Button(isAdded ? "Added" : "Add") {
-                if !isAdded { onAdd() }
+            Button(isAdded ? "Remove" : "Add") {
+                onToggle()
             }
             .font(.caption.weight(.bold))
-            .foregroundStyle(isAdded ? Theme.textDim : .white)
+            .foregroundStyle(isAdded ? .red.opacity(0.9) : .white)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(isAdded ? Theme.surface2 : Theme.accent)

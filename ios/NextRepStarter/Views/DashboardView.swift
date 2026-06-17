@@ -54,10 +54,16 @@ struct DashboardView: View {
         let day = nextDay(for: program)
         let accent = Color(hex: program.accent)
 
-        return VStack(alignment: .leading, spacing: 16) {
+        return ZStack {
             NavigationLink {
                 ProgramDetailView(program: program)
             } label: {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Today · \(program.name)")
                         .font(.caption.weight(.semibold))
@@ -74,11 +80,8 @@ struct DashboardView: View {
                         .foregroundStyle(Theme.textDim)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
 
-            if let day {
-                HStack {
+                if let day {
                     Button {
                         store.startWorkout(program: program, day: day, week: run.week)
                         store.presentWorkout()
@@ -86,16 +89,16 @@ struct DashboardView: View {
                         Text(isActiveWorkout(program: program, day: day, week: run.week) ? "Resume Workout" : "Start Workout")
                     }
                     .buttonStyle(PrimaryButtonStyle())
+                } else if let firstDay = domainResolveProgramDay(program, dayIndex: 0, week: 1) {
+                    Button {
+                        store.resetProgramProgress(id: program.id)
+                        store.startWorkout(program: program, day: firstDay, week: 1)
+                        store.presentWorkout()
+                    } label: {
+                        Text("Start Workout")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
-            } else if let firstDay = domainResolveProgramDay(program, dayIndex: 0, week: 1) {
-                Button {
-                    store.resetProgramProgress(id: program.id)
-                    store.startWorkout(program: program, day: firstDay, week: 1)
-                    store.presentWorkout()
-                } label: {
-                    Text("Start Workout")
-                }
-                .buttonStyle(PrimaryButtonStyle())
             }
         }
         .padding(18)

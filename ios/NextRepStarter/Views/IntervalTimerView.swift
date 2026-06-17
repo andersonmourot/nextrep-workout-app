@@ -3,8 +3,17 @@ import Combine
 import SwiftUI
 
 struct IntervalTimerView: View {
+    @Environment(AppStore.self) private var store
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
+    @State private var topMode = "timer"
+    @State private var timerInput = ""
+    @State private var timerTotal = 60
+    @State private var timerRemaining = 60
+    @State private var timerRunning = false
+    @State private var timerDone = false
+    @State private var stopwatchCentiseconds = 0
+    @State private var stopwatchRunning = false
     @State private var mode = "TABATA"
     @State private var workSeconds = 20
     @State private var restSeconds = 10
@@ -21,10 +30,19 @@ struct IntervalTimerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
-                modePicker
-                timerCard
-                controls
-                settings
+                topModePicker
+                switch topMode {
+                case "stopwatch":
+                    stopwatchCard
+                case "interval":
+                    intervalModePicker
+                    intervalCard
+                    intervalControls
+                    intervalSettings
+                default:
+                    countdownCard
+                    recentTimers
+                }
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -34,24 +52,31 @@ struct IntervalTimerView: View {
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
         .onAppear {
-            resetTimer()
+            topMode = ["timer", "stopwatch", "interval"].contains(store.appData.timerMode) ? store.appData.timerMode : "timer"
+            seedIntervalSettings()
         }
         .onChange(of: mode) { _ in
             resetTimer()
+            store.setIntervalFormat(mode)
+        }
+        .onChange(of: topMode) { newMode in
+            store.setTimerMode(newMode)
         }
         .onReceive(ticker) { _ in
-            tick()
+            tickCountdown()
+            tickStopwatch()
+            tickInterval()
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Interval Timer")
+            Text("Timer")
                 .font(.system(size: 34, weight: .bold, design: .default))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
 
-            Text("TABATA · EMOM · AMRAP")
+            Text("Timer · Stopwatch · Interval")
                 .font(.caption)
                 .textCase(.uppercase)
                 .tracking(1.5)
@@ -59,7 +84,119 @@ struct IntervalTimerView: View {
         }
     }
 
-    private var modePicker: some View {
+    private var topModePicker: some View {
+        Picker("Timer mode", selection: $topMode) {
+            Text("Timer").tag("timer")
+            Text("Stopwatch").tag("stopwatch")
+            Text("Interval").tag("interval")
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private var countdownCard: some View {
+        VStack(spacing: 18) {
+            ProgressRing(
+                value: timerTotal > 0 ? Double(timerRemaining) / Double(timerTotal) : 0,
+                size: 190,
+                lineWidth: 12,
+                center: timerDone ? "Done" : formatIntervalClock(timerRemaining)
+            )
+
+            if timerDone {
+                Text("Time's up!")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accentLight)
+            }
+
+            HStack(spacing: 10) {
+                TextField("Set time (mm:ss or seconds)", text: $timerInput)
+                    .keyboardType(.numberPad)
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.inputBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .onChange(of: timerInput) { newValue in
+                        timerInput = maskTimerInput(newValue)
+                    }
+
+                Button(timerRunning ? "Reset" : "Start") {
+                    timerRunning ? resetCountdown() : startCountdown()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(Theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .cardStyle()
+    }
+
+    @ViewBuilder
+    private var recentTimers: some View {
+        if !store.appData.savedTimers.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Recent Timers")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                ForEach(store.appData.savedTimers) { timer in
+                    HStack {
+                        Button {
+                            loadSavedTimer(timer.seconds)
+                        } label: {
+                            Label(timer.label, systemImage: "play.fill")
+                        }
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.text)
+
+                        Spacer()
+
+                        Button {
+                            store.removeSavedTimer(id: timer.id)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .padding(12)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+            .cardStyle()
+        }
+    }
+
+    private var stopwatchCard: some View {
+        VStack(spacing: 22) {
+            Text(stopwatchText)
+                .font(.system(size: 58, weight: .bold, design: .default).monospacedDigit())
+                .foregroundStyle(Theme.text)
+
+            HStack(spacing: 10) {
+                Button {
+                    stopwatchRunning.toggle()
+                } label: {
+                    Text(stopwatchRunning ? "Pause" : stopwatchCentiseconds == 0 ? "Start" : "Resume")
+                }
+                .buttonStyle(PrimaryButtonStyle())
+
+                Button {
+                    stopwatchRunning = false
+                    stopwatchCentiseconds = 0
+                } label: {
+                    Text("Reset")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+        }
+        .cardStyle()
+    }
+
+    private var intervalModePicker: some View {
         Picker("Mode", selection: $mode) {
             Text("TABATA").tag("TABATA")
             Text("EMOM").tag("EMOM")
@@ -68,7 +205,7 @@ struct IntervalTimerView: View {
         .pickerStyle(.segmented)
     }
 
-    private var timerCard: some View {
+    private var intervalCard: some View {
         VStack(spacing: 14) {
             Text(statusLabel)
                 .font(.caption.weight(.semibold))
@@ -92,7 +229,7 @@ struct IntervalTimerView: View {
         .cardStyle()
     }
 
-    private var controls: some View {
+    private var intervalControls: some View {
         HStack(spacing: 10) {
             Button {
                 isRunning.toggle()
@@ -114,7 +251,7 @@ struct IntervalTimerView: View {
         }
     }
 
-    private var settings: some View {
+    private var intervalSettings: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Settings")
                 .font(.headline)
@@ -123,23 +260,29 @@ struct IntervalTimerView: View {
             switch mode {
             case "EMOM":
                 StepperRow(title: "Interval", value: $emomInterval, range: 15...300, step: 15, suffix: "s") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
                 StepperRow(title: "Rounds", value: $rounds, range: 1...60, step: 1, suffix: "") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
             case "AMRAP":
                 StepperRow(title: "Time cap", value: $amrapCap, range: 60...3600, step: 60, suffix: "s") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
             default:
                 StepperRow(title: "Work", value: $workSeconds, range: 5...300, step: 5, suffix: "s") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
                 StepperRow(title: "Rest", value: $restSeconds, range: 0...300, step: 5, suffix: "s") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
                 StepperRow(title: "Rounds", value: $rounds, range: 1...60, step: 1, suffix: "") {
+                    persistIntervalSettings()
                     resetTimer()
                 }
             }
@@ -190,7 +333,25 @@ struct IntervalTimerView: View {
         return 1 - (Double(remaining) / Double(phaseDuration))
     }
 
-    private func tick() {
+    private func tickCountdown() {
+        guard topMode == "timer", timerRunning else { return }
+        if timerRemaining > 1 {
+            timerRemaining -= 1
+        } else {
+            timerRemaining = 0
+            timerRunning = false
+            timerDone = true
+            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        }
+    }
+
+    private func tickStopwatch() {
+        guard topMode == "stopwatch", stopwatchRunning else { return }
+        stopwatchCentiseconds += 100
+    }
+
+    private func tickInterval() {
+        guard topMode == "interval" else { return }
         guard isRunning, !isComplete else {
             return
         }
@@ -252,6 +413,60 @@ struct IntervalTimerView: View {
             remaining = workSeconds
         }
     }
+
+    private func startCountdown() {
+        let seconds = parseTimerInput(timerInput) ?? timerTotal
+        let total = max(1, seconds)
+        timerTotal = total
+        timerRemaining = total
+        timerDone = false
+        timerRunning = true
+        store.addSavedTimer(seconds: total)
+    }
+
+    private func resetCountdown() {
+        timerRunning = false
+        timerDone = false
+        timerRemaining = timerTotal
+    }
+
+    private func loadSavedTimer(_ seconds: Int) {
+        timerRunning = false
+        timerDone = false
+        timerTotal = seconds
+        timerRemaining = seconds
+        timerInput = formatIntervalClock(seconds)
+    }
+
+    private var stopwatchText: String {
+        let totalSeconds = stopwatchCentiseconds / 100
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        let hundredths = stopwatchCentiseconds % 100
+        return String(format: "%d:%02d.%02d", minutes, seconds, hundredths)
+    }
+
+    private func seedIntervalSettings() {
+        let settings = store.appData.intervalSettings
+        emomInterval = settings.emomInterval
+        rounds = settings.tabataRounds
+        workSeconds = settings.tabataWork
+        restSeconds = settings.tabataRest
+        amrapCap = settings.amrapCap
+        mode = store.appData.intervalFormat ?? "TABATA"
+        resetTimer()
+    }
+
+    private func persistIntervalSettings() {
+        var settings = store.appData.intervalSettings
+        settings.emomInterval = emomInterval
+        settings.emomRounds = rounds
+        settings.tabataWork = workSeconds
+        settings.tabataRest = restSeconds
+        settings.tabataRounds = rounds
+        settings.amrapCap = amrapCap
+        store.setIntervalSettings(settings)
+    }
 }
 
 private struct StepperRow: View {
@@ -292,4 +507,23 @@ private func formatIntervalClock(_ seconds: Int) -> String {
     let minutes = seconds / 60
     let remainder = seconds % 60
     return String(format: "%d:%02d", minutes, remainder)
+}
+
+private func parseTimerInput(_ input: String) -> Int? {
+    let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    if trimmed.contains(":") {
+        let parts = trimmed.split(separator: ":", omittingEmptySubsequences: false)
+        let minutes = Int(String(parts.first ?? "0")) ?? 0
+        let seconds = parts.count > 1 ? (Int(String(parts[1])) ?? 0) : 0
+        return minutes * 60 + seconds
+    }
+    return Int(trimmed)
+}
+
+private func maskTimerInput(_ input: String) -> String {
+    let digits = String(input.filter(\.isNumber).prefix(4))
+    guard digits.count > 2 else { return digits }
+    let split = digits.index(digits.endIndex, offsetBy: -2)
+    return "\(digits[..<split]):\(digits[split...])"
 }

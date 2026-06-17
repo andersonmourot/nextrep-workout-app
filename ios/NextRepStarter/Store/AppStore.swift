@@ -230,6 +230,35 @@ final class AppStore {
         scheduleSync()
     }
 
+    func setTimerMode(_ mode: String) {
+        appData.timerMode = mode
+        scheduleSync()
+    }
+
+    func addSavedTimer(seconds: Int) {
+        guard seconds > 0 else { return }
+        let timer = SavedTimer(id: UUID().uuidString, label: formatClock(seconds), seconds: seconds)
+        appData.savedTimers.removeAll { $0.seconds == seconds }
+        appData.savedTimers.insert(timer, at: 0)
+        appData.savedTimers = Array(appData.savedTimers.prefix(8))
+        scheduleSync()
+    }
+
+    func removeSavedTimer(id: String) {
+        appData.savedTimers.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
+    func setIntervalSettings(_ settings: IntervalSettings) {
+        appData.intervalSettings = settings
+        scheduleSync()
+    }
+
+    func setIntervalFormat(_ format: String?) {
+        appData.intervalFormat = format
+        scheduleSync()
+    }
+
     func setThemeColor(_ color: String) {
         UserDefaults.standard.set(color, forKey: Theme.accentStorageKey)
         appData.themeColor = color
@@ -965,6 +994,12 @@ final class AppStore {
     private static func parseReps(_ reps: String) -> Int {
         let digits = reps.prefix { $0.isNumber }
         return Int(digits) ?? 10
+    }
+
+    private func formatClock(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let remainder = seconds % 60
+        return String(format: "%d:%02d", minutes, remainder)
     }
 
     private static let dateOnlyFormatter: DateFormatter = {

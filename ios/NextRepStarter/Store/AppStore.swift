@@ -106,6 +106,28 @@ final class AppStore {
         }
     }
 
+    func forgotPassword(email: String) async -> Bool {
+        do {
+            authError = nil
+            try await apiClient.forgotPassword(email: email)
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
+    func resetPassword(token: String, newPassword: String) async -> Bool {
+        do {
+            authError = nil
+            try await apiClient.resetPassword(token: token, newPassword: newPassword)
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
     func logout() {
         syncTask?.cancel()
         restNotifier.cancelRestComplete()

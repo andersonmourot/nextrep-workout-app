@@ -76,6 +76,22 @@ final class APIClient {
         )
     }
 
+    func forgotPassword(email: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/auth/forgot-password",
+            method: "POST",
+            body: ["email": email]
+        )
+    }
+
+    func resetPassword(token: String, newPassword: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/auth/reset-password",
+            method: "POST",
+            body: ["token": token, "new_password": newPassword]
+        )
+    }
+
     func me(token: String) async throws -> SessionUser {
         try await request("/me", token: token)
     }

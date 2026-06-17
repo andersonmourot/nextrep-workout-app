@@ -46,6 +46,17 @@ struct AuthView: View {
                         .textContentType(isSignup ? .newPassword : .password)
                         .fieldStyle()
 
+                    if !isSignup {
+                        NavigationLink {
+                            ForgotPasswordView()
+                        } label: {
+                            Text("Forgot password?")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(Theme.accentLight)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                    }
+
                     if let error = store.authError {
                         Text(error)
                             .font(.footnote)
@@ -69,6 +80,15 @@ struct AuthView: View {
                     .opacity(canSubmit ? 1 : 0.5)
                 }
                 .cardStyle()
+
+                NavigationLink {
+                    ResetPasswordView()
+                } label: {
+                    Text("Have a reset token?")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.accentLight)
+                        .frame(maxWidth: .infinity)
+                }
             }
             .padding(16)
             .frame(maxWidth: 448)

@@ -22,7 +22,7 @@ Observation, URLSession, and Keychain Services.
   streaks, previous-week weights, and superset grouping logic.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
-- `Views/*` with a minimal auth flow, Home dashboard, Programs tab with
+- `Views/*` with auth/login/signup plus password recovery, Home dashboard, Programs tab with
   Exercise Library access, Program Detail + Day Detail navigation, Search tab
   people discovery/social sharing, Interval Timer basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history

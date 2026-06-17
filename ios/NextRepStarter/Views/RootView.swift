@@ -6,7 +6,9 @@ struct RootView: View {
     var body: some View {
         Group {
             if store.user == nil {
-                AuthView()
+                NavigationStack {
+                    AuthView()
+                }
             } else {
                 AppShellView()
             }

@@ -225,7 +225,7 @@ struct WorkoutHistoryView: View {
 
                 if sortedLogs.count > 5 {
                     NavigationLink {
-                        AllWorkoutHistoryView(logs: sortedLogs, unit: store.appData.unit)
+                        AllWorkoutHistoryView(unit: store.appData.unit)
                     } label: {
                         Text("View all")
                             .font(.caption.weight(.semibold))
@@ -730,7 +730,6 @@ struct MaxTrackerView: View {
 struct AllWorkoutHistoryView: View {
     @Environment(AppStore.self) private var store
     @State private var pendingDeleteLog: WorkoutLog?
-    let logs: [WorkoutLog]
     let unit: String
 
     var body: some View {
@@ -767,6 +766,12 @@ struct AllWorkoutHistoryView: View {
             }
         } message: {
             Text("This removes the workout from your synced history.")
+        }
+    }
+
+    private var logs: [WorkoutLog] {
+        store.appData.logs.sorted { lhs, rhs in
+            logDate(lhs) > logDate(rhs)
         }
     }
 }

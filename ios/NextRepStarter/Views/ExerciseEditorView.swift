@@ -161,7 +161,7 @@ struct ExerciseEditorView: View {
 
     private func editorField(_ placeholder: String, text: Binding<String>, minLines: Int = 1) -> some View {
         TextField("", text: text, axis: .vertical)
-            .lineLimit(minLines..., reservesSpace: minLines > 1)
+            .lineLimit(minLines, reservesSpace: minLines > 1)
             .foregroundStyle(Theme.text)
             .tint(Theme.accentLight)
             .padding(.horizontal, 12)

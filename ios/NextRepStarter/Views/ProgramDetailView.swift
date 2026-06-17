@@ -40,10 +40,13 @@ struct ProgramDetailView: View {
                                 selectedWeek: currentWeek,
                                 isUpNext: isUpNext(dayIndex: index),
                                 log: slotLog(dayIndex: index),
-                                loggedSetCount: loggedSetCount(for: day),
+                                loggedSetCount: slotLog(dayIndex: index).map(completedSetCount) ?? 0,
                                 exerciseName: exerciseName,
                                 loggedSummary: { planned, log in
                                     loggedSummary(for: planned, in: log)
+                                },
+                                onStart: {
+                                    startDay(dayId: program.days[index].id, week: currentWeek)
                                 }
                             )
                         }
@@ -367,10 +370,6 @@ struct ProgramDetailView: View {
             .first
     }
 
-    private func loggedSetCount(for day: ProgramDay) -> Int {
-        latestLog(for: day).map(completedSetCount) ?? 0
-    }
-
     private func completedSetCount(_ log: WorkoutLog) -> Int {
         log.exercises.reduce(0) { total, exercise in
             total + exercise.sets.count
@@ -403,7 +402,6 @@ private struct MetricTile: View {
 }
 
 private struct ProgramDayCard: View {
-    @Environment(AppStore.self) private var store
     let program: Program
     let day: ProgramDay
     let dayNumber: Int
@@ -413,6 +411,7 @@ private struct ProgramDayCard: View {
     let loggedSetCount: Int
     let exerciseName: (PlannedExercise) -> String
     let loggedSummary: (PlannedExercise, WorkoutLog?) -> String?
+    let onStart: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -468,10 +467,9 @@ private struct ProgramDayCard: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    store.startWorkout(program: program, day: day, week: selectedWeek)
-                    store.presentWorkout()
+                    onStart()
                 } label: {
-                    Text(loggedSetCount > 0 ? "Repeat" : "Start")
+                    Text(log != nil ? "Repeat" : "Start")
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)

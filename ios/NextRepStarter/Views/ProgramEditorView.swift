@@ -324,7 +324,6 @@ struct ProgramEditorView: View {
                 get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
             ))
-            supersetControls(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
@@ -358,30 +357,6 @@ struct ProgramEditorView: View {
         .frame(width: 28)
         .background(Theme.surface2)
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-    }
-
-    @ViewBuilder
-    private func supersetControls(dayIndex: Int, exerciseIndex: Int) -> some View {
-        HStack(spacing: 10) {
-            if exerciseIndex < draft.days[dayIndex].exercises.count - 1 {
-                Button {
-                    supersetWithNext(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
-                } label: {
-                    Text("Superset with next")
-                }
-                .buttonStyle(GhostButtonStyle())
-            }
-
-            if let groupId = draft.days[dayIndex].exercises[exerciseIndex].groupId,
-               !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Button {
-                    unlinkSuperset(dayIndex: dayIndex, groupId: groupId)
-                } label: {
-                    Text("Unlink group")
-                }
-                .buttonStyle(GhostButtonStyle())
-            }
-        }
     }
 
     private func exerciseSelector(dayIndex: Int, exerciseIndex: Int) -> some View {
@@ -554,33 +529,6 @@ struct ProgramEditorView: View {
             return
         }
         draft.days[dayIndex].exercises.swapAt(exerciseIndex, target)
-    }
-
-    private func supersetWithNext(dayIndex: Int, exerciseIndex: Int) {
-        guard draft.days.indices.contains(dayIndex),
-              draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
-              draft.days[dayIndex].exercises.indices.contains(exerciseIndex + 1) else {
-            return
-        }
-
-        let current = draft.days[dayIndex].exercises[exerciseIndex].groupId
-        let next = draft.days[dayIndex].exercises[exerciseIndex + 1].groupId
-        let groupId = [current, next]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .first { !$0.isEmpty } ?? "A"
-
-        draft.days[dayIndex].exercises[exerciseIndex].groupId = groupId
-        draft.days[dayIndex].exercises[exerciseIndex + 1].groupId = groupId
-
-        let sets = max(1, draft.days[dayIndex].exercises[exerciseIndex].sets)
-        draft.days[dayIndex].exercises[exerciseIndex + 1].sets = sets
-    }
-
-    private func unlinkSuperset(dayIndex: Int, groupId: String) {
-        guard draft.days.indices.contains(dayIndex) else { return }
-        for exerciseIndex in draft.days[dayIndex].exercises.indices where draft.days[dayIndex].exercises[exerciseIndex].groupId == groupId {
-            draft.days[dayIndex].exercises[exerciseIndex].groupId = nil
-        }
     }
 
     private static func blankProgram() -> Program {

@@ -33,6 +33,16 @@ struct ExerciseLibraryView: View {
         }
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    ExerciseEditorView()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .tint(Theme.accentLight)
+            }
+        }
         .screenBackground()
     }
 
@@ -159,13 +169,21 @@ struct ExerciseDetailView: View {
         .toolbar {
             if store.isCustomExercise(exercise) {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task {
-                            await store.shareExercise(exercise)
-                            shareMessage = "Exercise shared"
+                    HStack(spacing: 13) {
+                        NavigationLink {
+                            ExerciseEditorView(exercise: exercise)
+                        } label: {
+                            Image(systemName: "pencil")
                         }
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
+
+                        Button {
+                            Task {
+                                await store.shareExercise(exercise)
+                                shareMessage = "Exercise shared"
+                            }
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
                     }
                     .tint(Theme.accentLight)
                 }

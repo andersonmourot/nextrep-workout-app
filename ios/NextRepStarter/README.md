@@ -28,6 +28,8 @@ Observation, URLSession, and Keychain Services.
   body-weight tracking, and logged set details.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
   creation and editing.
+- `ExerciseEditorView.swift` supports first-pass custom exercise creation and
+  editing.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
 - Custom Program and Exercise detail screens include share actions backed by the
@@ -59,7 +61,7 @@ by the web app. Keep that behavior as you add native features.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
    - Progress charts
-   - Richer custom exercise creation/editing
+   - Exercise photos and richer custom exercise editing
    - Rest-complete custom sound/background audio polish
    - Superset and per-week program edit flows
    - Social remove/unshare flows

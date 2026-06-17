@@ -245,6 +245,16 @@ final class AppStore {
         scheduleSync()
     }
 
+    func saveCustomExercise(_ exercise: Exercise) {
+        upsertCustomExercise(exercise)
+        scheduleSync()
+    }
+
+    func deleteCustomExercise(id: String) {
+        appData.customExercises.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
     func addBodyWeight(_ weight: Double) {
         let entry = BodyWeightEntry(
             id: UUID().uuidString,

@@ -74,6 +74,23 @@ final class AppStore {
         appData.customExercises.contains(where: { $0.id == exercise.id })
     }
 
+    func hideExercise(id: String) {
+        if !appData.hiddenExerciseIds.contains(id) {
+            appData.hiddenExerciseIds.append(id)
+        }
+        scheduleSync()
+    }
+
+    func restoreHiddenExercises() {
+        appData.hiddenExerciseIds = []
+        scheduleSync()
+    }
+
+    func restoreHiddenExercise(id: String) {
+        appData.hiddenExerciseIds.removeAll { $0 == id }
+        scheduleSync()
+    }
+
     func restoreSession() async {
         guard !hasAttemptedRestore else { return }
         hasAttemptedRestore = true
@@ -561,7 +578,24 @@ final class AppStore {
     }
 
     func deleteCustomExercise(id: String) {
+        if let exercise = appData.customExercises.first(where: { $0.id == id }) {
+            appData.trashedExercises.removeAll { $0.exercise.id == id }
+            appData.trashedExercises.append(TrashedExercise(exercise: exercise, deletedAt: Date().timeIntervalSince1970 * 1000))
+        }
         appData.customExercises.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
+    func restoreTrashedExercise(id: String) {
+        guard let trashed = appData.trashedExercises.first(where: { $0.exercise.id == id }) else { return }
+        appData.customExercises.removeAll { $0.id == id }
+        appData.customExercises.append(trashed.exercise)
+        appData.trashedExercises.removeAll { $0.exercise.id == id }
+        scheduleSync()
+    }
+
+    func purgeTrashedExercise(id: String) {
+        appData.trashedExercises.removeAll { $0.exercise.id == id }
         scheduleSync()
     }
 

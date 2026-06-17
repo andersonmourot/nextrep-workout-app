@@ -5,6 +5,9 @@ struct ExerciseLibraryView: View {
     @Environment(AppStore.self) private var store
     @State private var query = ""
     @State private var selectedMuscle = "All"
+    @State private var showingHidden = false
+    @State private var showingTrash = false
+    @State private var pendingHide: Exercise?
 
     var body: some View {
         ScrollView {
@@ -12,6 +15,7 @@ struct ExerciseLibraryView: View {
                 header
                 searchField
                 muscleFilters
+                managementControls
 
                 if filteredExercises.isEmpty {
                     emptyState
@@ -21,7 +25,13 @@ struct ExerciseLibraryView: View {
                             NavigationLink {
                                 ExerciseDetailView(exercise: exercise)
                             } label: {
-                                ExerciseCard(exercise: exercise)
+                                ExerciseCard(exercise: exercise) {
+                                    if store.isCustomExercise(exercise) {
+                                        store.deleteCustomExercise(id: exercise.id)
+                                    } else {
+                                        pendingHide = exercise
+                                    }
+                                }
                             }
                             .buttonStyle(.plain)
                         }
@@ -34,6 +44,26 @@ struct ExerciseLibraryView: View {
         }
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showingHidden) {
+            HiddenExercisesView()
+        }
+        .navigationDestination(isPresented: $showingTrash) {
+            TrashedExercisesView()
+        }
+        .alert("Hide Exercise?", isPresented: Binding(
+            get: { pendingHide != nil },
+            set: { if !$0 { pendingHide = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingHide = nil }
+            Button("Hide", role: .destructive) {
+                if let pendingHide {
+                    store.hideExercise(id: pendingHide.id)
+                }
+                pendingHide = nil
+            }
+        } message: {
+            Text("This hides the built-in exercise from your library. You can restore hidden exercises later.")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {
@@ -119,7 +149,7 @@ struct ExerciseLibraryView: View {
 
     private var muscles: [String] {
         let values = Set(store.allExercises.map(\.primaryMuscle))
-        return ["All"] + values.sorted()
+        return ["All", "Custom"] + values.sorted()
     }
 
     private var filteredExercises: [Exercise] {
@@ -127,6 +157,7 @@ struct ExerciseLibraryView: View {
 
         return store.allExercises.filter { exercise in
             let matchesMuscle = selectedMuscle == "All" ||
+                (selectedMuscle == "Custom" && store.isCustomExercise(exercise)) ||
                 exercise.primaryMuscle == selectedMuscle ||
                 exercise.secondaryMuscles.contains(selectedMuscle)
 
@@ -145,6 +176,28 @@ struct ExerciseLibraryView: View {
                 .joined(separator: " ")
 
             return haystack.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    private var managementControls: some View {
+        HStack(spacing: 10) {
+            if !store.appData.hiddenExerciseIds.isEmpty {
+                Button {
+                    showingHidden = true
+                } label: {
+                    Label("Hidden", systemImage: "eye.slash")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+
+            if !store.appData.trashedExercises.isEmpty {
+                Button {
+                    showingTrash = true
+                } label: {
+                    Label("Trash", systemImage: "trash")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
         }
     }
 }
@@ -443,6 +496,7 @@ private extension View {
 
 private struct ExerciseCard: View {
     let exercise: Exercise
+    let onManage: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -460,6 +514,15 @@ private struct ExerciseCard: View {
                 }
 
                 Spacer()
+
+                Button {
+                    onManage()
+                } label: {
+                    Image(systemName: exercise.id.hasPrefix("ios-ex-") ? "trash" : "eye.slash")
+                        .font(.caption)
+                }
+                .foregroundStyle(.red.opacity(0.8))
+                .buttonStyle(.plain)
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
@@ -482,5 +545,108 @@ private struct ExerciseCard: View {
             .padding(.vertical, 6)
             .background(Theme.surface2)
             .clipShape(Capsule())
+    }
+}
+
+private struct HiddenExercisesView: View {
+    @Environment(AppStore.self) private var store
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if hiddenExercises.isEmpty {
+                    Text("No hidden exercises.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    Button("Restore All Hidden") {
+                        store.restoreHiddenExercises()
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+
+                    ForEach(hiddenExercises) { exercise in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(exercise.name)
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.text)
+                                Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textDim)
+                            }
+                            Spacer()
+                            Button("Restore") {
+                                store.restoreHiddenExercise(id: exercise.id)
+                            }
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+                        }
+                        .cardStyle()
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Hidden Exercises")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+    }
+
+    private var hiddenExercises: [Exercise] {
+        store.catalog.exercises
+            .filter { store.appData.hiddenExerciseIds.contains($0.id) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+}
+
+private struct TrashedExercisesView: View {
+    @Environment(AppStore.self) private var store
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if store.appData.trashedExercises.isEmpty {
+                    Text("No deleted custom exercises.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(store.appData.trashedExercises) { trashed in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(trashed.exercise.name)
+                                    .font(.headline)
+                                    .foregroundStyle(Theme.text)
+                                Text("\(trashed.exercise.primaryMuscle) · \(trashed.exercise.equipment)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textDim)
+                            }
+                            Spacer()
+                            Button("Restore") {
+                                store.restoreTrashedExercise(id: trashed.exercise.id)
+                            }
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+                            Button {
+                                store.purgeTrashedExercise(id: trashed.exercise.id)
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                            .foregroundStyle(.red.opacity(0.8))
+                        }
+                        .cardStyle()
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Trash")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }

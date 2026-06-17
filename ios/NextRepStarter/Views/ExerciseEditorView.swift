@@ -1,4 +1,6 @@
+import PhotosUI
 import SwiftUI
+import UIKit
 
 struct ExerciseEditorView: View {
     @Environment(AppStore.self) private var store
@@ -8,6 +10,7 @@ struct ExerciseEditorView: View {
     @State private var instructionsText: String
     @State private var tipsText: String
     @State private var showingDeleteConfirm = false
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     private let muscles = [
         "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings",
@@ -29,6 +32,7 @@ struct ExerciseEditorView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 basics
+                photos
                 coaching
                 actions
             }
@@ -47,6 +51,9 @@ struct ExerciseEditorView: View {
             }
         } message: {
             Text("This removes the custom exercise from your synced data.")
+        }
+        .onChange(of: selectedPhotoItems) { newItems in
+            Task { await loadPhotos(newItems) }
         }
     }
 
@@ -99,6 +106,46 @@ struct ExerciseEditorView: View {
         }
         .cardStyle()
         .foregroundStyle(Theme.text)
+    }
+
+    private var photos: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Photos")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            if let photos = draft.photos, !photos.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(photos.enumerated()), id: \.offset) { index, photo in
+                            if let image = imageFromDataURL(photo) {
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 130, height: 110)
+                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    Button {
+                                        draft.photos?.remove(at: index)
+                                        if draft.photos?.isEmpty == true { draft.photos = nil }
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundStyle(.white, .black.opacity(0.55))
+                                    }
+                                    .padding(6)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 2, matching: .images) {
+                Label("Choose Photos", systemImage: "photo")
+            }
+            .buttonStyle(GhostButtonStyle())
+        }
+        .cardStyle()
     }
 
     private var coaching: some View {
@@ -181,6 +228,41 @@ struct ExerciseEditorView: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(.white.opacity(0.08), lineWidth: 1)
             }
+    }
+
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        var loaded: [String] = []
+        for item in items.prefix(2) {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data),
+                  let compressed = compressedDataURL(from: image) else {
+                continue
+            }
+            loaded.append(compressed)
+        }
+        if !loaded.isEmpty {
+            draft.photos = loaded
+        }
+        selectedPhotoItems = []
+    }
+
+    private func compressedDataURL(from image: UIImage) -> String? {
+        let maxDimension: CGFloat = 800
+        let size = image.size
+        let scale = min(1, maxDimension / max(size.width, size.height))
+        let target = CGSize(width: max(1, size.width * scale), height: max(1, size.height * scale))
+        let renderer = UIGraphicsImageRenderer(size: target)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: target))
+        }
+        guard let data = resized.jpegData(compressionQuality: 0.7) else { return nil }
+        return "data:image/jpeg;base64,\(data.base64EncodedString())"
+    }
+
+    private func imageFromDataURL(_ value: String) -> UIImage? {
+        let base64 = value.components(separatedBy: ",").last ?? value
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return UIImage(data: data)
     }
 
     private static func blankExercise() -> Exercise {

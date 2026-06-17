@@ -42,8 +42,8 @@ Observation, URLSession, and Keychain Services.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
   creation and editing, including duplicate day/exercise controls and superset
   group helpers.
-- `ExerciseEditorView.swift` supports first-pass custom exercise creation and
-  editing.
+- `ExerciseEditorView.swift` supports first-pass custom exercise creation,
+  editing, and up to two compressed reference photos.
 - Exercise detail supports reference photos when present, private notes/cues,
   and showing visible programs where an exercise appears.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to

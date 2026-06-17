@@ -526,6 +526,15 @@ final class AppStore {
         scheduleSync()
     }
 
+    func toggleFavoriteProgram(id: String) {
+        if appData.favoriteProgramIds.contains(id) {
+            appData.favoriteProgramIds.removeAll { $0 == id }
+        } else if appData.favoriteProgramIds.count < 5 {
+            appData.favoriteProgramIds.append(id)
+        }
+        scheduleSync()
+    }
+
     func hideProgram(id: String) {
         if !appData.hiddenProgramIds.contains(id) {
             appData.hiddenProgramIds.append(id)

@@ -21,6 +21,16 @@ struct WorkoutHistoryView: View {
         }
         .navigationTitle("Profile")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    SettingsView()
+                } label: {
+                    Image(systemName: "gearshape")
+                }
+                .tint(Theme.accentLight)
+            }
+        }
         .screenBackground()
     }
 

@@ -131,6 +131,69 @@ final class AppStore {
         }
     }
 
+    func setDisplayName(_ name: String) {
+        appData.name = name
+        if var currentUser = user {
+            currentUser.name = name
+            user = currentUser
+        }
+        scheduleSync()
+    }
+
+    func setUnit(_ unit: String) {
+        appData.unit = unit
+        scheduleSync()
+    }
+
+    func setThemeColor(_ color: String) {
+        appData.themeColor = color
+        scheduleSync()
+    }
+
+    func setThemeMode(_ mode: String) {
+        appData.themeMode = mode
+        scheduleSync()
+    }
+
+    func clearActiveProgram() {
+        appData.activeProgramId = nil
+        scheduleSync()
+    }
+
+    func resetAllData() {
+        let preservedName = user?.name ?? appData.name
+        let preservedUnit = appData.unit
+        let preservedThemeColor = appData.themeColor
+        let preservedThemeMode = appData.themeMode
+        appData = AppData(
+            name: preservedName,
+            unit: preservedUnit,
+            themeColor: preservedThemeColor,
+            themeMode: preservedThemeMode
+        )
+        scheduleSync()
+    }
+
+    func changePassword(currentPassword: String, newPassword: String) async -> Bool {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            try await apiClient.changePassword(
+                token: token,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            )
+            authError = nil
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
     func searchUsers(query: String) async -> [DiscoverUser] {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription

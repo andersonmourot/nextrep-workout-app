@@ -27,6 +27,9 @@ Observation, URLSession, and Keychain Services.
   persistence, and a Profile workout-history viewer with stat cards, dedicated
   Nutrition target/tracking and Max Tracker pages, body-weight tracking, and
   logged set details.
+- `SettingsView.swift` is available from the Profile toolbar and includes
+  account, appearance, unit, active-program, password, reset, logout, and legal
+  options.
 - `VisualComponents.swift` provides reusable native progress rings, line charts,
   and metric progress bars used across Dashboard, Profile, Nutrition, Max
   Tracker, Program Detail, and Active Workout.

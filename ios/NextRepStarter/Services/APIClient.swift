@@ -89,6 +89,15 @@ final class APIClient {
         )
     }
 
+    func changePassword(token: String, currentPassword: String, newPassword: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/auth/password",
+            method: "POST",
+            token: token,
+            body: ["current_password": currentPassword, "new_password": newPassword]
+        )
+    }
+
     func searchUsers(token: String, query: String) async throws -> [DiscoverUser] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         return try await request("/api/users/search?q=\(encoded)", token: token)

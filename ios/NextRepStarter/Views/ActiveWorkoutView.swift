@@ -174,52 +174,75 @@ struct ActiveWorkoutView: View {
 
     private func exercisesList(active: ActiveWorkout) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            ForEach(Array(day.exercises.enumerated()), id: \.offset) { exerciseIndex, planned in
-                let restAfterSet = restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned)
-                let startsRestAfterSet = restAfterSet > 0
-                WorkoutExerciseCard(
-                    accent: accent,
-                    name: exerciseName(for: planned),
-                    planned: planned,
-                    unit: store.appData.unit,
-                    previousHint: previousSetHint(for: planned),
-                    startsRestAfterSet: startsRestAfterSet,
-                    cueText: Binding(
-                        get: { store.appData.exerciseSubheaders[planned.exerciseId] ?? "" },
-                        set: { store.setExerciseCue(exerciseId: planned.exerciseId, cue: $0) }
-                    ),
-                    noteText: Binding(
-                        get: { store.appData.exerciseNotes[planned.exerciseId] ?? "" },
-                        set: { store.setExerciseNote(exerciseId: planned.exerciseId, note: $0) }
-                    ),
-                    rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
-                    onWeightSet: { setIndex, weight in
-                        guard active.sets.indices.contains(exerciseIndex),
-                              active.sets[exerciseIndex].indices.contains(setIndex) else {
-                            return
+            ForEach(Array(domainSupersetGroups(day.exercises).enumerated()), id: \.offset) { _, group in
+                if group.isSuperset {
+                    SupersetWorkoutCard(
+                        accent: accent,
+                        group: group,
+                        plannedExercises: day.exercises,
+                        activeSets: active.sets,
+                        unit: store.appData.unit,
+                        exerciseName: exerciseName,
+                        previousHint: previousSetHint,
+                        cueText: cueBinding,
+                        noteText: noteBinding,
+                        onWeightSet: { exerciseIndex, setIndex, weight in
+                            store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
+                        },
+                        onRepsSet: { exerciseIndex, setIndex, reps in
+                            store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: reps)
+                        },
+                        onToggleCompleted: { exerciseIndex, setIndex, completed in
+                            let planned = day.exercises[exerciseIndex]
+                            store.setCompleted(
+                                exerciseIndex: exerciseIndex,
+                                setIndex: setIndex,
+                                completed: completed,
+                                restSec: restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned),
+                                exerciseName: exerciseName(for: planned)
+                            )
+                        },
+                        onStartRest: {
+                            if let last = group.indices.last {
+                                let planned = day.exercises[last]
+                                store.startRest(seconds: planned.restSec, exerciseName: exerciseName(for: planned))
+                            }
                         }
-                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
-                    },
-                    onRepsSet: { setIndex, reps in
-                        guard active.sets.indices.contains(exerciseIndex),
-                              active.sets[exerciseIndex].indices.contains(setIndex) else {
-                            return
+                    )
+                } else if let exerciseIndex = group.indices.first {
+                    let planned = day.exercises[exerciseIndex]
+                    let restAfterSet = restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned)
+                    let startsRestAfterSet = restAfterSet > 0
+                    WorkoutExerciseCard(
+                        accent: accent,
+                        name: exerciseName(for: planned),
+                        planned: planned,
+                        unit: store.appData.unit,
+                        previousHint: previousSetHint(for: planned),
+                        startsRestAfterSet: startsRestAfterSet,
+                        cueText: cueBinding(for: planned.exerciseId),
+                        noteText: noteBinding(for: planned.exerciseId),
+                        rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
+                        onWeightSet: { setIndex, weight in
+                            store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
+                        },
+                        onRepsSet: { setIndex, reps in
+                            store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: reps)
+                        },
+                        onToggleCompleted: { setIndex, completed in
+                            store.setCompleted(
+                                exerciseIndex: exerciseIndex,
+                                setIndex: setIndex,
+                                completed: completed,
+                                restSec: restAfterSet,
+                                exerciseName: exerciseName(for: planned)
+                            )
+                        },
+                        onStartRest: {
+                            store.startRest(seconds: max(planned.restSec, restAfterSet), exerciseName: exerciseName(for: planned))
                         }
-                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: reps)
-                    },
-                    onToggleCompleted: { setIndex, completed in
-                        store.setCompleted(
-                            exerciseIndex: exerciseIndex,
-                            setIndex: setIndex,
-                            completed: completed,
-                            restSec: restAfterSet,
-                            exerciseName: exerciseName(for: planned)
-                        )
-                    },
-                    onStartRest: {
-                        store.startRest(seconds: max(planned.restSec, restAfterSet), exerciseName: exerciseName(for: planned))
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -269,6 +292,20 @@ struct ActiveWorkoutView: View {
             return "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
         }
         return nil
+    }
+
+    private func cueBinding(for exerciseId: String) -> Binding<String> {
+        Binding(
+            get: { store.appData.exerciseSubheaders[exerciseId] ?? "" },
+            set: { store.setExerciseCue(exerciseId: exerciseId, cue: $0) }
+        )
+    }
+
+    private func noteBinding(for exerciseId: String) -> Binding<String> {
+        Binding(
+            get: { store.appData.exerciseNotes[exerciseId] ?? "" },
+            set: { store.setExerciseNote(exerciseId: exerciseId, note: $0) }
+        )
     }
 
     private func completedSets(_ active: ActiveWorkout) -> Int {
@@ -473,6 +510,203 @@ private struct WorkoutExerciseCard: View {
     }
 }
 
+private struct SupersetWorkoutCard: View {
+    let accent: Color
+    let group: SupersetGroup
+    let plannedExercises: [PlannedExercise]
+    let activeSets: [[SetLog]]
+    let unit: String
+    let exerciseName: (PlannedExercise) -> String
+    let previousHint: (PlannedExercise) -> String?
+    let cueText: (String) -> Binding<String>
+    let noteText: (String) -> Binding<String>
+    let onWeightSet: (Int, Int, Double) -> Void
+    let onRepsSet: (Int, Int, Int) -> Void
+    let onToggleCompleted: (Int, Int, Bool) -> Void
+    let onStartRest: () -> Void
+    @State private var showingNotesFor: Int?
+
+    private var memberIndices: [Int] {
+        group.indices.filter { plannedExercises.indices.contains($0) }
+    }
+
+    private var roundCount: Int {
+        memberIndices
+            .map { activeSets.indices.contains($0) ? activeSets[$0].count : plannedExercises[$0].sets }
+            .max() ?? 0
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Superset \(group.label)")
+                        .font(.caption.weight(.semibold))
+                        .textCase(.uppercase)
+                        .tracking(1.3)
+                        .foregroundStyle(accent)
+
+                    Text("No rest between exercises")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Text("\(roundCount) round\(roundCount == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                }
+
+                Spacer()
+
+                Button("Start Rest") {
+                    onStartRest()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+            }
+
+            legend
+
+            VStack(spacing: 12) {
+                ForEach(0..<roundCount, id: \.self) { round in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Round \(round + 1)")
+                            .font(.caption.weight(.bold))
+                            .textCase(.uppercase)
+                            .tracking(1.1)
+                            .foregroundStyle(Theme.textFaint)
+
+                        ForEach(Array(memberIndices.enumerated()), id: \.offset) { memberOffset, exerciseIndex in
+                            if activeSets.indices.contains(exerciseIndex),
+                               activeSets[exerciseIndex].indices.contains(round) {
+                                SupersetSetRow(
+                                    label: "\(group.label)\(memberOffset + 1)",
+                                    set: activeSets[exerciseIndex][round],
+                                    unit: unit,
+                                    accent: accent,
+                                    onWeightSet: { onWeightSet(exerciseIndex, round, $0) },
+                                    onRepsSet: { onRepsSet(exerciseIndex, round, $0) },
+                                    onToggleCompleted: { onToggleCompleted(exerciseIndex, round, $0) }
+                                )
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Theme.inputBg.opacity(0.55))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+            }
+        }
+        .cardStyle()
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(accent.opacity(0.45), lineWidth: 1.5)
+        }
+    }
+
+    private var legend: some View {
+        VStack(spacing: 8) {
+            ForEach(Array(memberIndices.enumerated()), id: \.offset) { memberOffset, exerciseIndex in
+                let planned = plannedExercises[exerciseIndex]
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 10) {
+                        Text("\(group.label)\(memberOffset + 1)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 34, height: 28)
+                            .background(accent)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(exerciseName(planned))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.text)
+
+                            if let previousHint = previousHint(planned) {
+                                Text(previousHint)
+                                    .font(.caption)
+                                    .foregroundStyle(accent)
+                            }
+
+                            if !cueText(planned.exerciseId).wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(cueText(planned.exerciseId).wrappedValue)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(accent)
+                            }
+                        }
+
+                        Spacer()
+
+                        Button {
+                            showingNotesFor = showingNotesFor == exerciseIndex ? nil : exerciseIndex
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(Theme.textDim)
+                    }
+
+                    if showingNotesFor == exerciseIndex {
+                        TextField("Cue", text: cueText(planned.exerciseId), axis: .vertical)
+                            .workoutInputStyle()
+                        TextField("Private notes", text: noteText(planned.exerciseId), axis: .vertical)
+                            .lineLimit(2, reservesSpace: true)
+                            .workoutInputStyle()
+                    }
+                }
+                .padding(10)
+                .background(Theme.surface2.opacity(0.7))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+    }
+}
+
+private struct SupersetSetRow: View {
+    let label: String
+    let set: SetLog
+    let unit: String
+    let accent: Color
+    let onWeightSet: (Double) -> Void
+    let onRepsSet: (Int) -> Void
+    let onToggleCompleted: (Bool) -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(label)
+                .font(.caption.weight(.bold))
+                .foregroundStyle(accent)
+                .frame(width: 34)
+
+            WorkoutNumberField(
+                title: "Weight",
+                value: set.weight == 0 ? "" : formatWeight(set.weight),
+                unit: unit,
+                keyboard: .decimalPad,
+                onChange: { onWeightSet(Double($0.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0) }
+            )
+
+            WorkoutNumberField(
+                title: "Reps",
+                value: set.reps == 0 ? "" : "\(set.reps)",
+                unit: "",
+                keyboard: .numberPad,
+                onChange: { onRepsSet(Int($0.filter(\.isNumber)) ?? 0) }
+            )
+
+            Button {
+                onToggleCompleted(!set.completed)
+            } label: {
+                Image(systemName: set.completed ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+            }
+            .foregroundStyle(set.completed ? accent : Theme.textDim)
+        }
+        .padding(10)
+        .background(set.completed ? accent.opacity(0.14) : Theme.surface2.opacity(0.65))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
 private struct WorkoutSetRow: View {
     let index: Int
     let set: SetLog
@@ -593,6 +827,7 @@ private struct FloatingRestBar: View {
     let accent: Color
     let onAddTime: () -> Void
     let onSkip: () -> Void
+    @State private var signaledSeconds: Set<Int> = []
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -641,6 +876,15 @@ private struct FloatingRestBar: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(accent.opacity(0.35), lineWidth: 1)
             }
+            .onAppear {
+                signalIfNeeded(remaining: remaining)
+            }
+            .onChange(of: active.restEndsAt) { _ in
+                signaledSeconds = []
+            }
+            .onChange(of: remaining) { newValue in
+                signalIfNeeded(remaining: newValue)
+            }
         }
     }
 
@@ -653,6 +897,14 @@ private struct FloatingRestBar: View {
     private func progress(remaining: Int) -> Double {
         guard active.restTotal > 0 else { return 0 }
         return 1 - (Double(remaining) / Double(active.restTotal))
+    }
+
+    private func signalIfNeeded(remaining: Int) {
+        guard [3, 2, 1, 0].contains(remaining), !signaledSeconds.contains(remaining) else {
+            return
+        }
+        signaledSeconds.insert(remaining)
+        AudioServicesPlaySystemSound(remaining == 0 ? kSystemSoundID_Vibrate : 1104)
     }
 }
 private func formatClock(_ seconds: Int) -> String {

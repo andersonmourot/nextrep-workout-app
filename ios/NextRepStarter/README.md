@@ -53,6 +53,8 @@ Observation, URLSession, and Keychain Services.
 - Active workouts request notification permission, schedule a rest-complete
   local notification, cancel it when rest/workout ends, and vibrate in-app when
   the visible countdown reaches zero.
+- Active workout supersets render as grouped round-by-round cards, with rest
+  only after the group boundary and a floating rest bar with +15s/Skip controls.
 
 ## Backend assumptions
 

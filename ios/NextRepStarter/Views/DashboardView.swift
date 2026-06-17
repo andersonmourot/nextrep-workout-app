@@ -55,21 +55,27 @@ struct DashboardView: View {
         let accent = Color(hex: program.accent)
 
         return VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Today · \(program.name)")
-                    .font(.caption.weight(.semibold))
-                    .textCase(.uppercase)
-                    .tracking(1.3)
-                    .foregroundStyle(accent)
+            NavigationLink {
+                ProgramDetailView(program: program)
+            } label: {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Today · \(program.name)")
+                        .font(.caption.weight(.semibold))
+                        .textCase(.uppercase)
+                        .tracking(1.3)
+                        .foregroundStyle(accent)
 
-                Text(day?.name ?? "Program complete")
-                    .font(.system(size: 28, weight: .bold, design: .default))
-                    .foregroundStyle(Theme.text)
+                    Text(day?.name ?? "Program complete")
+                        .font(.system(size: 28, weight: .bold, design: .default))
+                        .foregroundStyle(Theme.text)
 
-                Text(day?.focus ?? "Review your progress or choose a new program.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
+                    Text(day?.focus ?? "Review your progress or choose a new program.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .buttonStyle(.plain)
 
             if let day {
                 HStack {
@@ -91,13 +97,6 @@ struct DashboardView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
-
-            NavigationLink {
-                ProgramDetailView(program: program)
-            } label: {
-                Text("View Program")
-            }
-            .buttonStyle(GhostButtonStyle())
         }
         .padding(18)
         .background {

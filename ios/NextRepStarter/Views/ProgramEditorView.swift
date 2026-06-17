@@ -6,10 +6,12 @@ struct ProgramEditorView: View {
     @State private var draft: Program
     @State private var showingDeleteConfirm = false
     @State private var exerciseQueries: [String: String] = [:]
+    @State private var collapsedDayIds: Set<String> = []
     @FocusState private var focusedExerciseKey: String?
 
     private let categories = ["Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
     private let levels = ["Beginner", "Intermediate", "Advanced"]
+    private let accentColors = ["#e9b949", "#b91c1c", "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#ec4899"]
 
     init(program: Program? = nil) {
         _draft = State(initialValue: program ?? Self.blankProgram())
@@ -70,27 +72,118 @@ struct ProgramEditorView: View {
             field("Summary", text: $draft.summary)
             field("Description", text: $draft.description)
 
-            Picker("Category", selection: $draft.category) {
-                ForEach(categories, id: \.self) { category in
-                    Text(category).tag(category)
-                }
+            HStack(spacing: 10) {
+                menuPicker("Category", selection: $draft.category, options: categories)
+                menuPicker("Level", selection: $draft.level, options: levels)
             }
-            .pickerStyle(.menu)
-            .tint(Theme.accentLight)
 
-            Picker("Level", selection: $draft.level) {
-                ForEach(levels, id: \.self) { level in
-                    Text(level).tag(level)
-                }
+            HStack(spacing: 10) {
+                numericField("Weeks", value: $draft.durationWeeks)
+                numericField("Days / week", value: $draft.daysPerWeek)
             }
-            .pickerStyle(.menu)
-            .tint(Theme.accentLight)
 
-            Stepper("Duration: \(draft.durationWeeks) weeks", value: $draft.durationWeeks, in: 1...52)
-            Stepper("Days/week: \(draft.daysPerWeek)", value: $draft.daysPerWeek, in: 1...7)
+            accentPicker
+            collaborativePicker
         }
         .cardStyle()
         .foregroundStyle(Theme.text)
+    }
+
+    private func menuPicker(_ title: String, selection: Binding<String>, options: [String]) -> some View {
+        Menu {
+            ForEach(options, id: \.self) { option in
+                Button(option) {
+                    selection.wrappedValue = option
+                }
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(Theme.textFaint)
+                    Text(selection.wrappedValue)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.text)
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textFaint)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var accentPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Accent color")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+
+            HStack(spacing: 10) {
+                ForEach(accentColors, id: \.self) { color in
+                    Button {
+                        draft.accent = color
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: color))
+                            .frame(width: 30, height: 30)
+                            .overlay {
+                                if draft.accent.lowercased() == color.lowercased() {
+                                    Image(systemName: "checkmark")
+                                        .font(.caption.weight(.bold))
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .overlay {
+                                Circle()
+                                    .stroke(.white.opacity(draft.accent.lowercased() == color.lowercased() ? 0.9 : 0), lineWidth: 2)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var collaborativePicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Collaborative")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+
+            HStack(spacing: 10) {
+                togglePill("Yes", isSelected: draft.collaborative == true) {
+                    draft.collaborative = true
+                }
+                togglePill("No", isSelected: draft.collaborative != true) {
+                    draft.collaborative = false
+                }
+            }
+
+            Text(draft.collaborative == true ? "Anyone who adds this program can edit it." : "Only you can edit this program.")
+                .font(.caption)
+                .foregroundStyle(Theme.textFaint)
+        }
+    }
+
+    private func togglePill(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? .white : Theme.textDim)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isSelected ? Theme.accent : Theme.surface2)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private var daysEditor: some View {
@@ -124,8 +217,25 @@ struct ProgramEditorView: View {
     }
 
     private func dayEditor(dayIndex: Int) -> some View {
+        let dayId = draft.days[dayIndex].id
+        let isCollapsed = collapsedDayIds.contains(dayId)
+
         VStack(alignment: .leading, spacing: 12) {
             HStack {
+                Button {
+                    if isCollapsed {
+                        collapsedDayIds.remove(dayId)
+                    } else {
+                        collapsedDayIds.insert(dayId)
+                    }
+                } label: {
+                    Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textDim)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+
                 Text("Day \(dayIndex + 1)")
                     .font(.caption.weight(.semibold))
                     .textCase(.uppercase)
@@ -148,19 +258,25 @@ struct ProgramEditorView: View {
                 .foregroundStyle(.red.opacity(0.85))
             }
 
-            field("Day Name", text: $draft.days[dayIndex].name)
-            field("Focus", text: $draft.days[dayIndex].focus)
+            if !isCollapsed {
+                field("Day Name", text: $draft.days[dayIndex].name)
+                field("Focus", text: $draft.days[dayIndex].focus)
 
-            ForEach(draft.days[dayIndex].exercises.indices, id: \.self) { exerciseIndex in
-                exerciseEditor(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
-            }
+                ForEach(draft.days[dayIndex].exercises.indices, id: \.self) { exerciseIndex in
+                    exerciseEditor(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+                }
 
-            Button {
-                draft.days[dayIndex].exercises.append(blankPlannedExercise())
-            } label: {
-                Label("Add Exercise", systemImage: "plus")
+                Button {
+                    draft.days[dayIndex].exercises.append(blankPlannedExercise())
+                } label: {
+                    Label("Add Exercise", systemImage: "plus")
+                }
+                .buttonStyle(GhostButtonStyle())
+            } else {
+                Text("\(draft.days[dayIndex].exercises.count) exercise\(draft.days[dayIndex].exercises.count == 1 ? "" : "s")")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
             }
-            .buttonStyle(GhostButtonStyle())
         }
         .cardStyle()
     }
@@ -175,6 +291,8 @@ struct ProgramEditorView: View {
                     .foregroundStyle(Theme.textFaint)
 
                 Spacer()
+
+                moveExerciseControls(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
 
                 Button("Duplicate") {
                     duplicateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
@@ -206,6 +324,7 @@ struct ProgramEditorView: View {
                 get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
             ))
+            supersetControls(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
@@ -214,6 +333,54 @@ struct ProgramEditorView: View {
         .padding(12)
         .background(Theme.inputBg.opacity(0.65))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func moveExerciseControls(dayIndex: Int, exerciseIndex: Int) -> some View {
+        VStack(spacing: 0) {
+            Button {
+                moveExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex, direction: -1)
+            } label: {
+                Image(systemName: "chevron.up")
+            }
+            .disabled(exerciseIndex == 0)
+
+            Divider().overlay(.white.opacity(0.08))
+
+            Button {
+                moveExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex, direction: 1)
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .disabled(exerciseIndex >= draft.days[dayIndex].exercises.count - 1)
+        }
+        .font(.caption.weight(.bold))
+        .foregroundStyle(Theme.textDim)
+        .frame(width: 28)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func supersetControls(dayIndex: Int, exerciseIndex: Int) -> some View {
+        HStack(spacing: 10) {
+            if exerciseIndex < draft.days[dayIndex].exercises.count - 1 {
+                Button {
+                    supersetWithNext(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+                } label: {
+                    Text("Superset with next")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+
+            if let groupId = draft.days[dayIndex].exercises[exerciseIndex].groupId,
+               !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    unlinkSuperset(dayIndex: dayIndex, groupId: groupId)
+                } label: {
+                    Text("Unlink group")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+        }
     }
 
     private func exerciseSelector(dayIndex: Int, exerciseIndex: Int) -> some View {
@@ -376,6 +543,43 @@ struct ProgramEditorView: View {
 
         let copy = draft.days[dayIndex].exercises[exerciseIndex]
         draft.days[dayIndex].exercises.insert(copy, at: exerciseIndex + 1)
+    }
+
+    private func moveExercise(dayIndex: Int, exerciseIndex: Int, direction: Int) {
+        guard draft.days.indices.contains(dayIndex) else { return }
+        let target = exerciseIndex + direction
+        guard draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
+              draft.days[dayIndex].exercises.indices.contains(target) else {
+            return
+        }
+        draft.days[dayIndex].exercises.swapAt(exerciseIndex, target)
+    }
+
+    private func supersetWithNext(dayIndex: Int, exerciseIndex: Int) {
+        guard draft.days.indices.contains(dayIndex),
+              draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
+              draft.days[dayIndex].exercises.indices.contains(exerciseIndex + 1) else {
+            return
+        }
+
+        let current = draft.days[dayIndex].exercises[exerciseIndex].groupId
+        let next = draft.days[dayIndex].exercises[exerciseIndex + 1].groupId
+        let groupId = [current, next]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty } ?? "A"
+
+        draft.days[dayIndex].exercises[exerciseIndex].groupId = groupId
+        draft.days[dayIndex].exercises[exerciseIndex + 1].groupId = groupId
+
+        let sets = max(1, draft.days[dayIndex].exercises[exerciseIndex].sets)
+        draft.days[dayIndex].exercises[exerciseIndex + 1].sets = sets
+    }
+
+    private func unlinkSuperset(dayIndex: Int, groupId: String) {
+        guard draft.days.indices.contains(dayIndex) else { return }
+        for exerciseIndex in draft.days[dayIndex].exercises.indices where draft.days[dayIndex].exercises[exerciseIndex].groupId == groupId {
+            draft.days[dayIndex].exercises[exerciseIndex].groupId = nil
+        }
     }
 
     private static func blankProgram() -> Program {

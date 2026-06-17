@@ -24,7 +24,7 @@ Observation, URLSession, and Keychain Services.
   loading, and manual sync.
 - `Views/*` with auth/login/signup plus password recovery, Home dashboard, Programs tab with
   Exercise Library access, Program Detail + Day Detail navigation, Search tab
-  people discovery/social sharing, Timer/Stopwatch/Interval basics, and a first-pass
+  people discovery/following/social sharing, Timer/Stopwatch/Interval basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history
   persistence, and a Profile workout-history viewer with stat cards, dedicated
   Nutrition target/tracking and Max Tracker pages, body-weight tracking, and

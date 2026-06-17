@@ -65,6 +65,22 @@ struct DiscoverUser: Codable, Identifiable, Equatable {
     }
 }
 
+struct FollowUser: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    var color: String
+    var programCount: Int
+    var exerciseCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case color
+        case programCount = "program_count"
+        case exerciseCount = "exercise_count"
+    }
+}
+
 struct SharedUser: Codable, Identifiable, Equatable {
     var id: String
     var name: String

@@ -376,6 +376,21 @@ final class AppStore {
         }
     }
 
+    func following() async -> [FollowUser] {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return []
+        }
+
+        do {
+            authError = nil
+            return try await apiClient.following(token: token)
+        } catch {
+            authError = error.localizedDescription
+            return []
+        }
+    }
+
     func sharedPrograms(for userId: String) async -> [Program] {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
@@ -778,6 +793,19 @@ final class AppStore {
         active.restTotal = 0
         appData.activeWorkout = active
         restNotifier.cancelRestComplete()
+        scheduleSync()
+    }
+
+    func extendRest(by seconds: Int) {
+        guard seconds > 0, var active = appData.activeWorkout else {
+            return
+        }
+
+        let now = Date().timeIntervalSince1970 * 1000
+        let currentEnd = active.restEndsAt ?? now
+        active.restEndsAt = max(currentEnd, now) + Double(seconds * 1000)
+        active.restTotal += seconds
+        appData.activeWorkout = active
         scheduleSync()
     }
 

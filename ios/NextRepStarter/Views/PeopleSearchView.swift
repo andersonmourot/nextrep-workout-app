@@ -4,12 +4,14 @@ struct PeopleSearchView: View {
     @Environment(AppStore.self) private var store
     @State private var query = ""
     @State private var results: [DiscoverUser] = []
+    @State private var followingUsers: [FollowUser] = []
     @State private var isSearching = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                followingSection
                 searchField
 
                 if let error = store.authError {
@@ -49,6 +51,9 @@ struct PeopleSearchView: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .task {
+            await loadFollowing()
+        }
     }
 
     private var header: some View {
@@ -93,6 +98,39 @@ struct PeopleSearchView: View {
         }
     }
 
+    @ViewBuilder
+    private var followingSection: some View {
+        if !followingUsers.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Following")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+                    Spacer()
+                    Button {
+                        Task { await loadFollowing() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accentLight)
+                }
+
+                ForEach(followingUsers) { follow in
+                    let user = discoverUser(from: follow)
+                    NavigationLink {
+                        SharedUserDetailView(user: user)
+                    } label: {
+                        DiscoverUserRow(user: user) {
+                            toggleFollow(user)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Search for users" : "No users found", systemImage: "person.2")
@@ -127,7 +165,23 @@ struct PeopleSearchView: View {
                 await store.follow(userId: user.id)
             }
             await runSearch()
+            await loadFollowing()
         }
+    }
+
+    private func loadFollowing() async {
+        followingUsers = await store.following()
+    }
+
+    private func discoverUser(from follow: FollowUser) -> DiscoverUser {
+        DiscoverUser(
+            id: follow.id,
+            name: follow.name,
+            color: follow.color,
+            following: true,
+            programCount: follow.programCount,
+            exerciseCount: follow.exerciseCount
+        )
     }
 }
 

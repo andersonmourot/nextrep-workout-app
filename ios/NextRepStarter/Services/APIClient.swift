@@ -165,6 +165,10 @@ final class APIClient {
         )
     }
 
+    func following(token: String) async throws -> [FollowUser] {
+        try await request("/api/following", token: token)
+    }
+
     func userPrograms(token: String, userId: String) async throws -> SharedPrograms {
         try await request("/api/users/\(userId)/programs", token: token)
     }

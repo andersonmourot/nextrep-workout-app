@@ -18,10 +18,6 @@ struct ActiveWorkoutView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     header(active: active)
 
-                    RestTimerCard(active: active, accent: accent) {
-                        store.stopRest()
-                    }
-
                     exercisesList(active: active)
 
                     Button {
@@ -83,6 +79,18 @@ struct ActiveWorkoutView: View {
             }
         } message: {
             Text("This will save completed sets to workout history and clear the active session.")
+        }
+        .safeAreaInset(edge: .bottom) {
+            if let active = store.appData.activeWorkout, active.restEndsAt != nil {
+                FloatingRestBar(
+                    active: active,
+                    accent: accent,
+                    onAddTime: { store.extendRest(by: 15) },
+                    onSkip: { store.stopRest() }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+            }
         }
     }
 
@@ -176,22 +184,28 @@ struct ActiveWorkoutView: View {
                     unit: store.appData.unit,
                     previousHint: previousSetHint(for: planned),
                     startsRestAfterSet: startsRestAfterSet,
+                    cueText: Binding(
+                        get: { store.appData.exerciseSubheaders[planned.exerciseId] ?? "" },
+                        set: { store.setExerciseCue(exerciseId: planned.exerciseId, cue: $0) }
+                    ),
+                    noteText: Binding(
+                        get: { store.appData.exerciseNotes[planned.exerciseId] ?? "" },
+                        set: { store.setExerciseNote(exerciseId: planned.exerciseId, note: $0) }
+                    ),
                     rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
-                    onWeightChange: { setIndex, delta in
+                    onWeightSet: { setIndex, weight in
                         guard active.sets.indices.contains(exerciseIndex),
                               active.sets[exerciseIndex].indices.contains(setIndex) else {
                             return
                         }
-                        let current = active.sets[exerciseIndex][setIndex].weight
-                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: current + delta)
+                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
                     },
-                    onRepsChange: { setIndex, delta in
+                    onRepsSet: { setIndex, reps in
                         guard active.sets.indices.contains(exerciseIndex),
                               active.sets[exerciseIndex].indices.contains(setIndex) else {
                             return
                         }
-                        let current = active.sets[exerciseIndex][setIndex].reps
-                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: current + delta)
+                        store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, reps: reps)
                     },
                     onToggleCompleted: { setIndex, completed in
                         store.setCompleted(
@@ -359,11 +373,14 @@ private struct WorkoutExerciseCard: View {
     let unit: String
     let previousHint: String?
     let startsRestAfterSet: Bool
+    @Binding var cueText: String
+    @Binding var noteText: String
     let rows: [SetLog]
-    let onWeightChange: (Int, Double) -> Void
-    let onRepsChange: (Int, Int) -> Void
+    let onWeightSet: (Int, Double) -> Void
+    let onRepsSet: (Int, Int) -> Void
     let onToggleCompleted: (Int, Bool) -> Void
     let onStartRest: () -> Void
+    @State private var showingNotes = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -392,6 +409,18 @@ private struct WorkoutExerciseCard: View {
                             .background(accent.opacity(0.14))
                             .clipShape(Capsule())
                     }
+
+                    if !cueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(cueText)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(accent)
+                            .padding(.leading, 8)
+                            .overlay(alignment: .leading) {
+                                Capsule()
+                                    .fill(accent)
+                                    .frame(width: 3)
+                            }
+                    }
                 }
 
                 Spacer()
@@ -411,6 +440,21 @@ private struct WorkoutExerciseCard: View {
                     .foregroundStyle(Theme.textFaint)
             }
 
+            DisclosureGroup(isExpanded: $showingNotes) {
+                VStack(spacing: 10) {
+                    TextField("Cue", text: $cueText, axis: .vertical)
+                        .workoutInputStyle()
+                    TextField("Private notes", text: $noteText, axis: .vertical)
+                        .lineLimit(2, reservesSpace: true)
+                        .workoutInputStyle()
+                }
+                .padding(.top, 8)
+            } label: {
+                Label("Notes & Cues", systemImage: "pencil")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textDim)
+            }
+
             VStack(spacing: 10) {
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, set in
                     WorkoutSetRow(
@@ -418,8 +462,8 @@ private struct WorkoutExerciseCard: View {
                         set: set,
                         accent: accent,
                         unit: unit,
-                        onWeightChange: { onWeightChange(index, $0) },
-                        onRepsChange: { onRepsChange(index, $0) },
+                        onWeightSet: { onWeightSet(index, $0) },
+                        onRepsSet: { onRepsSet(index, $0) },
                         onToggleCompleted: { onToggleCompleted(index, $0) }
                     )
                 }
@@ -434,8 +478,8 @@ private struct WorkoutSetRow: View {
     let set: SetLog
     let accent: Color
     let unit: String
-    let onWeightChange: (Double) -> Void
-    let onRepsChange: (Int) -> Void
+    let onWeightSet: (Double) -> Void
+    let onRepsSet: (Int) -> Void
     let onToggleCompleted: (Bool) -> Void
 
     var body: some View {
@@ -457,20 +501,24 @@ private struct WorkoutSetRow: View {
             }
 
             HStack(spacing: 10) {
-                SetValueControl(
+                WorkoutNumberField(
                     title: "Weight",
-                    value: formatWeight(set.weight),
+                    value: set.weight == 0 ? "" : formatWeight(set.weight),
                     unit: unit,
-                    minusAction: { onWeightChange(-5) },
-                    plusAction: { onWeightChange(5) }
+                    keyboard: .decimalPad,
+                    onChange: { text in
+                        onWeightSet(Double(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0)
+                    }
                 )
 
-                SetValueControl(
+                WorkoutNumberField(
                     title: "Reps",
-                    value: "\(set.reps)",
+                    value: set.reps == 0 ? "" : "\(set.reps)",
                     unit: "",
-                    minusAction: { onRepsChange(-1) },
-                    plusAction: { onRepsChange(1) }
+                    keyboard: .numberPad,
+                    onChange: { text in
+                        onRepsSet(Int(text.filter(\.isNumber)) ?? 0)
+                    }
                 )
             }
         }
@@ -484,12 +532,12 @@ private struct WorkoutSetRow: View {
     }
 }
 
-private struct SetValueControl: View {
+private struct WorkoutNumberField: View {
     let title: String
     let value: String
     let unit: String
-    let minusAction: () -> Void
-    let plusAction: () -> Void
+    let keyboard: UIKeyboardType
+    let onChange: (String) -> Void
 
     var body: some View {
         VStack(spacing: 8) {
@@ -499,29 +547,22 @@ private struct SetValueControl: View {
                 .tracking(1.1)
                 .foregroundStyle(Theme.textFaint)
 
-            HStack(spacing: 8) {
-                Button(action: minusAction) {
-                    Image(systemName: "minus")
-                }
-                .buttonStyle(SetStepperButtonStyle())
+            TextField(title, text: Binding(
+                get: { value },
+                set: { onChange($0) }
+            ))
+            .keyboardType(keyboard)
+            .multilineTextAlignment(.center)
+            .font(.headline.monospacedDigit())
+            .foregroundStyle(Theme.text)
+            .padding(.vertical, 8)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                VStack(spacing: 1) {
-                    Text(value)
-                        .font(.headline.monospacedDigit())
-                        .foregroundStyle(Theme.text)
-
-                    if !unit.isEmpty {
-                        Text(unit)
-                            .font(.caption2)
-                            .foregroundStyle(Theme.textFaint)
-                    }
-                }
-                .frame(minWidth: 42)
-
-                Button(action: plusAction) {
-                    Image(systemName: "plus")
-                }
-                .buttonStyle(SetStepperButtonStyle())
+            if !unit.isEmpty {
+                Text(unit)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textFaint)
             }
         }
         .frame(maxWidth: .infinity)
@@ -531,17 +572,89 @@ private struct SetValueControl: View {
     }
 }
 
-private struct SetStepperButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.caption.weight(.bold))
+private extension View {
+    func workoutInputStyle() -> some View {
+        self
             .foregroundStyle(Theme.text)
-            .frame(width: 28, height: 28)
-            .background(configuration.isPressed ? Theme.surface3 : Theme.surface)
-            .clipShape(Circle())
+            .tint(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
     }
 }
 
+private struct FloatingRestBar: View {
+    let active: ActiveWorkout
+    let accent: Color
+    let onAddTime: () -> Void
+    let onSkip: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = remainingSeconds(now: context.date)
+
+            VStack(spacing: 10) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Rest")
+                            .font(.caption.weight(.semibold))
+                            .textCase(.uppercase)
+                            .tracking(1.2)
+                            .foregroundStyle(accent)
+
+                        Text(remaining > 0 ? formatClock(remaining) : "Rest complete")
+                            .font(.title2.monospacedDigit().weight(.bold))
+                            .foregroundStyle(remaining > 0 ? Theme.text : accent)
+                    }
+
+                    Spacer()
+
+                    Button("+15s", action: onAddTime)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.text)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                    Button("Skip", action: onSkip)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(accent)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+
+                ProgressView(value: progress(remaining: remaining))
+                    .tint(accent)
+            }
+            .padding(14)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(accent.opacity(0.35), lineWidth: 1)
+            }
+        }
+    }
+
+    private func remainingSeconds(now: Date) -> Int {
+        guard let restEndsAt = active.restEndsAt else { return 0 }
+        let seconds = (restEndsAt / 1000) - now.timeIntervalSince1970
+        return max(0, Int(ceil(seconds)))
+    }
+
+    private func progress(remaining: Int) -> Double {
+        guard active.restTotal > 0 else { return 0 }
+        return 1 - (Double(remaining) / Double(active.restTotal))
+    }
+}
 private func formatClock(_ seconds: Int) -> String {
     let minutes = seconds / 60
     let remainder = seconds % 60

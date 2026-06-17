@@ -7,6 +7,7 @@ struct ActiveWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingFinishConfirm = false
     @State private var finishedLog: WorkoutLog?
+    @State private var hasPreparedWorkout = false
     let program: Program
     let day: ProgramDay
     var week: Int = 1
@@ -62,9 +63,12 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
-            store.startWorkout(program: program, day: day, week: week)
-            Task {
-                await store.requestTimerNotificationPermission()
+            if !hasPreparedWorkout {
+                hasPreparedWorkout = true
+                store.startWorkout(program: program, day: day, week: week)
+                Task {
+                    await store.requestTimerNotificationPermission()
+                }
             }
         }
         .alert("Finish Workout?", isPresented: $showingFinishConfirm) {

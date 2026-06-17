@@ -5,6 +5,7 @@ struct ProgramEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: Program
     @State private var showingDeleteConfirm = false
+    @State private var exerciseQueries: [String: String] = [:]
 
     private let categories = ["Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
     private let levels = ["Beginner", "Intermediate", "Advanced"]
@@ -170,13 +171,7 @@ struct ProgramEditorView: View {
                 .foregroundStyle(.red.opacity(0.85))
             }
 
-            Picker("Exercise", selection: $draft.days[dayIndex].exercises[exerciseIndex].exerciseId) {
-                ForEach(store.allExercises) { exercise in
-                    Text(exercise.name).tag(exercise.id)
-                }
-            }
-            .pickerStyle(.menu)
-            .tint(Theme.accentLight)
+            exerciseSelector(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
 
             HStack(spacing: 10) {
                 Stepper("Sets: \(draft.days[dayIndex].exercises[exerciseIndex].sets)", value: $draft.days[dayIndex].exercises[exerciseIndex].sets, in: 1...20)
@@ -193,6 +188,84 @@ struct ProgramEditorView: View {
         .padding(12)
         .background(Theme.inputBg.opacity(0.65))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func exerciseSelector(dayIndex: Int, exerciseIndex: Int) -> some View {
+        let key = exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+        let planned = draft.days[dayIndex].exercises[exerciseIndex]
+        let query = exerciseQueries[key] ?? exerciseDisplayName(for: planned)
+        let matches = Array(filteredExercises(query: query).prefix(5))
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Exercise")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .foregroundStyle(Theme.textFaint)
+
+            TextField("Type exercise name", text: Binding(
+                get: { exerciseQueries[key] ?? exerciseDisplayName(for: draft.days[dayIndex].exercises[exerciseIndex]) },
+                set: { newValue in
+                    exerciseQueries[key] = newValue
+                    if let exact = store.allExercises.first(where: { $0.name.localizedCaseInsensitiveCompare(newValue) == .orderedSame }) {
+                        draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exact.id
+                        draft.days[dayIndex].exercises[exerciseIndex].name = nil
+                    } else {
+                        draft.days[dayIndex].exercises[exerciseIndex].exerciseId = "custom-\(key)"
+                        draft.days[dayIndex].exercises[exerciseIndex].name = newValue
+                    }
+                }
+            ))
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+
+            if !matches.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(matches) { exercise in
+                        Button {
+                            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exercise.id
+                            draft.days[dayIndex].exercises[exerciseIndex].name = nil
+                            exerciseQueries[key] = exercise.name
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(exercise.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Theme.text)
+                                    Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.textDim)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                        }
+                        .buttonStyle(.plain)
+
+                        if exercise.id != matches.last?.id {
+                            Divider().overlay(.white.opacity(0.08))
+                        }
+                    }
+                }
+                .background(Theme.surface2)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            if planned.name != nil {
+                Text("Custom exercise name")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textFaint)
+            }
+        }
     }
 
     private var actions: some View {
@@ -273,5 +346,30 @@ struct ProgramEditorView: View {
 
     private static func blankDay(number: Int) -> ProgramDay {
         ProgramDay(id: "day-\(UUID().uuidString)", name: "Day \(number)", focus: "Full Body", exercises: [])
+    }
+
+    private func exerciseKey(dayIndex: Int, exerciseIndex: Int) -> String {
+        "\(draft.days[dayIndex].id)-\(exerciseIndex)"
+    }
+
+    private func exerciseDisplayName(for planned: PlannedExercise) -> String {
+        if let name = planned.name, !name.isEmpty {
+            return name
+        }
+
+        return store.allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? ""
+    }
+
+    private func filteredExercises(query: String) -> [Exercise] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return Array(store.allExercises.prefix(5))
+        }
+
+        return store.allExercises.filter { exercise in
+            exercise.name.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.primaryMuscle.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.equipment.localizedCaseInsensitiveContains(trimmed)
+        }
     }
 }

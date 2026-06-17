@@ -263,6 +263,7 @@ private struct MetricTile: View {
 }
 
 private struct ProgramDayCard: View {
+    @Environment(AppStore.self) private var store
     let program: Program
     let day: ProgramDay
     let dayNumber: Int
@@ -312,8 +313,9 @@ private struct ProgramDayCard: View {
                 }
                 .buttonStyle(.plain)
 
-                NavigationLink {
-                    ActiveWorkoutView(program: program, day: day)
+                Button {
+                    store.startWorkout(program: program, day: day)
+                    store.presentWorkout()
                 } label: {
                     Text(loggedSetCount > 0 ? "Repeat" : "Start")
                         .font(.caption.weight(.bold))

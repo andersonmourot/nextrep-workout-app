@@ -69,8 +69,9 @@ struct DayDetailView: View {
                 DayMetricTile(value: "\(loggedSetCount)", label: "Logged", accent: accent)
             }
 
-            NavigationLink {
-                ActiveWorkoutView(program: program, day: day)
+            Button {
+                store.startWorkout(program: program, day: day)
+                store.presentWorkout()
             } label: {
                 Text(loggedSetCount > 0 ? "Repeat Workout" : "Start Workout")
             }

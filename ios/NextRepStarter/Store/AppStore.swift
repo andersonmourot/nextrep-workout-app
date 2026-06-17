@@ -9,6 +9,7 @@ final class AppStore {
     var catalog = Catalog()
     var isLoading = false
     var authError: String?
+    var isWorkoutPresented = false
 
     private let apiClient: APIClient
     private let keychain: KeychainStore
@@ -240,6 +241,14 @@ final class AppStore {
     func clearActiveProgram() {
         appData.activeProgramId = nil
         scheduleSync()
+    }
+
+    func presentWorkout() {
+        isWorkoutPresented = true
+    }
+
+    func dismissWorkout() {
+        isWorkoutPresented = false
     }
 
     func resetAllData() {
@@ -722,6 +731,7 @@ final class AppStore {
 
     func endWorkout() {
         appData.activeWorkout = nil
+        isWorkoutPresented = false
         restNotifier.cancelRestComplete()
         scheduleSync()
     }

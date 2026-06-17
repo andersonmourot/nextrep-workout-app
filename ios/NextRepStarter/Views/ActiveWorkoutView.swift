@@ -42,6 +42,17 @@ struct ActiveWorkoutView: View {
         }
         .navigationTitle("Workout")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    store.dismissWorkout()
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .tint(Theme.textDim)
+            }
+        }
         .screenBackground()
         .navigationDestination(isPresented: summaryIsPresented) {
             if let finishedLog {
@@ -88,6 +99,7 @@ struct ActiveWorkoutView: View {
 
     private func closeSummaryAndWorkout() {
         finishedLog = nil
+        store.dismissWorkout()
         DispatchQueue.main.async {
             dismiss()
         }

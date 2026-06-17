@@ -73,8 +73,9 @@ struct DashboardView: View {
 
             if let day {
                 HStack {
-                    NavigationLink {
-                        ActiveWorkoutView(program: program, day: day, week: run.week)
+                    Button {
+                        store.startWorkout(program: program, day: day, week: run.week)
+                        store.presentWorkout()
                     } label: {
                         Text(isActiveWorkout(program: program, day: day, week: run.week) ? "Resume Workout" : "Start Workout")
                     }

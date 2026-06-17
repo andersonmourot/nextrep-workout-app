@@ -35,44 +35,121 @@ struct AppShellView: View {
     @Environment(AppStore.self) private var store
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                DashboardView()
-            }
-            .tabItem {
-                Label("Home", systemImage: "house")
-            }
+        ZStack(alignment: .bottom) {
+            TabView {
+                NavigationStack {
+                    DashboardView()
+                }
+                .tabItem {
+                    Label("Home", systemImage: "house")
+                }
 
-            NavigationStack {
-                ProgramsListView()
-            }
-            .tabItem {
-                Label("Programs", systemImage: "square.grid.2x2")
-            }
+                NavigationStack {
+                    ProgramsListView()
+                }
+                .tabItem {
+                    Label("Programs", systemImage: "square.grid.2x2")
+                }
 
-            NavigationStack {
-                IntervalTimerView()
-            }
-            .tabItem {
-                Label("Timer", systemImage: "timer")
-            }
+                NavigationStack {
+                    IntervalTimerView()
+                }
+                .tabItem {
+                    Label("Timer", systemImage: "timer")
+                }
 
-            NavigationStack {
-                PeopleSearchView()
-            }
-            .tabItem {
-                Label("Search", systemImage: "magnifyingglass")
-            }
+                NavigationStack {
+                    PeopleSearchView()
+                }
+                .tabItem {
+                    Label("Search", systemImage: "magnifyingglass")
+                }
 
-            NavigationStack {
-                WorkoutHistoryView()
+                NavigationStack {
+                    WorkoutHistoryView()
+                }
+                .tabItem {
+                    Label("Profile", systemImage: "person")
+                }
             }
-            .tabItem {
-                Label("Profile", systemImage: "person")
+            .tint(Color(hex: store.appData.themeColor))
+            .id(store.appData.themeColor)
+
+            if let activeContext {
+                ResumeWorkoutBanner(program: activeContext.program, day: activeContext.day) {
+                    store.presentWorkout()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 58)
             }
         }
-        .tint(Color(hex: store.appData.themeColor))
-        .id(store.appData.themeColor)
+        .fullScreenCover(isPresented: Binding(
+            get: { store.isWorkoutPresented },
+            set: { if !$0 { store.dismissWorkout() } }
+        )) {
+            if let activeContext {
+                NavigationStack {
+                    ActiveWorkoutView(
+                        program: activeContext.program,
+                        day: activeContext.day,
+                        week: activeContext.week
+                    )
+                }
+            } else {
+                EmptyView()
+            }
+        }
+    }
+
+    private var activeContext: (program: Program, day: ProgramDay, week: Int)? {
+        guard let active = store.appData.activeWorkout,
+              let program = store.allPrograms.first(where: { $0.id == active.programId }),
+              let dayIndex = program.days.firstIndex(where: { $0.id == active.dayId }),
+              let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: active.week ?? 1) else {
+            return nil
+        }
+
+        return (program, day, active.week ?? 1)
+    }
+}
+
+private struct ResumeWorkoutBanner: View {
+    let program: Program
+    let day: ProgramDay
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Theme.accentLight)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Resume Workout")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Theme.text)
+                    Text("\(program.name) · \(day.name)")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.up")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textFaint)
+            }
+            .padding(14)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Theme.accent.opacity(0.35), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 

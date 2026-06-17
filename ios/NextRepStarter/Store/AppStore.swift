@@ -10,6 +10,9 @@ final class AppStore {
     var isLoading = false
     var authError: String?
     var isWorkoutPresented = false
+    var workoutPresentationProgramId: String?
+    var workoutPresentationDayId: String?
+    var workoutPresentationWeek: Int?
 
     private let apiClient: APIClient
     private let keychain: KeychainStore
@@ -244,11 +247,21 @@ final class AppStore {
     }
 
     func presentWorkout() {
+        if workoutPresentationProgramId == nil, let active = appData.activeWorkout {
+            setWorkoutPresentationContext(
+                programId: active.programId,
+                dayId: active.dayId,
+                week: active.week ?? 1
+            )
+        }
         isWorkoutPresented = true
     }
 
     func dismissWorkout() {
         isWorkoutPresented = false
+        workoutPresentationProgramId = nil
+        workoutPresentationDayId = nil
+        workoutPresentationWeek = nil
     }
 
     func resetAllData() {
@@ -626,6 +639,7 @@ final class AppStore {
            active.programId == program.id,
            active.dayId == day.id,
            (active.week ?? 1) == week {
+            setWorkoutPresentationContext(programId: program.id, dayId: day.id, week: week)
             reconcileActiveWorkout(day: day)
             return
         }
@@ -640,6 +654,7 @@ final class AppStore {
         )
 
         appData.activeProgramId = program.id
+        setWorkoutPresentationContext(programId: program.id, dayId: day.id, week: week)
         appData.activeWorkout = ActiveWorkout(
             programId: program.id,
             dayId: day.id,
@@ -804,6 +819,12 @@ final class AppStore {
         } catch {
             authError = error.localizedDescription
         }
+    }
+
+    private func setWorkoutPresentationContext(programId: String, dayId: String, week: Int) {
+        workoutPresentationProgramId = programId
+        workoutPresentationDayId = dayId
+        workoutPresentationWeek = week
     }
 
     private func authenticate(_ operation: () async throws -> AuthResponse) async {

@@ -102,14 +102,19 @@ struct AppShellView: View {
     }
 
     private var activeContext: (program: Program, day: ProgramDay, week: Int)? {
-        guard let active = store.appData.activeWorkout,
-              let program = store.allPrograms.first(where: { $0.id == active.programId }),
-              let dayIndex = program.days.firstIndex(where: { $0.id == active.dayId }),
-              let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: active.week ?? 1) else {
+        let programId = store.appData.activeWorkout?.programId ?? store.workoutPresentationProgramId
+        let dayId = store.appData.activeWorkout?.dayId ?? store.workoutPresentationDayId
+        let week = store.appData.activeWorkout?.week ?? store.workoutPresentationWeek ?? 1
+
+        guard let programId,
+              let dayId,
+              let program = store.allPrograms.first(where: { $0.id == programId }),
+              let dayIndex = program.days.firstIndex(where: { $0.id == dayId }),
+              let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: week) else {
             return nil
         }
 
-        return (program, day, active.week ?? 1)
+        return (program, day, week)
     }
 }
 

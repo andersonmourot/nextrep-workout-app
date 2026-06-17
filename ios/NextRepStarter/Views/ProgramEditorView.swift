@@ -206,24 +206,6 @@ struct ProgramEditorView: View {
                 get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
             ))
-
-            HStack(spacing: 10) {
-                Button {
-                    linkSupersetWithPrevious(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
-                } label: {
-                    Text("Link Previous")
-                }
-                .buttonStyle(GhostButtonStyle())
-                .disabled(exerciseIndex == 0)
-                .opacity(exerciseIndex == 0 ? 0.5 : 1)
-
-                Button {
-                    draft.days[dayIndex].exercises[exerciseIndex].groupId = nil
-                } label: {
-                    Text("Clear Group")
-                }
-                .buttonStyle(GhostButtonStyle())
-            }
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
@@ -394,20 +376,6 @@ struct ProgramEditorView: View {
 
         let copy = draft.days[dayIndex].exercises[exerciseIndex]
         draft.days[dayIndex].exercises.insert(copy, at: exerciseIndex + 1)
-    }
-
-    private func linkSupersetWithPrevious(dayIndex: Int, exerciseIndex: Int) {
-        guard draft.days.indices.contains(dayIndex),
-              exerciseIndex > 0,
-              draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
-              draft.days[dayIndex].exercises.indices.contains(exerciseIndex - 1) else {
-            return
-        }
-
-        let existing = draft.days[dayIndex].exercises[exerciseIndex - 1].groupId
-        let group = existing?.isEmpty == false ? existing! : "A"
-        draft.days[dayIndex].exercises[exerciseIndex - 1].groupId = group
-        draft.days[dayIndex].exercises[exerciseIndex].groupId = group
     }
 
     private static func blankProgram() -> Program {

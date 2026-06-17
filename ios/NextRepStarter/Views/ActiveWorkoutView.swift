@@ -142,11 +142,14 @@ struct ActiveWorkoutView: View {
     private func exercisesList(active: ActiveWorkout) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(day.exercises.enumerated()), id: \.offset) { exerciseIndex, planned in
+                let restAfterSet = restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned)
+                let startsRestAfterSet = restAfterSet > 0
                 WorkoutExerciseCard(
                     accent: accent,
                     name: exerciseName(for: planned),
                     planned: planned,
                     unit: store.appData.unit,
+                    startsRestAfterSet: startsRestAfterSet,
                     rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
                     onWeightChange: { setIndex, delta in
                         guard active.sets.indices.contains(exerciseIndex),
@@ -169,12 +172,12 @@ struct ActiveWorkoutView: View {
                             exerciseIndex: exerciseIndex,
                             setIndex: setIndex,
                             completed: completed,
-                            restSec: planned.restSec,
+                            restSec: restAfterSet,
                             exerciseName: exerciseName(for: planned)
                         )
                     },
                     onStartRest: {
-                        store.startRest(seconds: planned.restSec, exerciseName: exerciseName(for: planned))
+                        store.startRest(seconds: max(planned.restSec, restAfterSet), exerciseName: exerciseName(for: planned))
                     }
                 )
             }
@@ -201,6 +204,20 @@ struct ActiveWorkoutView: View {
 
         let allExercises = store.catalog.exercises + store.appData.customExercises
         return allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+    }
+
+    private func restSecondsAfterSet(exerciseIndex: Int, planned: PlannedExercise) -> Int {
+        guard let groupId = planned.groupId, !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return planned.restSec
+        }
+
+        let nextIndex = exerciseIndex + 1
+        if day.exercises.indices.contains(nextIndex),
+           day.exercises[nextIndex].groupId == groupId {
+            return 0
+        }
+
+        return planned.restSec
     }
 
     private func completedSets(_ active: ActiveWorkout) -> Int {
@@ -303,6 +320,7 @@ private struct WorkoutExerciseCard: View {
     let name: String
     let planned: PlannedExercise
     let unit: String
+    let startsRestAfterSet: Bool
     let rows: [SetLog]
     let onWeightChange: (Int, Double) -> Void
     let onRepsChange: (Int, Int) -> Void
@@ -339,6 +357,14 @@ private struct WorkoutExerciseCard: View {
                 }
                 .font(.caption.weight(.bold))
                 .foregroundStyle(accent)
+            }
+
+            if let groupId = planned.groupId,
+               !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               !startsRestAfterSet {
+                Text("No auto-rest until the end of this superset round.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textFaint)
             }
 
             VStack(spacing: 10) {

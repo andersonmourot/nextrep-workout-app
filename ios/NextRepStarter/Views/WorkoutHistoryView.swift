@@ -43,7 +43,7 @@ struct WorkoutHistoryView: View {
     }
 
     private var profileStats: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             ProfileStatTile(
                 icon: "dumbbell.fill",
                 value: "\(store.appData.logs.count)",
@@ -53,11 +53,6 @@ struct WorkoutHistoryView: View {
                 icon: "chart.line.uptrend.xyaxis",
                 value: formatVolume(totalVolume),
                 label: "Volume \(store.appData.unit)"
-            )
-            ProfileStatTile(
-                icon: "checkmark.circle.fill",
-                value: "\(completedSetTotal)",
-                label: "Sets"
             )
             ProfileStatTile(
                 icon: "flame.fill",
@@ -70,12 +65,6 @@ struct WorkoutHistoryView: View {
     private var totalVolume: Double {
         store.appData.logs.reduce(0) { total, log in
             total + log.totalVolume
-        }
-    }
-
-    private var completedSetTotal: Int {
-        store.appData.logs.reduce(0) { total, log in
-            total + completedSetCount(log)
         }
     }
 

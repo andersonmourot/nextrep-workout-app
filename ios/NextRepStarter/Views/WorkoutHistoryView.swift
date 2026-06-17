@@ -390,6 +390,7 @@ private func profileInput(_ placeholder: String, text: Binding<String>, keyboard
 
 struct NutritionTrackerView: View {
     @Environment(AppStore.self) private var store
+    @State private var selectedDate = Date()
     @State private var caloriesText = ""
     @State private var proteinText = ""
     @State private var carbsText = ""
@@ -405,6 +406,7 @@ struct NutritionTrackerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                datePickerCard
                 todaySummary
                 inputCard
                 targetCard
@@ -435,46 +437,99 @@ struct NutritionTrackerView: View {
         }
     }
 
+    private var datePickerCard: some View {
+        HStack {
+            DatePicker("Date", selection: $selectedDate, in: ...Date(), displayedComponents: .date)
+                .datePickerStyle(.compact)
+                .foregroundStyle(Theme.text)
+                .tint(Theme.accentLight)
+
+            Spacer()
+
+            Button("Today") {
+                selectedDate = Date()
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.accentLight)
+        }
+        .cardStyle()
+    }
+
     private var todaySummary: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Today")
+                Text(selectedDateKey == todayKey() ? "Today" : formatBodyWeightDate(selectedDateKey))
                     .font(.headline)
                     .foregroundStyle(Theme.text)
 
                 Spacer()
 
-                if let todayNutrition {
-                    Text("\(todayNutrition.calories) cal")
+                if let selectedNutrition {
+                    Text("\(selectedNutrition.calories) cal")
                         .font(.caption.monospacedDigit().weight(.bold))
                         .foregroundStyle(Theme.accentLight)
                 }
             }
 
-            if let todayNutrition {
+            if let selectedNutrition {
                 HStack(spacing: 8) {
-                    ProfileMiniMetric(value: "\(todayNutrition.protein)g", label: "Protein")
-                    ProfileMiniMetric(value: "\(todayNutrition.carbs)g", label: "Carbs")
-                    ProfileMiniMetric(value: "\(todayNutrition.fat)g", label: "Fat")
-                    ProfileMiniMetric(value: "\(todayNutrition.water)", label: "Water")
+                    ProfileMiniMetric(value: "\(selectedNutrition.protein)g", label: "Protein")
+                    ProfileMiniMetric(value: "\(selectedNutrition.carbs)g", label: "Carbs")
+                    ProfileMiniMetric(value: "\(selectedNutrition.fat)g", label: "Fat")
+                    ProfileMiniMetric(value: "\(selectedNutrition.water)", label: "Water")
                 }
             } else {
-                Text("No nutrition logged today.")
+                Text("No nutrition logged for this day.")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textDim)
             }
 
-            if let todayNutrition {
+            if let selectedNutrition {
                 VStack(spacing: 10) {
-                    MetricProgressBar(label: "Calories", value: Double(todayNutrition.calories), target: Double(store.appData.nutritionGoals.calories), suffix: "")
-                    MetricProgressBar(label: "Protein", value: Double(todayNutrition.protein), target: Double(store.appData.nutritionGoals.protein), suffix: "g")
-                    MetricProgressBar(label: "Carbs", value: Double(todayNutrition.carbs), target: Double(store.appData.nutritionGoals.carbs), suffix: "g")
-                    MetricProgressBar(label: "Fat", value: Double(todayNutrition.fat), target: Double(store.appData.nutritionGoals.fat), suffix: "g")
-                    MetricProgressBar(label: "Water", value: Double(todayNutrition.water), target: Double(store.appData.nutritionGoals.water), suffix: "")
+                    MetricProgressBar(label: "Calories", value: Double(selectedNutrition.calories), target: Double(store.appData.nutritionGoals.calories), suffix: "")
+                    MetricProgressBar(label: "Protein", value: Double(selectedNutrition.protein), target: Double(store.appData.nutritionGoals.protein), suffix: "g")
+                    MetricProgressBar(label: "Carbs", value: Double(selectedNutrition.carbs), target: Double(store.appData.nutritionGoals.carbs), suffix: "g")
+                    MetricProgressBar(label: "Fat", value: Double(selectedNutrition.fat), target: Double(store.appData.nutritionGoals.fat), suffix: "g")
+                    MetricProgressBar(label: "Water", value: Double(selectedNutrition.water), target: Double(store.appData.nutritionGoals.water), suffix: "")
                 }
+
+                waterButtons(current: selectedNutrition.water)
+            } else {
+                waterButtons(current: 0)
             }
         }
         .cardStyle()
+    }
+
+    private func waterButtons(current: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Water")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+
+            HStack(spacing: 8) {
+                ForEach(0..<max(store.appData.nutritionGoals.water, max(current, 1)), id: \.self) { index in
+                    Button {
+                        let next = current == index + 1 ? index : index + 1
+                        saveNutrition(
+                            calories: selectedNutrition?.calories ?? 0,
+                            protein: selectedNutrition?.protein ?? 0,
+                            carbs: selectedNutrition?.carbs ?? 0,
+                            fat: selectedNutrition?.fat ?? 0,
+                            water: next
+                        )
+                    } label: {
+                        Image(systemName: "drop.fill")
+                            .font(.caption)
+                            .foregroundStyle(index < current ? .white : Theme.textFaint)
+                            .frame(width: 28, height: 28)
+                            .background(index < current ? Theme.accent : Theme.surface2)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private var inputCard: some View {
@@ -493,13 +548,13 @@ struct NutritionTrackerView: View {
                 profileInput("Water", text: $waterText, keyboard: .numberPad)
             }
 
-            Button("Save Today's Nutrition") {
-                store.setTodayNutrition(
-                    calories: Int(caloriesText) ?? todayNutrition?.calories ?? 0,
-                    protein: Int(proteinText) ?? todayNutrition?.protein ?? 0,
-                    carbs: Int(carbsText) ?? todayNutrition?.carbs ?? 0,
-                    fat: Int(fatText) ?? todayNutrition?.fat ?? 0,
-                    water: Int(waterText) ?? todayNutrition?.water ?? 0
+            Button("Save Nutrition") {
+                saveNutrition(
+                    calories: Int(caloriesText) ?? selectedNutrition?.calories ?? 0,
+                    protein: Int(proteinText) ?? selectedNutrition?.protein ?? 0,
+                    carbs: Int(carbsText) ?? selectedNutrition?.carbs ?? 0,
+                    fat: Int(fatText) ?? selectedNutrition?.fat ?? 0,
+                    water: Int(waterText) ?? selectedNutrition?.water ?? 0
                 )
                 caloriesText = ""
                 proteinText = ""
@@ -558,30 +613,52 @@ struct NutritionTrackerView: View {
                     .cardStyle()
             } else {
                 ForEach(store.appData.nutritionLog.sorted(by: { $0.date > $1.date }).prefix(7)) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(formatBodyWeightDate(entry.date))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.text)
-                            Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)")
-                                .font(.caption)
-                                .foregroundStyle(Theme.textDim)
+                    Button {
+                        if let date = BodyWeightDateFormatter.input.date(from: entry.date) {
+                            selectedDate = date
                         }
-                        Spacer()
-                        Text("\(entry.calories)")
-                            .font(.caption.monospacedDigit().weight(.bold))
-                            .foregroundStyle(Theme.accentLight)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(formatBodyWeightDate(entry.date))
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.text)
+                                Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textDim)
+                            }
+                            Spacer()
+                            Text("\(entry.calories)")
+                                .font(.caption.monospacedDigit().weight(.bold))
+                                .foregroundStyle(Theme.accentLight)
+                        }
+                        .padding(10)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
-                    .padding(10)
-                    .background(Theme.surface2)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .buttonStyle(.plain)
                 }
             }
         }
     }
 
-    private var todayNutrition: NutritionEntry? {
-        store.appData.nutritionLog.first { $0.date == todayKey() }
+    private var selectedNutrition: NutritionEntry? {
+        store.appData.nutritionLog.first { $0.date == selectedDateKey }
+    }
+
+    private var selectedDateKey: String {
+        BodyWeightDateFormatter.input.string(from: selectedDate)
+    }
+
+    private func saveNutrition(calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
+        store.setNutritionEntry(
+            date: selectedDateKey,
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            water: water
+        )
     }
 
     private func seedGoalFieldsIfNeeded() {
@@ -677,8 +754,10 @@ struct MaxTrackerView: View {
                     .cardStyle()
             } else {
                 ForEach(store.appData.maxTrackers) { tracker in
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
+                    HStack(spacing: 12) {
+                        NavigationLink {
+                            MaxTrackerDetailView(trackerId: tracker.id)
+                        } label: {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(tracker.name)
                                     .font(.subheadline.weight(.semibold))
@@ -688,30 +767,34 @@ struct MaxTrackerView: View {
                                     .font(.caption)
                                     .foregroundStyle(Theme.textDim)
                             }
-
-                            Spacer()
-
-                            Button {
-                                store.deleteMaxTracker(id: tracker.id)
-                            } label: {
-                                Image(systemName: "trash")
-                                    .font(.caption)
-                            }
-                            .foregroundStyle(.red.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
+                        .buttonStyle(.plain)
 
-                        let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
-                        if values.count >= 2 {
-                            MiniLineChart(values: values)
-                                .frame(height: 70)
-                                .padding(10)
-                                .background(Theme.inputBg.opacity(0.65))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Button {
+                            store.deleteMaxTracker(id: tracker.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
                         }
+                        .foregroundStyle(.red.opacity(0.8))
+
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Theme.textFaint)
                     }
                     .padding(10)
                     .background(Theme.surface2)
                     .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                    let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
+                    if values.count >= 2 {
+                        MiniLineChart(values: values)
+                            .frame(height: 70)
+                            .padding(10)
+                            .background(Theme.inputBg.opacity(0.65))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                 }
             }
         }
@@ -724,6 +807,161 @@ struct MaxTrackerView: View {
 
         let e1rm = estimatedOneRepMax(weight: latest.weight, reps: latest.reps)
         return "\(formatWeight(latest.weight)) \(store.appData.unit) x \(latest.reps) · e1RM \(formatWeight(e1rm))"
+    }
+}
+
+struct MaxTrackerDetailView: View {
+    @Environment(AppStore.self) private var store
+    @State private var weightText = ""
+    @State private var repsText = ""
+    @State private var pendingDeleteRecord: MaxRecord?
+    let trackerId: String
+
+    private var tracker: MaxTracker? {
+        store.appData.maxTrackers.first { $0.id == trackerId }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if let tracker {
+                    header(tracker)
+                    trend(tracker)
+                    addRecord(tracker)
+                    history(tracker)
+                } else {
+                    Text("Tracker not found.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle(tracker?.name ?? "Max")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+        .alert("Delete Record?", isPresented: Binding(
+            get: { pendingDeleteRecord != nil },
+            set: { if !$0 { pendingDeleteRecord = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingDeleteRecord = nil }
+            Button("Delete", role: .destructive) {
+                if let pendingDeleteRecord {
+                    store.deleteMaxRecord(trackerId: trackerId, recordId: pendingDeleteRecord.id)
+                }
+                pendingDeleteRecord = nil
+            }
+        } message: {
+            Text("This removes the max record from your synced data.")
+        }
+    }
+
+    private func header(_ tracker: MaxTracker) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Max Tracker")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.4)
+                .foregroundStyle(Theme.accentLight)
+
+            Text(tracker.name)
+                .font(.system(size: 34, weight: .bold, design: .default))
+                .foregroundStyle(Theme.text)
+
+            if let best = tracker.records.map(\.weight).max(), best > 0 {
+                Text("Best: \(formatWeight(best)) \(store.appData.unit)")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            }
+        }
+    }
+
+    private func trend(_ tracker: MaxTracker) -> some View {
+        let sorted = tracker.records.sorted { $0.date < $1.date }
+        let values = sorted.map(\.weight)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Trend")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            if values.count >= 2 {
+                MiniLineChart(values: values)
+                    .frame(height: 110)
+                    .padding(12)
+                    .background(Theme.inputBg.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                Text(values.isEmpty ? "Log a max to start a trend line." : "Log one more max to see your trend.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            }
+        }
+        .cardStyle()
+    }
+
+    private func addRecord(_ tracker: MaxTracker) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Log a Max")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            HStack(spacing: 10) {
+                profileInput("Weight", text: $weightText, keyboard: .decimalPad)
+                profileInput("Reps", text: $repsText, keyboard: .numberPad)
+            }
+
+            Button("Add Entry") {
+                if let weight = Double(weightText.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    store.addMaxRecordToTracker(trackerId: tracker.id, weight: weight, reps: Int(repsText) ?? 1)
+                    weightText = ""
+                    repsText = ""
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+        }
+        .cardStyle()
+    }
+
+    private func history(_ tracker: MaxTracker) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("History")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            if tracker.records.isEmpty {
+                Text("No entries yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+                    .cardStyle()
+            } else {
+                ForEach(tracker.records.sorted { $0.date > $1.date }) { record in
+                    HStack {
+                        Text(formatBodyWeightDate(record.date))
+                            .font(.caption)
+                            .foregroundStyle(Theme.textDim)
+                        Spacer()
+                        Text("\(formatWeight(record.weight)) \(store.appData.unit) x \(record.reps)")
+                            .font(.subheadline.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(Theme.text)
+                        Button {
+                            pendingDeleteRecord = record
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .padding(10)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+        }
+        .cardStyle()
     }
 }
 

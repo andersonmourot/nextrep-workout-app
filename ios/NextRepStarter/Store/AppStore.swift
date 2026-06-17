@@ -604,8 +604,19 @@ final class AppStore {
     }
 
     func setTodayNutrition(calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
-        let entry = NutritionEntry(
+        setNutritionEntry(
             date: Self.dateOnlyFormatter.string(from: Date()),
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            water: water
+        )
+    }
+
+    func setNutritionEntry(date: String, calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
+        let entry = NutritionEntry(
+            date: date,
             calories: max(0, calories),
             protein: max(0, protein),
             carbs: max(0, carbs),
@@ -648,6 +659,30 @@ final class AppStore {
         } else {
             appData.maxTrackers.insert(MaxTracker(id: UUID().uuidString, name: cleanName, records: [record]), at: 0)
         }
+        scheduleSync()
+    }
+
+    func addMaxRecordToTracker(trackerId: String, weight: Double, reps: Int) {
+        guard let index = appData.maxTrackers.firstIndex(where: { $0.id == trackerId }) else {
+            return
+        }
+
+        let record = MaxRecord(
+            id: UUID().uuidString,
+            date: Self.dateOnlyFormatter.string(from: Date()),
+            weight: max(0, weight),
+            reps: max(0, reps)
+        )
+        appData.maxTrackers[index].records.append(record)
+        scheduleSync()
+    }
+
+    func deleteMaxRecord(trackerId: String, recordId: String) {
+        guard let index = appData.maxTrackers.firstIndex(where: { $0.id == trackerId }) else {
+            return
+        }
+
+        appData.maxTrackers[index].records.removeAll { $0.id == recordId }
         scheduleSync()
     }
 

@@ -246,6 +246,14 @@ final class AppStore {
         scheduleSync()
     }
 
+    func resetProgramProgress(id: String) {
+        appData.programAnchors[id] = ISO8601DateFormatter().string(from: Date())
+        if appData.activeWorkout?.programId == id {
+            appData.activeWorkout = nil
+        }
+        scheduleSync()
+    }
+
     func presentWorkout() {
         if workoutPresentationProgramId == nil, let active = appData.activeWorkout {
             setWorkoutPresentationContext(

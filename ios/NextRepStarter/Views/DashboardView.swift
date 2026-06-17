@@ -81,6 +81,15 @@ struct DashboardView: View {
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 }
+            } else if let firstDay = domainResolveProgramDay(program, dayIndex: 0, week: 1) {
+                Button {
+                    store.resetProgramProgress(id: program.id)
+                    store.startWorkout(program: program, day: firstDay, week: 1)
+                    store.presentWorkout()
+                } label: {
+                    Text("Start Workout")
+                }
+                .buttonStyle(PrimaryButtonStyle())
             }
 
             NavigationLink {

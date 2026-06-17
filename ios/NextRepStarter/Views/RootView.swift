@@ -75,8 +75,8 @@ struct AppShellView: View {
             .tint(Color(hex: store.appData.themeColor))
             .id(store.appData.themeColor)
 
-            if let activeContext {
-                ResumeWorkoutBanner(program: activeContext.program, day: activeContext.day) {
+            if let activeWorkoutContext {
+                ResumeWorkoutBanner(program: activeWorkoutContext.program, day: activeWorkoutContext.day) {
                     store.presentWorkout()
                 }
                 .padding(.horizontal, 16)
@@ -115,6 +115,17 @@ struct AppShellView: View {
         }
 
         return (program, day, week)
+    }
+
+    private var activeWorkoutContext: (program: Program, day: ProgramDay, week: Int)? {
+        guard let active = store.appData.activeWorkout,
+              let program = store.allPrograms.first(where: { $0.id == active.programId }),
+              let dayIndex = program.days.firstIndex(where: { $0.id == active.dayId }),
+              let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: active.week ?? 1) else {
+            return nil
+        }
+
+        return (program, day, active.week ?? 1)
     }
 }
 

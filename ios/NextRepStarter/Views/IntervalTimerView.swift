@@ -5,6 +5,7 @@ import SwiftUI
 struct IntervalTimerView: View {
     @Environment(AppStore.self) private var store
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    private let stopwatchTicker = Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()
 
     @State private var topMode = "timer"
     @State private var timerInput = ""
@@ -64,8 +65,10 @@ struct IntervalTimerView: View {
         }
         .onReceive(ticker) { _ in
             tickCountdown()
-            tickStopwatch()
             tickInterval()
+        }
+        .onReceive(stopwatchTicker) { _ in
+            tickStopwatch()
         }
     }
 
@@ -347,7 +350,7 @@ struct IntervalTimerView: View {
 
     private func tickStopwatch() {
         guard topMode == "stopwatch", stopwatchRunning else { return }
-        stopwatchCentiseconds += 100
+        stopwatchCentiseconds += 1
     }
 
     private func tickInterval() {

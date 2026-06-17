@@ -146,6 +146,19 @@ struct ProgramDetailView: View {
                 suffix: "",
                 color: accent
             )
+
+            Button {
+                store.setActiveProgram(id: program.id)
+                shareMessage = "Active program set"
+            } label: {
+                Label(
+                    store.appData.activeProgramId == program.id ? "Active Program" : "Set Active Program",
+                    systemImage: store.appData.activeProgramId == program.id ? "checkmark.circle.fill" : "checkmark.circle"
+                )
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(store.appData.activeProgramId == program.id)
+            .opacity(store.appData.activeProgramId == program.id ? 0.65 : 1)
         }
         .padding(18)
         .background {

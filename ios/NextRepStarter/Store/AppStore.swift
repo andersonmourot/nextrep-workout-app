@@ -292,6 +292,11 @@ final class AppStore {
         scheduleSync()
     }
 
+    func setActiveProgram(id: String) {
+        appData.activeProgramId = id
+        scheduleSync()
+    }
+
     func hideProgram(id: String) {
         if !appData.hiddenProgramIds.contains(id) {
             appData.hiddenProgramIds.append(id)
@@ -348,6 +353,17 @@ final class AppStore {
         appData.nutritionLog.removeAll { $0.date == entry.date }
         appData.nutritionLog.append(entry)
         appData.nutritionLog.sort { $0.date < $1.date }
+        scheduleSync()
+    }
+
+    func setNutritionGoals(_ goals: NutritionGoals) {
+        appData.nutritionGoals = NutritionGoals(
+            calories: max(0, goals.calories),
+            protein: max(0, goals.protein),
+            carbs: max(0, goals.carbs),
+            fat: max(0, goals.fat),
+            water: max(0, goals.water)
+        )
         scheduleSync()
     }
 

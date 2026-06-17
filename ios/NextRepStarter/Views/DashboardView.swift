@@ -50,32 +50,20 @@ struct DashboardView: View {
         let accent = Color(hex: program.accent)
 
         return VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Today · \(program.name)")
-                        .font(.caption.weight(.semibold))
-                        .textCase(.uppercase)
-                        .tracking(1.3)
-                        .foregroundStyle(accent)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Today · \(program.name)")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(1.3)
+                    .foregroundStyle(accent)
 
-                    Text(day?.name ?? "Program complete")
-                        .font(.system(size: 28, weight: .bold, design: .default))
-                        .foregroundStyle(Theme.text)
+                Text(day?.name ?? "Program complete")
+                    .font(.system(size: 28, weight: .bold, design: .default))
+                    .foregroundStyle(Theme.text)
 
-                    Text(day?.focus ?? "Review your progress or choose a new program.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textDim)
-                }
-
-                Spacer()
-
-                ProgressRing(
-                    value: Double(workoutsThisWeek) / Double(max(1, program.daysPerWeek)),
-                    size: 70,
-                    color: accent,
-                    center: "\(workoutsThisWeek)",
-                    caption: "of \(program.daysPerWeek)"
-                )
+                Text(day?.focus ?? "Review your progress or choose a new program.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
             }
 
             if let day {
@@ -139,9 +127,8 @@ struct DashboardView: View {
     }
 
     private var statsGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 2), spacing: 10) {
             DashboardStatTile(icon: "flame.fill", value: "\(streak)", label: "Streak")
-            DashboardStatTile(icon: "calendar", value: "\(workoutsThisWeek)", label: "This week", ringValue: activeProgram.map { Double(workoutsThisWeek) / Double(max(1, $0.daysPerWeek)) })
             DashboardStatTile(icon: "dumbbell.fill", value: "\(store.appData.logs.count)", label: "Workouts")
         }
     }
@@ -205,10 +192,6 @@ struct DashboardView: View {
 
     private var streak: Int {
         computeDashboardStreak(logs: store.appData.logs)
-    }
-
-    private var workoutsThisWeek: Int {
-        countDashboardWorkoutsThisWeek(logs: store.appData.logs, programId: store.appData.activeProgramId)
     }
 
     private func nextDay(for program: Program) -> ProgramDay? {

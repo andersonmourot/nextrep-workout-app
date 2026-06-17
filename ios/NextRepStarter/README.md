@@ -25,7 +25,8 @@ Observation, URLSession, and Keychain Services.
   people discovery/social sharing, Interval Timer basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history
   persistence, and a Profile workout-history viewer with stat cards, dedicated
-  Nutrition and Max Tracker pages, body-weight tracking, and logged set details.
+  Nutrition target/tracking and Max Tracker pages, body-weight tracking, and
+  logged set details.
 - `VisualComponents.swift` provides reusable native progress rings, line charts,
   and metric progress bars used across Dashboard, Profile, Nutrition, Max
   Tracker, Program Detail, and Active Workout.

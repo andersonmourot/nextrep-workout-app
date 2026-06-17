@@ -12,7 +12,6 @@ struct WorkoutHistoryView: View {
                 header
                 profileStats
                 trackerLinks
-                volumeChartSection
                 bodyWeightSection
                 recentWorkoutsSection
             }
@@ -170,32 +169,6 @@ struct WorkoutHistoryView: View {
             }
         }
         .cardStyle()
-    }
-
-    @ViewBuilder
-    private var volumeChartSection: some View {
-        if sortedLogs.count >= 2 {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Workout Volume")
-                        .font(.headline)
-                        .foregroundStyle(Theme.text)
-
-                    Spacer()
-
-                    Text("\(formatVolume(sortedLogs.first?.totalVolume ?? 0)) \(store.appData.unit)")
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(Theme.accentLight)
-                }
-
-                MiniLineChart(values: sortedLogs.reversed().map(\.totalVolume))
-                    .frame(height: 90)
-                    .padding(12)
-                    .background(Theme.inputBg.opacity(0.65))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .cardStyle()
-        }
     }
 
     private var sortedBodyWeight: [BodyWeightEntry] {
@@ -381,12 +354,18 @@ struct NutritionTrackerView: View {
     @State private var carbsText = ""
     @State private var fatText = ""
     @State private var waterText = ""
+    @State private var goalCaloriesText = ""
+    @State private var goalProteinText = ""
+    @State private var goalCarbsText = ""
+    @State private var goalFatText = ""
+    @State private var goalWaterText = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 todaySummary
+                targetCard
                 inputCard
                 recentNutrition
             }
@@ -397,6 +376,9 @@ struct NutritionTrackerView: View {
         .navigationTitle("Nutrition")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .onAppear {
+            seedGoalFieldsIfNeeded()
+        }
     }
 
     private var header: some View {
@@ -489,6 +471,39 @@ struct NutritionTrackerView: View {
         .cardStyle()
     }
 
+    private var targetCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Daily Targets")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            HStack(spacing: 10) {
+                profileInput("Calories", text: $goalCaloriesText, keyboard: .numberPad)
+                profileInput("Protein", text: $goalProteinText, keyboard: .numberPad)
+            }
+            HStack(spacing: 10) {
+                profileInput("Carbs", text: $goalCarbsText, keyboard: .numberPad)
+                profileInput("Fat", text: $goalFatText, keyboard: .numberPad)
+                profileInput("Water", text: $goalWaterText, keyboard: .numberPad)
+            }
+
+            Button("Save Targets") {
+                store.setNutritionGoals(
+                    NutritionGoals(
+                        calories: Int(goalCaloriesText) ?? store.appData.nutritionGoals.calories,
+                        protein: Int(goalProteinText) ?? store.appData.nutritionGoals.protein,
+                        carbs: Int(goalCarbsText) ?? store.appData.nutritionGoals.carbs,
+                        fat: Int(goalFatText) ?? store.appData.nutritionGoals.fat,
+                        water: Int(goalWaterText) ?? store.appData.nutritionGoals.water
+                    )
+                )
+                seedGoalFields(force: true)
+            }
+            .buttonStyle(GhostButtonStyle())
+        }
+        .cardStyle()
+    }
+
     private var recentNutrition: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Recent")
@@ -526,6 +541,25 @@ struct NutritionTrackerView: View {
 
     private var todayNutrition: NutritionEntry? {
         store.appData.nutritionLog.first { $0.date == todayKey() }
+    }
+
+    private func seedGoalFieldsIfNeeded() {
+        guard goalCaloriesText.isEmpty,
+              goalProteinText.isEmpty,
+              goalCarbsText.isEmpty,
+              goalFatText.isEmpty,
+              goalWaterText.isEmpty else {
+            return
+        }
+        seedGoalFields(force: true)
+    }
+
+    private func seedGoalFields(force: Bool = false) {
+        if force || goalCaloriesText.isEmpty { goalCaloriesText = "\(store.appData.nutritionGoals.calories)" }
+        if force || goalProteinText.isEmpty { goalProteinText = "\(store.appData.nutritionGoals.protein)" }
+        if force || goalCarbsText.isEmpty { goalCarbsText = "\(store.appData.nutritionGoals.carbs)" }
+        if force || goalFatText.isEmpty { goalFatText = "\(store.appData.nutritionGoals.fat)" }
+        if force || goalWaterText.isEmpty { goalWaterText = "\(store.appData.nutritionGoals.water)" }
     }
 }
 

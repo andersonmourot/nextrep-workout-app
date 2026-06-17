@@ -25,7 +25,7 @@ Observation, URLSession, and Keychain Services.
   people discovery/social sharing, Interval Timer basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history
   persistence, and a Profile workout-history viewer with stat cards,
-  body-weight/volume trend tracking, and logged set details.
+  body-weight tracking, and logged set details.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
   creation and editing, including superset group labels.
 - `ExerciseEditorView.swift` supports first-pass custom exercise creation and

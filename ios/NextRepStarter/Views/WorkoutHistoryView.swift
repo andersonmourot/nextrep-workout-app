@@ -10,7 +10,6 @@ struct WorkoutHistoryView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 profileStats
-                volumeTrendSection
                 bodyWeightSection
 
                 if sortedLogs.isEmpty {
@@ -169,32 +168,6 @@ struct WorkoutHistoryView: View {
         store.appData.bodyWeight.sorted { $0.date < $1.date }
     }
 
-    @ViewBuilder
-    private var volumeTrendSection: some View {
-        if sortedLogs.count >= 2 {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Volume Trend")
-                        .font(.headline)
-                        .foregroundStyle(Theme.text)
-
-                    Spacer()
-
-                    Text("\(formatVolume(sortedLogs.last?.totalVolume ?? 0)) \(store.appData.unit)")
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(Theme.accentLight)
-                }
-
-                WorkoutVolumeTrend(logs: sortedLogs)
-                    .frame(height: 90)
-                    .padding(12)
-                    .background(Theme.inputBg.opacity(0.65))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            }
-            .cardStyle()
-        }
-    }
-
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Workout History")
@@ -298,51 +271,6 @@ private struct BodyWeightTrend: View {
         return entries.enumerated().map { index, entry in
             let x = size.width * CGFloat(index) / CGFloat(max(1, entries.count - 1))
             let normalized = (entry.weight - minWeight) / range
-            let y = size.height - (size.height * CGFloat(normalized))
-            return CGPoint(x: x, y: y)
-        }
-    }
-}
-
-private struct WorkoutVolumeTrend: View {
-    let logs: [WorkoutLog]
-
-    var body: some View {
-        GeometryReader { proxy in
-            let points = trendPoints(size: proxy.size)
-
-            ZStack(alignment: .bottomLeading) {
-                Path { path in
-                    guard let first = points.first else {
-                        return
-                    }
-                    path.move(to: first)
-                    for point in points.dropFirst() {
-                        path.addLine(to: point)
-                    }
-                }
-                .stroke(Theme.accentLight, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-
-                ForEach(Array(points.enumerated()), id: \.offset) { _, point in
-                    Circle()
-                        .fill(Theme.accentLight)
-                        .frame(width: 7, height: 7)
-                        .position(point)
-                }
-            }
-        }
-    }
-
-    private func trendPoints(size: CGSize) -> [CGPoint] {
-        let volumes = logs.map(\.totalVolume)
-        guard let minVolume = volumes.min(), let maxVolume = volumes.max(), logs.count > 1 else {
-            return []
-        }
-
-        let range = max(1, maxVolume - minVolume)
-        return logs.enumerated().map { index, log in
-            let x = size.width * CGFloat(index) / CGFloat(max(1, logs.count - 1))
-            let normalized = (log.totalVolume - minVolume) / range
             let y = size.height - (size.height * CGFloat(normalized))
             return CGPoint(x: x, y: y)
         }

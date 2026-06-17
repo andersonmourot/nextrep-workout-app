@@ -16,6 +16,7 @@ struct RootView: View {
         .task {
             await store.restoreSession()
         }
+        .preferredColorScheme(preferredColorScheme)
         .overlay {
             if store.isLoading {
                 ZStack {
@@ -27,6 +28,17 @@ struct RootView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
             }
+        }
+    }
+
+    private var preferredColorScheme: ColorScheme? {
+        switch store.appData.themeMode {
+        case "dark":
+            return .dark
+        case "light":
+            return .light
+        default:
+            return nil
         }
     }
 }

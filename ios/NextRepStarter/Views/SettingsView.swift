@@ -151,6 +151,7 @@ struct SettingsView: View {
             )) {
                 Text("Dark").tag("dark")
                 Text("Light").tag("light")
+                Text("System").tag("system")
             }
             .pickerStyle(.segmented)
 
@@ -423,27 +424,137 @@ enum LegalDocument: String {
         switch self {
         case .privacy:
             return """
-            NextRep collects account information and the fitness data you choose to enter, including programs, exercises, workout logs, max tracker entries, nutrition, hydration, body-weight entries, timers, and settings.
+            Last updated: June 2026
 
-            We use this information to provide, maintain, and improve the app, authenticate your account, sync your data, and respond to support requests. We do not sell your personal information.
+            This Privacy Policy explains how NextRep ("we", "us") collects, uses, and protects your information when you use the NextRep application and website (the "Service"). By using the Service you agree to this policy.
 
-            Data is stored by the existing NextRep backend. You can request account or data deletion by contacting support.
+            1. Information we collect
+
+            We collect only what's needed to run the Service:
+
+            - Account information: your name, email address, and a securely hashed password.
+            - App data you create: programs, exercises, workout logs, max-tracker entries, nutrition and hydration entries, body-weight entries, timers, and settings.
+            - Basic technical data: standard request information (such as timestamps) needed to operate and secure the Service.
+
+            We do not knowingly collect payment card numbers, government IDs, or sensitive categories of data beyond the fitness information you choose to enter.
+
+            2. How we use your information
+
+            - To provide, maintain, and improve the Service.
+            - To authenticate you and keep your account secure.
+            - To send transactional emails such as password resets.
+            - To respond to support requests.
+
+            We do not sell your personal information.
+
+            3. Email
+
+            We use a third-party email provider to deliver transactional messages (for example, password reset links). Your email address is shared with that provider solely to deliver those messages.
+
+            4. Data retention
+
+            We retain your account and app data for as long as your account is active. You may request deletion of your account and associated data at any time (see "Your rights").
+
+            5. Security
+
+            Passwords are stored as salted hashes, never in plain text, and the Service is served over encrypted connections (HTTPS). No method of transmission or storage is 100% secure, but we take reasonable measures to protect your information.
+
+            6. Your rights
+
+            Depending on where you live (for example, under GDPR or CCPA), you may have the right to access, correct, export, or delete your personal data, and to object to certain processing. To exercise these rights, contact us at andersonmourot@aol.com.
+
+            7. Children
+
+            The Service is not directed to children under 13 (or the minimum age required in your jurisdiction), and we do not knowingly collect their data.
+
+            8. Changes
+
+            We may update this policy from time to time. Material changes will be reflected by updating the "Last updated" date above.
+
+            9. Contact
+
+            Questions about this policy? Email andersonmourot@aol.com.
             """
         case .terms:
             return """
-            By using NextRep, you agree to use the service lawfully and to keep your login credentials secure.
+            Last updated: June 2026
 
-            You retain ownership of the programs, exercises, logs, and other content you create. NextRep stores and processes that content so the app can operate and sync across clients.
+            These Terms of Service ("Terms") govern your access to and use of NextRep (the "Service"). By creating an account or using the Service, you agree to these Terms.
 
-            The app may change over time as features are added or improved.
+            1. Eligibility & accounts
+
+            You must be at least 13 years old (or the minimum age in your jurisdiction) to use the Service. You are responsible for keeping your login credentials secure and for all activity under your account.
+
+            2. Acceptable use
+
+            You agree not to:
+
+            - Use the Service for any unlawful purpose or in violation of these Terms.
+            - Attempt to gain unauthorized access to the Service or other users' accounts.
+            - Interfere with, disrupt, or overload the Service or its infrastructure.
+            - Reverse engineer or copy the Service except as permitted by law.
+
+            3. Your content
+
+            You retain ownership of the data you create in the Service. You grant us a limited license to store and process that data solely to operate the Service for you.
+
+            4. Health & fitness
+
+            The Service provides general fitness and nutrition tracking tools and information. It does not provide medical advice. See the Health & Fitness Disclaimer, which is incorporated into these Terms by reference.
+
+            5. Service availability
+
+            The Service is provided on an "as is" and "as available" basis. We may modify, suspend, or discontinue any part of the Service at any time, and we do not guarantee uninterrupted or error-free operation.
+
+            6. Disclaimer of warranties
+
+            To the maximum extent permitted by law, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement.
+
+            7. Limitation of liability
+
+            To the maximum extent permitted by law, NextRep and its operators will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, arising from your use of (or inability to use) the Service.
+
+            8. Termination
+
+            You may stop using the Service at any time. We may suspend or terminate your access if you violate these Terms.
+
+            9. Changes to these Terms
+
+            We may update these Terms from time to time. Continued use of the Service after changes become effective constitutes acceptance of the revised Terms.
+
+            10. Contact
+
+            Questions about these Terms? Email andersonmourot@aol.com.
             """
         case .disclaimer:
             return """
-            NextRep provides general fitness and nutrition tracking tools. It is not medical advice.
+            Last updated: June 2026
 
-            Always consult a qualified professional before beginning a new exercise or nutrition program, especially if you have a medical condition, injury, or health concern.
+            Please read this carefully before using NextRep for any exercise, training, or nutrition activity.
 
-            Stop exercising if you feel pain, dizziness, shortness of breath, or other concerning symptoms.
+            Not medical advice
+
+            NextRep provides general fitness, training, and nutrition information and tracking tools for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. The Service does not create a doctor-patient, trainer-client, or other professional relationship.
+
+            Consult a professional first
+
+            Always consult a qualified physician or healthcare provider before beginning any exercise program, changing your diet, or starting any nutrition or supplementation plan — especially if you are pregnant, have an injury, or have any medical condition. Never disregard professional medical advice or delay seeking it because of something you read or tracked in the Service.
+
+            Assumption of risk
+
+            Physical exercise carries inherent risks, including the risk of serious injury. By using NextRep and performing any exercises or programs referenced in it, you do so voluntarily and at your own risk. Stop immediately and seek medical attention if you experience pain, dizziness, shortness of breath, or any other symptom.
+
+            No guarantee of results
+
+            Individual results vary. NextRep makes no guarantee regarding fitness, weight, strength, or health outcomes from using the Service.
+
+            Limitation of liability
+
+            To the maximum extent permitted by law, NextRep and its operators are not responsible or liable for any injury, loss, or damage of any kind arising from your use of the Service or reliance on any information it provides.
+
+            Contact
+
+            Questions? Email andersonmourot@aol.com.
             """
         }
     }

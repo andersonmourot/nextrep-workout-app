@@ -142,7 +142,7 @@ struct ProgramEditorView: View {
                 .foregroundStyle(.red.opacity(0.85))
             }
 
-            field("Day name", text: $draft.days[dayIndex].name)
+            field("Day Name", text: $draft.days[dayIndex].name)
             field("Focus", text: $draft.days[dayIndex].focus)
 
             ForEach(draft.days[dayIndex].exercises.indices, id: \.self) { exerciseIndex in
@@ -186,7 +186,7 @@ struct ProgramEditorView: View {
             )
             field("Reps", text: $draft.days[dayIndex].exercises[exerciseIndex].reps)
             numericField(
-                "Rest seconds",
+                "Rest",
                 value: $draft.days[dayIndex].exercises[exerciseIndex].restSec,
                 emptyWhenZero: true
             )
@@ -208,13 +208,7 @@ struct ProgramEditorView: View {
         let matches = isFocused ? Array(filteredExercises(query: query).prefix(5)) : []
 
         return VStack(alignment: .leading, spacing: 8) {
-            Text("Exercise")
-                .font(.caption.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(1.1)
-                .foregroundStyle(Theme.textFaint)
-
-            TextField("Type exercise name", text: Binding(
+            TextField("", text: Binding(
                 get: { exerciseQueries[key] ?? exerciseDisplayName(for: draft.days[dayIndex].exercises[exerciseIndex]) },
                 set: { newValue in
                     exerciseQueries[key] = newValue
@@ -227,6 +221,7 @@ struct ProgramEditorView: View {
                     }
                 }
             ))
+            .programEditorInputStyle(placeholder: "Exercise", isEmpty: query.isEmpty)
             .foregroundStyle(Theme.text)
             .tint(Theme.accentLight)
             .focused($focusedExerciseKey, equals: key)
@@ -234,14 +229,6 @@ struct ProgramEditorView: View {
             .onSubmit {
                 commitExerciseQuery(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
                 focusedExerciseKey = nil
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Theme.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
             }
 
             if !matches.isEmpty {
@@ -311,51 +298,31 @@ struct ProgramEditorView: View {
     }
 
     private func field(_ placeholder: String, text: Binding<String>) -> some View {
-        TextField(placeholder, text: text, axis: .vertical)
+        TextField("", text: text, axis: .vertical)
+            .programEditorInputStyle(placeholder: placeholder, isEmpty: text.wrappedValue.isEmpty)
             .foregroundStyle(Theme.text)
             .tint(Theme.accentLight)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Theme.inputBg)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
-            }
     }
 
     private func numericField(_ label: String, value: Binding<Int>, emptyWhenZero: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(1.1)
-                .foregroundStyle(Theme.textFaint)
+        let isEmpty = emptyWhenZero && value.wrappedValue == 0
 
-            TextField(label, text: Binding(
-                get: {
-                    if emptyWhenZero && value.wrappedValue == 0 {
-                        return ""
-                    }
-                    return "\(value.wrappedValue)"
-                },
-                set: { newValue in
-                    let digits = newValue.filter(\.isNumber)
-                    value.wrappedValue = Int(digits) ?? 0
+        return TextField("", text: Binding(
+            get: {
+                if emptyWhenZero && value.wrappedValue == 0 {
+                    return ""
                 }
-            ))
-            .keyboardType(.numberPad)
-            .foregroundStyle(Theme.text)
-            .tint(Theme.accentLight)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Theme.inputBg)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(.white.opacity(0.08), lineWidth: 1)
+                return "\(value.wrappedValue)"
+            },
+            set: { newValue in
+                let digits = newValue.filter(\.isNumber)
+                value.wrappedValue = Int(digits) ?? 0
             }
-        }
+        ))
+        .programEditorInputStyle(placeholder: label, isEmpty: isEmpty)
+        .keyboardType(.numberPad)
+        .foregroundStyle(Theme.text)
+        .tint(Theme.accentLight)
     }
 
     private func normalizeDraft() {
@@ -379,16 +346,16 @@ struct ProgramEditorView: View {
     private static func blankProgram() -> Program {
         Program(
             id: "ios-\(UUID().uuidString)",
-            name: "New Program",
+            name: "",
             category: "Strength",
             level: "Beginner",
             goal: nil,
-            coach: "You",
+            coach: "",
             durationWeeks: 4,
             daysPerWeek: 1,
             accent: "#355E3B",
-            summary: "Custom training plan",
-            description: "A custom program built on iOS.",
+            summary: "",
+            description: "",
             tags: nil,
             days: [blankDay(number: 1)],
             weekOverrides: nil,
@@ -400,7 +367,7 @@ struct ProgramEditorView: View {
     }
 
     private static func blankDay(number: Int) -> ProgramDay {
-        ProgramDay(id: "day-\(UUID().uuidString)", name: "Day \(number)", focus: "Full Body", exercises: [])
+        ProgramDay(id: "day-\(UUID().uuidString)", name: "", focus: "", exercises: [])
     }
 
     private func exerciseKey(dayIndex: Int, exerciseIndex: Int) -> String {
@@ -463,5 +430,28 @@ struct ProgramEditorView: View {
             }
         }
         return nil
+    }
+}
+
+private extension View {
+    func programEditorInputStyle(placeholder: String, isEmpty: Bool) -> some View {
+        self
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(alignment: .topLeading) {
+                if isEmpty {
+                    Text(placeholder)
+                        .foregroundStyle(Theme.textDim.opacity(0.95))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
     }
 }

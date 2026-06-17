@@ -44,12 +44,6 @@ struct ProgramsListView: View {
                     } label: {
                         Image(systemName: "figure.strengthtraining.traditional")
                     }
-
-                    Button {
-                        Task { await store.reload() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
                 }
                 .tint(Theme.accentLight)
             }

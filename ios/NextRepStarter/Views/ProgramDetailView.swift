@@ -176,7 +176,7 @@ struct ProgramDetailView: View {
     }
 
     private var accent: Color {
-        Color(hex: program.accent)
+        Theme.accent
     }
 
     private var completedDayCount: Int {
@@ -355,7 +355,7 @@ private struct ProgramDayCard: View {
     }
 
     private var accent: Color {
-        Color(hex: program.accent)
+        Theme.accent
     }
 }
 

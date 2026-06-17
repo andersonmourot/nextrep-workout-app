@@ -161,7 +161,7 @@ struct SharedUserDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color(hex: user.color))
+                    .fill(Theme.accent)
                     .frame(width: 44, height: 44)
                     .overlay {
                         Text(String(user.name.prefix(1)).uppercased())
@@ -261,7 +261,7 @@ private struct DiscoverUserRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(Color(hex: user.color))
+                .fill(Theme.accent)
                 .frame(width: 44, height: 44)
                 .overlay {
                     Text(String(user.name.prefix(1)).uppercased())

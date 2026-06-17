@@ -71,7 +71,7 @@ struct ActiveWorkoutView: View {
     }
 
     private var accent: Color {
-        Color(hex: program.accent)
+        Theme.accent
     }
 
     private var summaryIsPresented: Binding<Bool> {

@@ -92,7 +92,7 @@ struct DayDetailView: View {
     }
 
     private var accent: Color {
-        Color(hex: program.accent)
+        Theme.accent
     }
 
     private var plannedSetCount: Int {

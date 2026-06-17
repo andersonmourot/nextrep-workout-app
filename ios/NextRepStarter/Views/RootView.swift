@@ -70,6 +70,7 @@ struct AppShellView: View {
             }
         }
         .tint(Color(hex: store.appData.themeColor))
+        .id(store.appData.themeColor)
     }
 }
 

@@ -31,6 +31,8 @@ Observation, URLSession, and Keychain Services.
   logged set details.
 - `ProgramHistoryView.swift` shows completed program archives and their saved
   workout logs.
+- `DayLogEditorView.swift` supports manual day logging/editing outside the live
+  workout flow.
 - `SettingsView.swift` is available from the Profile toolbar and includes
   account, appearance, unit, active-program, password, reset, logout, and legal
   options.

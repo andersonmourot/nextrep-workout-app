@@ -5,6 +5,7 @@ struct DayDetailView: View {
     let program: Program
     let day: ProgramDay
     let dayNumber: Int
+    var week: Int = 1
 
     var body: some View {
         ScrollView {
@@ -76,6 +77,13 @@ struct DayDetailView: View {
                 Text(loggedSetCount > 0 ? "Repeat Workout" : "Start Workout")
             }
             .buttonStyle(PrimaryButtonStyle())
+
+            NavigationLink {
+                DayLogEditorView(program: program, day: day, week: week, existingLog: latestLog)
+            } label: {
+                Text(latestLog == nil ? "Log Day" : "Edit Logged Day")
+            }
+            .buttonStyle(GhostButtonStyle())
         }
         .padding(18)
         .background {
@@ -109,10 +117,11 @@ struct DayDetailView: View {
     }
 
     private var latestLog: WorkoutLog? {
-        store.appData.logs
-            .filter { $0.programId == program.id && $0.dayId == day.id }
-            .sorted { dayDetailLogDate($0) > dayDetailLogDate($1) }
-            .first
+        let slots = domainProgramLogSlots(program: program, logs: store.appData.logs, since: store.appData.programAnchors[program.id])
+        let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) ?? max(0, dayNumber - 1)
+        let slotIndex = (week - 1) * max(1, program.days.count) + dayIndex
+        guard slots.indices.contains(slotIndex) else { return nil }
+        return slots[slotIndex]
     }
 
     private func exercise(for planned: PlannedExercise) -> Exercise? {

@@ -454,7 +454,7 @@ private struct ProgramDayCard: View {
                 Spacer()
 
                 NavigationLink {
-                    DayDetailView(program: program, day: day, dayNumber: dayNumber)
+                    DayDetailView(program: program, day: day, dayNumber: dayNumber, week: selectedWeek)
                 } label: {
                     Text("View")
                         .font(.caption.weight(.bold))

@@ -516,6 +516,11 @@ final class AppStore {
         scheduleSync()
     }
 
+    func upsertWorkoutLog(_ log: WorkoutLog, program: Program) {
+        addWorkoutLog(log, program: program)
+        scheduleSync()
+    }
+
     func removeCompletedProgram(id: String) {
         appData.completedPrograms.removeAll { $0.id == id }
         scheduleSync()

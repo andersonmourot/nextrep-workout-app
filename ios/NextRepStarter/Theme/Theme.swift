@@ -1,6 +1,9 @@
 import SwiftUI
 
 enum Theme {
+    static let accentStorageKey = "nextrep.themeColor"
+    static let defaultAccentHex = "#355e3b"
+
     static let bg = Color(hex: "#08080A")
     static let surface = Color(hex: "#141417")
     static let surface2 = Color(hex: "#1B1B1F")
@@ -9,8 +12,38 @@ enum Theme {
     static let text = Color(hex: "#F4F4F5")
     static let textDim = Color(hex: "#A1A1AA")
     static let textFaint = Color(hex: "#71717A")
-    static let accent = Color(hex: "#355E3B")
-    static let accentLight = Color(hex: "#4C8A55")
+    static var accent: Color { Color(hex: currentAccentHex) }
+    static var accentLight: Color { Color(hex: mixHex(currentAccentHex, toward: "#FFFFFF", amount: 0.22)) }
+    static var accentDark: Color { Color(hex: mixHex(currentAccentHex, toward: "#000000", amount: 0.22)) }
+
+    private static var currentAccentHex: String {
+        UserDefaults.standard.string(forKey: accentStorageKey) ?? defaultAccentHex
+    }
+
+    private static func mixHex(_ base: String, toward target: String, amount: Double) -> String {
+        let a = rgb(base)
+        let b = rgb(target)
+        let mixed = (
+            r: Int((Double(a.r) + (Double(b.r) - Double(a.r)) * amount).rounded()),
+            g: Int((Double(a.g) + (Double(b.g) - Double(a.g)) * amount).rounded()),
+            b: Int((Double(a.b) + (Double(b.b) - Double(a.b)) * amount).rounded())
+        )
+        return String(format: "#%02X%02X%02X", mixed.r, mixed.g, mixed.b)
+    }
+
+    private static func rgb(_ hex: String) -> (r: Int, g: Int, b: Int) {
+        let clean = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let expanded = clean.count == 3
+            ? clean.map { "\($0)\($0)" }.joined()
+            : clean
+        var value: UInt64 = 0
+        Scanner(string: expanded).scanHexInt64(&value)
+        return (
+            r: Int((value >> 16) & 0xFF),
+            g: Int((value >> 8) & 0xFF),
+            b: Int(value & 0xFF)
+        )
+    }
 }
 
 extension Color {

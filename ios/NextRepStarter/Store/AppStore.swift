@@ -205,6 +205,7 @@ final class AppStore {
     }
 
     func setThemeColor(_ color: String) {
+        UserDefaults.standard.set(color, forKey: Theme.accentStorageKey)
         appData.themeColor = color
         scheduleSync()
     }
@@ -750,6 +751,7 @@ final class AppStore {
     private func loadInitialData(token: String) async throws {
         catalog = try await apiClient.catalog()
         appData = try await apiClient.appData(token: token)
+        UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
     }
 
     private func reconcileActiveWorkout(day: ProgramDay) {

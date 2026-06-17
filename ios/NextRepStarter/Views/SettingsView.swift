@@ -11,7 +11,7 @@ struct SettingsView: View {
     @State private var showingLogoutConfirm = false
     @State private var showingPasswordFields = false
 
-    private let themeColors = ["#355E3B", "#2563EB", "#7C3AED", "#DC2626", "#EA580C", "#0D9488", "#CA8A04"]
+    private let themeColors = ["#355e3b", "#e9b949", "#7f1d1d", "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#ec4899"]
 
     var body: some View {
         ScrollView {

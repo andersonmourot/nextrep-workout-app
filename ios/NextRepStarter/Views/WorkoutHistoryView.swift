@@ -365,8 +365,8 @@ struct NutritionTrackerView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 todaySummary
-                targetCard
                 inputCard
+                targetCard
                 recentNutrition
             }
             .padding(16)

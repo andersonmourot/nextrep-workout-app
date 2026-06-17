@@ -179,13 +179,17 @@ struct ProgramEditorView: View {
 
             exerciseSelector(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
 
-            HStack(spacing: 10) {
-                Stepper("Sets: \(draft.days[dayIndex].exercises[exerciseIndex].sets)", value: $draft.days[dayIndex].exercises[exerciseIndex].sets, in: 1...20)
-                Spacer(minLength: 0)
-            }
-
+            numericField(
+                "Sets",
+                value: $draft.days[dayIndex].exercises[exerciseIndex].sets,
+                emptyWhenZero: true
+            )
             field("Reps", text: $draft.days[dayIndex].exercises[exerciseIndex].reps)
-            Stepper("Rest: \(draft.days[dayIndex].exercises[exerciseIndex].restSec)s", value: $draft.days[dayIndex].exercises[exerciseIndex].restSec, in: 0...600, step: 15)
+            numericField(
+                "Rest seconds",
+                value: $draft.days[dayIndex].exercises[exerciseIndex].restSec,
+                emptyWhenZero: true
+            )
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
@@ -309,6 +313,7 @@ struct ProgramEditorView: View {
     private func field(_ placeholder: String, text: Binding<String>) -> some View {
         TextField(placeholder, text: text, axis: .vertical)
             .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(Theme.inputBg)
@@ -319,20 +324,56 @@ struct ProgramEditorView: View {
             }
     }
 
+    private func numericField(_ label: String, value: Binding<Int>, emptyWhenZero: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .foregroundStyle(Theme.textFaint)
+
+            TextField(label, text: Binding(
+                get: {
+                    if emptyWhenZero && value.wrappedValue == 0 {
+                        return ""
+                    }
+                    return "\(value.wrappedValue)"
+                },
+                set: { newValue in
+                    let digits = newValue.filter(\.isNumber)
+                    value.wrappedValue = Int(digits) ?? 0
+                }
+            ))
+            .keyboardType(.numberPad)
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+        }
+    }
+
     private func normalizeDraft() {
         draft.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
         draft.coach = draft.coach.trimmingCharacters(in: .whitespacesAndNewlines)
         draft.summary = draft.summary.trimmingCharacters(in: .whitespacesAndNewlines)
         draft.description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
         draft.daysPerWeek = max(1, draft.days.count)
+        for dayIndex in draft.days.indices {
+            for exerciseIndex in draft.days[dayIndex].exercises.indices {
+                draft.days[dayIndex].exercises[exerciseIndex].sets = max(1, draft.days[dayIndex].exercises[exerciseIndex].sets)
+                draft.days[dayIndex].exercises[exerciseIndex].restSec = max(0, draft.days[dayIndex].exercises[exerciseIndex].restSec)
+            }
+        }
     }
 
     private func blankPlannedExercise() -> PlannedExercise {
-        if let exercise = store.allExercises.first {
-            return PlannedExercise(exerciseId: exercise.id, name: nil, sets: 3, reps: "8-12", restSec: 90, notes: nil, groupId: nil)
-        }
-
-        return PlannedExercise(exerciseId: "custom", name: "Custom Exercise", sets: 3, reps: "8-12", restSec: 90, notes: nil, groupId: nil)
+        PlannedExercise(exerciseId: "", name: nil, sets: 0, reps: "", restSec: 0, notes: nil, groupId: nil)
     }
 
     private static func blankProgram() -> Program {
@@ -377,7 +418,7 @@ struct ProgramEditorView: View {
     private func filteredExercises(query: String) -> [Exercise] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return Array(store.allExercises.prefix(5))
+            return []
         }
 
         return store.allExercises.filter { exercise in

@@ -136,7 +136,16 @@ struct ProgramDetailView: View {
                 MetricTile(label: "Weeks", value: "\(program.durationWeeks)", accent: accent)
                 MetricTile(label: "Days/wk", value: "\(program.daysPerWeek)", accent: accent)
                 MetricTile(label: "Days", value: "\(program.days.count)", accent: accent)
+                MetricTile(label: "Done", value: "\(completedDayCount)", accent: accent)
             }
+
+            MetricProgressBar(
+                label: "Program progress",
+                value: Double(completedDayCount),
+                target: Double(max(1, program.days.count * max(1, program.durationWeeks))),
+                suffix: "",
+                color: accent
+            )
         }
         .padding(18)
         .background {
@@ -155,6 +164,10 @@ struct ProgramDetailView: View {
 
     private var accent: Color {
         Color(hex: program.accent)
+    }
+
+    private var completedDayCount: Int {
+        store.appData.logs.filter { $0.programId == program.id }.count
     }
 
     private var managementActions: some View {
@@ -253,9 +266,16 @@ private struct ProgramDayCard: View {
                         .tracking(1.3)
                         .foregroundStyle(accent)
 
-                    Text(day.name)
-                        .font(.headline)
-                        .foregroundStyle(Theme.text)
+                    HStack(spacing: 6) {
+                        Text(day.name)
+                            .font(.headline)
+                            .foregroundStyle(Theme.text)
+
+                        if loggedSetCount > 0 {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(accent)
+                        }
+                    }
 
                     if !day.focus.isEmpty {
                         Text(day.focus)

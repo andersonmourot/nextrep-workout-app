@@ -50,20 +50,32 @@ struct DashboardView: View {
         let accent = Color(hex: program.accent)
 
         return VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Today · \(program.name)")
-                    .font(.caption.weight(.semibold))
-                    .textCase(.uppercase)
-                    .tracking(1.3)
-                    .foregroundStyle(accent)
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Today · \(program.name)")
+                        .font(.caption.weight(.semibold))
+                        .textCase(.uppercase)
+                        .tracking(1.3)
+                        .foregroundStyle(accent)
 
-                Text(day?.name ?? "Program complete")
-                    .font(.system(size: 28, weight: .bold, design: .default))
-                    .foregroundStyle(Theme.text)
+                    Text(day?.name ?? "Program complete")
+                        .font(.system(size: 28, weight: .bold, design: .default))
+                        .foregroundStyle(Theme.text)
 
-                Text(day?.focus ?? "Review your progress or choose a new program.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
+                    Text(day?.focus ?? "Review your progress or choose a new program.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                }
+
+                Spacer()
+
+                ProgressRing(
+                    value: Double(workoutsThisWeek) / Double(max(1, program.daysPerWeek)),
+                    size: 70,
+                    color: accent,
+                    center: "\(workoutsThisWeek)",
+                    caption: "of \(program.daysPerWeek)"
+                )
             }
 
             if let day {
@@ -86,11 +98,18 @@ struct DashboardView: View {
         }
         .padding(18)
         .background {
-            LinearGradient(
-                colors: [accent.opacity(0.22), Theme.surface],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ZStack(alignment: .topTrailing) {
+                LinearGradient(
+                    colors: [accent.opacity(0.30), Theme.surface],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(accent.opacity(0.22))
+                    .blur(radius: 28)
+                    .frame(width: 120, height: 120)
+                    .offset(x: 35, y: -40)
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
@@ -122,7 +141,7 @@ struct DashboardView: View {
     private var statsGrid: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
             DashboardStatTile(icon: "flame.fill", value: "\(streak)", label: "Streak")
-            DashboardStatTile(icon: "calendar", value: "\(workoutsThisWeek)", label: "This week")
+            DashboardStatTile(icon: "calendar", value: "\(workoutsThisWeek)", label: "This week", ringValue: activeProgram.map { Double(workoutsThisWeek) / Double(max(1, $0.daysPerWeek)) })
             DashboardStatTile(icon: "dumbbell.fill", value: "\(store.appData.logs.count)", label: "Workouts")
         }
     }
@@ -214,12 +233,17 @@ private struct DashboardStatTile: View {
     let icon: String
     let value: String
     let label: String
+    var ringValue: Double? = nil
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundStyle(Theme.accentLight)
+            if let ringValue {
+                ProgressRing(value: ringValue, size: 38, lineWidth: 5, center: nil)
+            } else {
+                Image(systemName: icon)
+                    .font(.headline)
+                    .foregroundStyle(Theme.accentLight)
+            }
 
             Text(value)
                 .font(.title2.monospacedDigit().weight(.bold))

@@ -12,6 +12,7 @@ struct WorkoutHistoryView: View {
                 header
                 profileStats
                 trackerLinks
+                volumeChartSection
                 bodyWeightSection
                 recentWorkoutsSection
             }
@@ -107,7 +108,7 @@ struct WorkoutHistoryView: View {
             }
 
             if sortedBodyWeight.count >= 2 {
-                BodyWeightTrend(entries: sortedBodyWeight)
+                MiniLineChart(values: sortedBodyWeight.map(\.weight))
                     .frame(height: 90)
                     .padding(12)
                     .background(Theme.inputBg.opacity(0.65))
@@ -169,6 +170,32 @@ struct WorkoutHistoryView: View {
             }
         }
         .cardStyle()
+    }
+
+    @ViewBuilder
+    private var volumeChartSection: some View {
+        if sortedLogs.count >= 2 {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Workout Volume")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Spacer()
+
+                    Text("\(formatVolume(sortedLogs.first?.totalVolume ?? 0)) \(store.appData.unit)")
+                        .font(.caption.monospacedDigit().weight(.bold))
+                        .foregroundStyle(Theme.accentLight)
+                }
+
+                MiniLineChart(values: sortedLogs.reversed().map(\.totalVolume))
+                    .frame(height: 90)
+                    .padding(12)
+                    .background(Theme.inputBg.opacity(0.65))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .cardStyle()
+        }
     }
 
     private var sortedBodyWeight: [BodyWeightEntry] {
@@ -413,6 +440,16 @@ struct NutritionTrackerView: View {
                     .font(.subheadline)
                     .foregroundStyle(Theme.textDim)
             }
+
+            if let todayNutrition {
+                VStack(spacing: 10) {
+                    MetricProgressBar(label: "Calories", value: Double(todayNutrition.calories), target: Double(store.appData.nutritionGoals.calories), suffix: "")
+                    MetricProgressBar(label: "Protein", value: Double(todayNutrition.protein), target: Double(store.appData.nutritionGoals.protein), suffix: "g")
+                    MetricProgressBar(label: "Carbs", value: Double(todayNutrition.carbs), target: Double(store.appData.nutritionGoals.carbs), suffix: "g")
+                    MetricProgressBar(label: "Fat", value: Double(todayNutrition.fat), target: Double(store.appData.nutritionGoals.fat), suffix: "g")
+                    MetricProgressBar(label: "Water", value: Double(todayNutrition.water), target: Double(store.appData.nutritionGoals.water), suffix: "")
+                }
+            }
         }
         .cardStyle()
     }
@@ -565,26 +602,37 @@ struct MaxTrackerView: View {
                     .cardStyle()
             } else {
                 ForEach(store.appData.maxTrackers) { tracker in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(tracker.name)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Theme.text)
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(tracker.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.text)
 
-                            Text(latestMaxText(tracker))
-                                .font(.caption)
-                                .foregroundStyle(Theme.textDim)
+                                Text(latestMaxText(tracker))
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.textDim)
+                            }
+
+                            Spacer()
+
+                            Button {
+                                store.deleteMaxTracker(id: tracker.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.red.opacity(0.8))
                         }
 
-                        Spacer()
-
-                        Button {
-                            store.deleteMaxTracker(id: tracker.id)
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.caption)
+                        let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
+                        if values.count >= 2 {
+                            MiniLineChart(values: values)
+                                .frame(height: 70)
+                                .padding(10)
+                                .background(Theme.inputBg.opacity(0.65))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
-                        .foregroundStyle(.red.opacity(0.8))
                     }
                     .padding(10)
                     .background(Theme.surface2)
@@ -599,7 +647,8 @@ struct MaxTrackerView: View {
             return "No records"
         }
 
-        return "\(formatWeight(latest.weight)) \(store.appData.unit) x \(latest.reps) · \(formatBodyWeightDate(latest.date))"
+        let e1rm = estimatedOneRepMax(weight: latest.weight, reps: latest.reps)
+        return "\(formatWeight(latest.weight)) \(store.appData.unit) x \(latest.reps) · e1RM \(formatWeight(e1rm))"
     }
 }
 
@@ -932,6 +981,14 @@ private func formatWeight(_ weight: Double) -> String {
     }
 
     return String(format: "%.1f", weight)
+}
+
+private func estimatedOneRepMax(weight: Double, reps: Int) -> Double {
+    guard reps > 1 else {
+        return weight
+    }
+
+    return weight * (1 + Double(reps) / 30)
 }
 
 private func formatBodyWeightDate(_ value: String) -> String {

@@ -136,6 +136,14 @@ struct ActiveWorkoutView: View {
             Text("\(completedSets(active)) of \(totalSets(active)) sets complete")
                 .font(.footnote)
                 .foregroundStyle(Theme.textDim)
+
+            MetricProgressBar(
+                label: "Set progress",
+                value: Double(completedSets(active)),
+                target: Double(max(1, totalSets(active))),
+                suffix: "",
+                color: accent
+            )
         }
     }
 

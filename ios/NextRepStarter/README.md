@@ -25,7 +25,7 @@ Observation, URLSession, and Keychain Services.
   people discovery/social sharing, Interval Timer basics, and a first-pass
   Active Workout screen for set logging and rest timing, Finish Workout history
   persistence, and a Profile workout-history viewer with stat cards,
-  body-weight tracking, and logged set details.
+  Nutrition, Max Tracker, body-weight tracking, and logged set details.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
   creation and editing, including superset group labels.
 - `ExerciseEditorView.swift` supports first-pass custom exercise creation and
@@ -61,6 +61,7 @@ by the web app. Keep that behavior as you add native features.
 4. Confirm the Programs tab renders catalog + custom programs.
 5. Continue Phase 1 screens from `docs/ios-swiftui-screens.md`:
    - Exercise photos and richer custom exercise editing
+   - Nutrition and Max Tracker detail screens/charts
    - Rest-complete custom sound/background audio polish
    - Superset workout sequencing beyond group labels
    - Per-week program edit flows

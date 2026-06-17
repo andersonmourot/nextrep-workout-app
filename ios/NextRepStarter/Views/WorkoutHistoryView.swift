@@ -1,31 +1,28 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 struct WorkoutHistoryView: View {
     @Environment(AppStore.self) private var store
     @State private var weightText = ""
+    @State private var caloriesText = ""
+    @State private var proteinText = ""
+    @State private var carbsText = ""
+    @State private var fatText = ""
+    @State private var waterText = ""
+    @State private var maxName = ""
+    @State private var maxWeightText = ""
+    @State private var maxRepsText = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 profileStats
+                nutritionSection
+                maxTrackerSection
                 bodyWeightSection
-
-                if sortedLogs.isEmpty {
-                    emptyState
-                } else {
-                    LazyVStack(spacing: 12) {
-                        ForEach(sortedLogs) { log in
-                            NavigationLink {
-                                WorkoutLogDetailView(log: log)
-                            } label: {
-                                WorkoutLogRow(log: log, unit: store.appData.unit)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                recentWorkoutsSection
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -40,6 +37,10 @@ struct WorkoutHistoryView: View {
         store.appData.logs.sorted { lhs, rhs in
             logDate(lhs) > logDate(rhs)
         }
+    }
+
+    private var recentLogs: [WorkoutLog] {
+        Array(sortedLogs.prefix(5))
     }
 
     private var profileStats: some View {
@@ -70,6 +71,118 @@ struct WorkoutHistoryView: View {
 
     private var profileStreak: Int {
         computeProfileStreak(logs: store.appData.logs)
+    }
+
+    private var nutritionSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Nutrition")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                if let todayNutrition {
+                    Text("\(todayNutrition.calories) cal")
+                        .font(.caption.monospacedDigit().weight(.bold))
+                        .foregroundStyle(Theme.accentLight)
+                }
+            }
+
+            if let todayNutrition {
+                HStack(spacing: 8) {
+                    miniMetric(value: "\(todayNutrition.protein)g", label: "Protein")
+                    miniMetric(value: "\(todayNutrition.carbs)g", label: "Carbs")
+                    miniMetric(value: "\(todayNutrition.fat)g", label: "Fat")
+                    miniMetric(value: "\(todayNutrition.water)", label: "Water")
+                }
+            }
+
+            HStack(spacing: 10) {
+                profileTextField("Calories", text: $caloriesText, keyboard: .numberPad)
+                profileTextField("Protein", text: $proteinText, keyboard: .numberPad)
+            }
+            HStack(spacing: 10) {
+                profileTextField("Carbs", text: $carbsText, keyboard: .numberPad)
+                profileTextField("Fat", text: $fatText, keyboard: .numberPad)
+                profileTextField("Water", text: $waterText, keyboard: .numberPad)
+            }
+
+            Button("Save Today's Nutrition") {
+                store.setTodayNutrition(
+                    calories: Int(caloriesText) ?? todayNutrition?.calories ?? 0,
+                    protein: Int(proteinText) ?? todayNutrition?.protein ?? 0,
+                    carbs: Int(carbsText) ?? todayNutrition?.carbs ?? 0,
+                    fat: Int(fatText) ?? todayNutrition?.fat ?? 0,
+                    water: Int(waterText) ?? todayNutrition?.water ?? 0
+                )
+                caloriesText = ""
+                proteinText = ""
+                carbsText = ""
+                fatText = ""
+                waterText = ""
+            }
+            .buttonStyle(GhostButtonStyle())
+        }
+        .cardStyle()
+    }
+
+    private var maxTrackerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Max Tracker")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            HStack(spacing: 10) {
+                profileTextField("Lift", text: $maxName)
+                profileTextField("Weight", text: $maxWeightText, keyboard: .decimalPad)
+                profileTextField("Reps", text: $maxRepsText, keyboard: .numberPad)
+            }
+
+            Button("Add Max") {
+                if let weight = Double(maxWeightText.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    store.addMaxRecord(name: maxName, weight: weight, reps: Int(maxRepsText) ?? 1)
+                    maxName = ""
+                    maxWeightText = ""
+                    maxRepsText = ""
+                }
+            }
+            .buttonStyle(GhostButtonStyle())
+
+            if store.appData.maxTrackers.isEmpty {
+                Text("Track your top lifts here.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            } else {
+                ForEach(store.appData.maxTrackers.prefix(5)) { tracker in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(tracker.name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.text)
+
+                            Text(latestMaxText(tracker))
+                                .font(.caption)
+                                .foregroundStyle(Theme.textDim)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            store.deleteMaxTracker(id: tracker.id)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.red.opacity(0.8))
+                    }
+                    .padding(10)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+            }
+        }
+        .cardStyle()
     }
 
     private var bodyWeightSection: some View {
@@ -157,6 +270,85 @@ struct WorkoutHistoryView: View {
         store.appData.bodyWeight.sorted { $0.date < $1.date }
     }
 
+    private var recentWorkoutsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Recent Workouts")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                if sortedLogs.count > 5 {
+                    NavigationLink {
+                        AllWorkoutHistoryView(logs: sortedLogs, unit: store.appData.unit)
+                    } label: {
+                        Text("View all")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accentLight)
+                    }
+                }
+            }
+
+            if sortedLogs.isEmpty {
+                emptyState
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(recentLogs) { log in
+                        NavigationLink {
+                            WorkoutLogDetailView(log: log)
+                        } label: {
+                            WorkoutLogRow(log: log, unit: store.appData.unit)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var todayNutrition: NutritionEntry? {
+        store.appData.nutritionLog.first { $0.date == todayKey() }
+    }
+
+    private func profileTextField(_ placeholder: String, text: Binding<String>, keyboard: UIKeyboardType = .default) -> some View {
+        TextField(placeholder, text: text)
+            .keyboardType(keyboard)
+            .foregroundStyle(Theme.text)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+    }
+
+    private func miniMetric(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(.caption.monospacedDigit().weight(.bold))
+                .foregroundStyle(Theme.text)
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.textFaint)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func latestMaxText(_ tracker: MaxTracker) -> String {
+        guard let latest = tracker.records.sorted(by: { $0.date > $1.date }).first else {
+            return "No records"
+        }
+
+        return "\(formatWeight(latest.weight)) \(store.appData.unit) x \(latest.reps) · \(formatBodyWeightDate(latest.date))"
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Workout History")
@@ -218,6 +410,32 @@ private struct ProfileStatTile: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(.white.opacity(0.05), lineWidth: 1)
         }
+    }
+}
+
+struct AllWorkoutHistoryView: View {
+    let logs: [WorkoutLog]
+    let unit: String
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(logs) { log in
+                    NavigationLink {
+                        WorkoutLogDetailView(log: log)
+                    } label: {
+                        WorkoutLogRow(log: log, unit: unit)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("All Workouts")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
     }
 }
 
@@ -532,6 +750,10 @@ private func formatBodyWeightDate(_ value: String) -> String {
     }
 
     return value
+}
+
+private func todayKey() -> String {
+    BodyWeightDateFormatter.input.string(from: Date())
 }
 
 private enum DisplayDateFormatter {

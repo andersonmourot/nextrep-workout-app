@@ -335,6 +335,48 @@ final class AppStore {
         scheduleSync()
     }
 
+    func setTodayNutrition(calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
+        let entry = NutritionEntry(
+            date: Self.dateOnlyFormatter.string(from: Date()),
+            calories: max(0, calories),
+            protein: max(0, protein),
+            carbs: max(0, carbs),
+            fat: max(0, fat),
+            water: max(0, water),
+            photos: nil
+        )
+        appData.nutritionLog.removeAll { $0.date == entry.date }
+        appData.nutritionLog.append(entry)
+        appData.nutritionLog.sort { $0.date < $1.date }
+        scheduleSync()
+    }
+
+    func addMaxRecord(name: String, weight: Double, reps: Int) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else {
+            return
+        }
+
+        let record = MaxRecord(
+            id: UUID().uuidString,
+            date: Self.dateOnlyFormatter.string(from: Date()),
+            weight: max(0, weight),
+            reps: max(0, reps)
+        )
+
+        if let index = appData.maxTrackers.firstIndex(where: { $0.name.localizedCaseInsensitiveCompare(cleanName) == .orderedSame }) {
+            appData.maxTrackers[index].records.append(record)
+        } else {
+            appData.maxTrackers.insert(MaxTracker(id: UUID().uuidString, name: cleanName, records: [record]), at: 0)
+        }
+        scheduleSync()
+    }
+
+    func deleteMaxTracker(id: String) {
+        appData.maxTrackers.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
     func shareProgram(_ program: Program) async {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription

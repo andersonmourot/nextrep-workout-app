@@ -46,7 +46,7 @@ struct ProgramsListView: View {
                     }
 
                     NavigationLink {
-                        ProgramHistoryView()
+                        CompletedProgramHistoryView()
                     } label: {
                         Image(systemName: "clock.arrow.circlepath")
                     }

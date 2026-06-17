@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ProgramHistoryView: View {
+struct CompletedProgramHistoryView: View {
     @Environment(AppStore.self) private var store
     @State private var pendingDelete: CompletedProgram?
 
@@ -14,7 +14,7 @@ struct ProgramHistoryView: View {
                 } else {
                     ForEach(sortedPrograms) { entry in
                         NavigationLink {
-                            CompletedProgramDetailView(entry: entry)
+                            CompletedProgramArchiveDetailView(entry: entry)
                         } label: {
                             CompletedProgramRow(entry: entry) {
                                 pendingDelete = entry
@@ -132,7 +132,7 @@ private struct CompletedProgramRow: View {
     }
 }
 
-struct CompletedProgramDetailView: View {
+struct CompletedProgramArchiveDetailView: View {
     @Environment(AppStore.self) private var store
     let entry: CompletedProgram
 

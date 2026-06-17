@@ -6,6 +6,7 @@ struct ProgramEditorView: View {
     @State private var draft: Program
     @State private var showingDeleteConfirm = false
     @State private var exerciseQueries: [String: String] = [:]
+    @FocusState private var focusedExerciseKey: String?
 
     private let categories = ["Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
     private let levels = ["Beginner", "Intermediate", "Advanced"]
@@ -29,6 +30,11 @@ struct ProgramEditorView: View {
         .navigationTitle(draft.name.isEmpty ? "New Program" : draft.name)
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .onChange(of: focusedExerciseKey) { oldValue, newValue in
+            if newValue == nil, let oldValue {
+                commitExerciseQuery(for: oldValue)
+            }
+        }
         .alert("Delete Program?", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -194,7 +200,8 @@ struct ProgramEditorView: View {
         let key = exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
         let planned = draft.days[dayIndex].exercises[exerciseIndex]
         let query = exerciseQueries[key] ?? exerciseDisplayName(for: planned)
-        let matches = Array(filteredExercises(query: query).prefix(5))
+        let isFocused = focusedExerciseKey == key
+        let matches = isFocused ? Array(filteredExercises(query: query).prefix(5)) : []
 
         return VStack(alignment: .leading, spacing: 8) {
             Text("Exercise")
@@ -218,6 +225,12 @@ struct ProgramEditorView: View {
             ))
             .foregroundStyle(Theme.text)
             .tint(Theme.accentLight)
+            .focused($focusedExerciseKey, equals: key)
+            .submitLabel(.done)
+            .onSubmit {
+                commitExerciseQuery(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+                focusedExerciseKey = nil
+            }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(Theme.surface)
@@ -234,6 +247,7 @@ struct ProgramEditorView: View {
                             draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exercise.id
                             draft.days[dayIndex].exercises[exerciseIndex].name = nil
                             exerciseQueries[key] = exercise.name
+                            focusedExerciseKey = nil
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -371,5 +385,42 @@ struct ProgramEditorView: View {
                 exercise.primaryMuscle.localizedCaseInsensitiveContains(trimmed) ||
                 exercise.equipment.localizedCaseInsensitiveContains(trimmed)
         }
+    }
+
+    private func commitExerciseQuery(dayIndex: Int, exerciseIndex: Int) {
+        let key = exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+        commitExerciseQuery(for: key)
+    }
+
+    private func commitExerciseQuery(for key: String) {
+        guard let indices = exerciseIndices(for: key),
+              draft.days.indices.contains(indices.dayIndex),
+              draft.days[indices.dayIndex].exercises.indices.contains(indices.exerciseIndex) else {
+            return
+        }
+
+        let dayIndex = indices.dayIndex
+        let exerciseIndex = indices.exerciseIndex
+        let value = (exerciseQueries[key] ?? exerciseDisplayName(for: draft.days[dayIndex].exercises[exerciseIndex]))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let exact = store.allExercises.first(where: { $0.name.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
+            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exact.id
+            draft.days[dayIndex].exercises[exerciseIndex].name = nil
+            exerciseQueries[key] = exact.name
+        } else if !value.isEmpty {
+            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = "custom-\(key)"
+            draft.days[dayIndex].exercises[exerciseIndex].name = value
+            exerciseQueries[key] = value
+        }
+    }
+
+    private func exerciseIndices(for key: String) -> (dayIndex: Int, exerciseIndex: Int)? {
+        for dayIndex in draft.days.indices {
+            for exerciseIndex in draft.days[dayIndex].exercises.indices where exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex) == key {
+                return (dayIndex, exerciseIndex)
+            }
+        }
+        return nil
     }
 }

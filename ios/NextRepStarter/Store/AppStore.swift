@@ -30,28 +30,24 @@ final class AppStore {
     var allPrograms: [Program] {
         let hidden = Set(appData.hiddenProgramIds)
         let trashed = Set(appData.trashedPrograms.map(\.program.id))
-        let favorites = appData.favoriteProgramIds
-        let activeId = appData.activeProgramId
+        let customIds = Set(appData.customPrograms.map(\.id))
 
         return (catalog.programs + appData.customPrograms)
             .filter { !hidden.contains($0.id) && !trashed.contains($0.id) }
             .sorted { lhs, rhs in
-                if lhs.id == activeId { return true }
-                if rhs.id == activeId { return false }
+                let lhsCustom = customIds.contains(lhs.id)
+                let rhsCustom = customIds.contains(rhs.id)
 
-                let leftFavorite = favorites.firstIndex(of: lhs.id)
-                let rightFavorite = favorites.firstIndex(of: rhs.id)
-
-                switch (leftFavorite, rightFavorite) {
-                case let (left?, right?):
-                    return left < right
-                case (.some(_), .none):
-                    return true
-                case (.none, .some(_)):
-                    return false
-                case (.none, .none):
-                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                if lhsCustom != rhsCustom {
+                    return lhsCustom
                 }
+
+                let nameComparison = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+                if nameComparison != .orderedSame {
+                    return nameComparison == .orderedAscending
+                }
+
+                return lhs.id < rhs.id
             }
     }
 

@@ -45,6 +45,12 @@ struct ProgramsListView: View {
                         Image(systemName: "figure.strengthtraining.traditional")
                     }
 
+                    NavigationLink {
+                        ProgramHistoryView()
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+
                     if !store.appData.hiddenProgramIds.isEmpty {
                         Button {
                             store.restoreHiddenPrograms()

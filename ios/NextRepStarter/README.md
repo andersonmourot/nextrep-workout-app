@@ -29,6 +29,8 @@ Observation, URLSession, and Keychain Services.
   persistence, and a Profile workout-history viewer with stat cards, dedicated
   Nutrition target/tracking and Max Tracker pages, body-weight tracking, and
   logged set details.
+- `ProgramHistoryView.swift` shows completed program archives and their saved
+  workout logs.
 - `SettingsView.swift` is available from the Profile toolbar and includes
   account, appearance, unit, active-program, password, reset, logout, and legal
   options.

@@ -5,6 +5,7 @@ import UIKit
 struct WorkoutHistoryView: View {
     @Environment(AppStore.self) private var store
     @State private var weightText = ""
+    @State private var pendingDeleteLog: WorkoutLog?
 
     var body: some View {
         ScrollView {
@@ -32,6 +33,20 @@ struct WorkoutHistoryView: View {
             }
         }
         .screenBackground()
+        .alert("Delete Workout?", isPresented: Binding(
+            get: { pendingDeleteLog != nil },
+            set: { if !$0 { pendingDeleteLog = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingDeleteLog = nil }
+            Button("Delete", role: .destructive) {
+                if let pendingDeleteLog {
+                    store.deleteWorkoutLog(id: pendingDeleteLog.id)
+                }
+                pendingDeleteLog = nil
+            }
+        } message: {
+            Text("This removes the workout from your synced history.")
+        }
     }
 
     private var sortedLogs: [WorkoutLog] {
@@ -107,6 +122,20 @@ struct WorkoutHistoryView: View {
                     .font(.headline)
                     .foregroundStyle(Theme.text)
 
+                Spacer()
+
+                if !sortedBodyWeight.isEmpty {
+                    NavigationLink {
+                        BodyWeightHistoryView(unit: store.appData.unit)
+                    } label: {
+                        Text("View all")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accentLight)
+                    }
+                }
+            }
+
+            HStack {
                 Spacer()
 
                 if let latest = sortedBodyWeight.last {
@@ -213,7 +242,9 @@ struct WorkoutHistoryView: View {
                         NavigationLink {
                             WorkoutLogDetailView(log: log)
                         } label: {
-                            WorkoutLogRow(log: log, unit: store.appData.unit)
+                            WorkoutLogRow(log: log, unit: store.appData.unit) {
+                                pendingDeleteLog = log
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -697,17 +728,21 @@ struct MaxTrackerView: View {
 }
 
 struct AllWorkoutHistoryView: View {
+    @Environment(AppStore.self) private var store
+    @State private var pendingDeleteLog: WorkoutLog?
     let logs: [WorkoutLog]
     let unit: String
 
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(logs) { log in
+                ForEach(Array(logs.prefix(20))) { log in
                     NavigationLink {
                         WorkoutLogDetailView(log: log)
                     } label: {
-                        WorkoutLogRow(log: log, unit: unit)
+                        WorkoutLogRow(log: log, unit: unit) {
+                            pendingDeleteLog = log
+                        }
                     }
                     .buttonStyle(.plain)
                 }
@@ -719,6 +754,71 @@ struct AllWorkoutHistoryView: View {
         .navigationTitle("All Workouts")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .alert("Delete Workout?", isPresented: Binding(
+            get: { pendingDeleteLog != nil },
+            set: { if !$0 { pendingDeleteLog = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingDeleteLog = nil }
+            Button("Delete", role: .destructive) {
+                if let pendingDeleteLog {
+                    store.deleteWorkoutLog(id: pendingDeleteLog.id)
+                }
+                pendingDeleteLog = nil
+            }
+        } message: {
+            Text("This removes the workout from your synced history.")
+        }
+    }
+}
+
+struct BodyWeightHistoryView: View {
+    @Environment(AppStore.self) private var store
+    let unit: String
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if entries.isEmpty {
+                    Text("No weight entries yet.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(entries) { entry in
+                        HStack {
+                            Text(formatBodyWeightDate(entry.date))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.text)
+
+                            Spacer()
+
+                            Text("\(formatWeight(entry.weight)) \(unit)")
+                                .font(.subheadline.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(Theme.text)
+
+                            Button {
+                                store.deleteBodyWeight(id: entry.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.red.opacity(0.8))
+                        }
+                        .cardStyle()
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Body Weight")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+    }
+
+    private var entries: [BodyWeightEntry] {
+        store.appData.bodyWeight.sorted { $0.date > $1.date }
     }
 }
 
@@ -835,6 +935,7 @@ struct WorkoutLogDetailView: View {
 private struct WorkoutLogRow: View {
     let log: WorkoutLog
     let unit: String
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -850,6 +951,17 @@ private struct WorkoutLogRow: View {
                 }
 
                 Spacer()
+
+                if let onDelete {
+                    Button {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(.red.opacity(0.8))
+                    .buttonStyle(.plain)
+                }
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))

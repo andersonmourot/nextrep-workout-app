@@ -437,6 +437,16 @@ final class AppStore {
         scheduleSync()
     }
 
+    func deleteWorkoutLog(id: String) {
+        appData.logs.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
+    func removeCompletedProgram(id: String) {
+        appData.completedPrograms.removeAll { $0.id == id }
+        scheduleSync()
+    }
+
     func setActiveProgram(id: String) {
         appData.activeProgramId = id
         scheduleSync()

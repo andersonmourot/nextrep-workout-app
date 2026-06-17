@@ -46,6 +46,11 @@ struct DashboardView: View {
     }
 
     private func activeProgramCard(program: Program) -> some View {
+        let run = domainProgramRun(
+            program: program,
+            logs: store.appData.logs,
+            since: store.appData.programAnchors[program.id]
+        )
         let day = nextDay(for: program)
         let accent = Color(hex: program.accent)
 
@@ -69,7 +74,7 @@ struct DashboardView: View {
             if let day {
                 HStack {
                     NavigationLink {
-                        ActiveWorkoutView(program: program, day: day)
+                        ActiveWorkoutView(program: program, day: day, week: run.week)
                     } label: {
                         Text(isActiveWorkout(program: program, day: day) ? "Resume Workout" : "Start Workout")
                     }
@@ -191,16 +196,20 @@ struct DashboardView: View {
     }
 
     private var streak: Int {
-        computeDashboardStreak(logs: store.appData.logs)
+        domainComputeStreak(logs: store.appData.logs)
     }
 
     private func nextDay(for program: Program) -> ProgramDay? {
-        guard !program.days.isEmpty else {
+        let run = domainProgramRun(
+            program: program,
+            logs: store.appData.logs,
+            since: store.appData.programAnchors[program.id]
+        )
+        guard !run.isComplete else {
             return nil
         }
 
-        let completed = store.appData.logs.filter { $0.programId == program.id }.count
-        return program.days[completed % program.days.count]
+        return domainResolveProgramDay(program, dayIndex: run.dayIndex, week: run.week)
     }
 
     private func isActiveWorkout(program: Program, day: ProgramDay) -> Bool {
@@ -293,59 +302,6 @@ private func greeting() -> String {
     }
 }
 
-private func computeDashboardStreak(logs: [WorkoutLog]) -> Int {
-    guard !logs.isEmpty else {
-        return 0
-    }
-
-    let days = Set(logs.compactMap { dashboardLocalDayKey($0.date) })
-    var cursor = Calendar.current.startOfDay(for: Date())
-
-    if !days.contains(dashboardDayKey(cursor)) {
-        cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor) ?? cursor
-    }
-
-    var streak = 0
-    while days.contains(dashboardDayKey(cursor)) {
-        streak += 1
-        cursor = Calendar.current.date(byAdding: .day, value: -1, to: cursor) ?? cursor
-    }
-
-    return streak
-}
-
-private func countDashboardWorkoutsThisWeek(logs: [WorkoutLog], programId: String?) -> Int {
-    let calendar = Calendar.current
-    let now = Date()
-    let weekday = calendar.component(.weekday, from: now)
-    let daysFromMonday = (weekday + 5) % 7
-    let startOfToday = calendar.startOfDay(for: now)
-    let weekStart = calendar.date(byAdding: .day, value: -daysFromMonday, to: startOfToday) ?? startOfToday
-
-    let matchingDays = logs.compactMap { log -> String? in
-        if let programId, log.programId != programId {
-            return nil
-        }
-
-        guard dashboardLogDate(log) >= weekStart else {
-            return nil
-        }
-
-        return dashboardLocalDayKey(log.date)
-    }
-
-    return Set(matchingDays).count
-}
-
-private func dashboardLocalDayKey(_ value: String) -> String? {
-    let date = dashboardParseDate(value)
-    return date.map(dashboardDayKey)
-}
-
-private func dashboardDayKey(_ date: Date) -> String {
-    DashboardDayFormatter.shared.string(from: date)
-}
-
 private func dashboardLogDate(_ log: WorkoutLog) -> Date {
     dashboardParseDate(log.date) ?? .distantPast
 }
@@ -368,15 +324,6 @@ private func dashboardFormatNumber(_ value: Double) -> String {
     }
 
     return String(format: "%.1f", value)
-}
-
-private enum DashboardDayFormatter {
-    static let shared: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter
-    }()
 }
 
 private enum DashboardDisplayDateFormatter {

@@ -589,6 +589,15 @@ final class AppStore {
             return
         }
 
+        let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) ?? 0
+        let globalIndex = (max(1, week) - 1) * max(1, program.days.count) + dayIndex
+        let previousWeights = domainPreviousWeekWeights(
+            program: program,
+            logs: appData.logs,
+            since: appData.programAnchors[program.id],
+            globalIndex: globalIndex
+        )
+
         appData.activeProgramId = program.id
         appData.activeWorkout = ActiveWorkout(
             programId: program.id,
@@ -596,8 +605,11 @@ final class AppStore {
             week: week,
             startedAt: Date().timeIntervalSince1970 * 1000,
             sets: day.exercises.map { planned in
-                (0..<planned.sets).map { _ in
-                    SetLog(weight: 0, reps: Self.parseReps(planned.reps), completed: false)
+                let weights = previousWeights[planned.exerciseId] ?? []
+                return (0..<planned.sets).map { setIndex in
+                    let fallbackWeight = weights.last ?? 0
+                    let weight = weights.indices.contains(setIndex) ? weights[setIndex] : fallbackWeight
+                    return SetLog(weight: weight, reps: Self.parseReps(planned.reps), completed: false)
                 }
             },
             exerciseIds: day.exercises.map(\.exerciseId),
@@ -722,7 +734,7 @@ final class AppStore {
         )
 
         appData.activeProgramId = program.id
-        appData.logs.append(log)
+        addWorkoutLog(log, program: program)
         appData.activeWorkout = nil
         restNotifier.cancelRestComplete()
         scheduleSync()
@@ -772,6 +784,47 @@ final class AppStore {
         catalog = try await apiClient.catalog()
         appData = try await apiClient.appData(token: token)
         UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
+    }
+
+    private func addWorkoutLog(_ log: WorkoutLog, program: Program) {
+        appData.logs.removeAll { $0.id == log.id }
+        appData.logs.insert(log, at: 0)
+
+        let anchor = appData.programAnchors[program.id]
+        let run = domainProgramRun(program: program, logs: appData.logs, since: anchor)
+        let slots = domainProgramLogSlots(program: program, logs: appData.logs, since: anchor)
+        let totalSlots = run.totalSlots
+        var runLogs: [WorkoutLog] = []
+
+        for index in 0..<totalSlots {
+            guard slots.indices.contains(index), let slot = slots[index] else {
+                continue
+            }
+            runLogs.append(slot)
+        }
+
+        guard runLogs.count >= totalSlots else {
+            return
+        }
+
+        let runStartId = runLogs.first?.id ?? "run"
+        let archiveId = "\(program.id)-\(runStartId)"
+        guard !appData.completedPrograms.contains(where: { $0.id == archiveId }) else {
+            return
+        }
+
+        let completed = CompletedProgram(
+            id: archiveId,
+            programId: program.id,
+            name: program.name,
+            accent: program.accent,
+            durationWeeks: program.durationWeeks,
+            daysPerWeek: program.daysPerWeek,
+            completedAt: runLogs.last?.date ?? ISO8601DateFormatter().string(from: Date()),
+            program: program,
+            logs: runLogs
+        )
+        appData.completedPrograms.insert(completed, at: 0)
     }
 
     private func reconcileActiveWorkout(day: ProgramDay) {

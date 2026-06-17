@@ -9,6 +9,7 @@ struct ActiveWorkoutView: View {
     @State private var finishedLog: WorkoutLog?
     let program: Program
     let day: ProgramDay
+    var week: Int = 1
 
     var body: some View {
         ScrollView {
@@ -50,7 +51,7 @@ struct ActiveWorkoutView: View {
             }
         }
         .onAppear {
-            store.startWorkout(program: program, day: day)
+            store.startWorkout(program: program, day: day, week: week)
             Task {
                 await store.requestTimerNotificationPermission()
             }

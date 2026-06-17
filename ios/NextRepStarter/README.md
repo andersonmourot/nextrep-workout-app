@@ -18,6 +18,8 @@ Observation, URLSession, and Keychain Services.
 - `Services/APIClient.swift` for the existing FastAPI backend.
 - `Services/KeychainStore.swift` for JWT persistence.
 - `Services/RestTimerNotifier.swift` for rest-complete local notifications.
+- `Store/DomainHelpers.swift` for shared program progress, week/day slotting,
+  streaks, previous-week weights, and superset grouping logic.
 - `Store/AppStore.swift` for login/session restore, catalog loading, data
   loading, and manual sync.
 - `Views/*` with a minimal auth flow, Home dashboard, Programs tab with

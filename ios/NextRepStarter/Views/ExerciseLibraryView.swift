@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ExerciseLibraryView: View {
     @Environment(AppStore.self) private var store
@@ -151,12 +152,17 @@ struct ExerciseLibraryView: View {
 struct ExerciseDetailView: View {
     @Environment(AppStore.self) private var store
     @State private var shareMessage: String?
+    @State private var noteText = ""
+    @State private var cueText = ""
     let exercise: Exercise
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 hero
+                photosSection
+                personalSection
+                usageSection
                 instructionsSection
                 tipsSection
             }
@@ -166,6 +172,10 @@ struct ExerciseDetailView: View {
         }
         .navigationTitle(exercise.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            noteText = store.appData.exerciseNotes[exercise.id] ?? ""
+            cueText = store.appData.exerciseSubheaders[exercise.id] ?? ""
+        }
         .toolbar {
             if store.isCustomExercise(exercise) {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -238,6 +248,96 @@ struct ExerciseDetailView: View {
             }
         }
         .cardStyle()
+    }
+
+    @ViewBuilder
+    private var photosSection: some View {
+        if let photos = exercise.photos, !photos.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(photos.prefix(2).enumerated()), id: \.offset) { _, photo in
+                        if let image = imageFromDataURL(photo) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 190, height: 150)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(.white.opacity(0.08), lineWidth: 1)
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var personalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Personal Notes & Cues")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            TextField("Cue shown under exercise name", text: $cueText, axis: .vertical)
+                .exerciseDetailFieldStyle()
+            TextField("Private notes", text: $noteText, axis: .vertical)
+                .lineLimit(3, reservesSpace: true)
+                .exerciseDetailFieldStyle()
+
+            Button("Save Notes & Cues") {
+                store.setExerciseCue(exerciseId: exercise.id, cue: cueText)
+                store.setExerciseNote(exerciseId: exercise.id, note: noteText)
+                shareMessage = "Notes saved"
+            }
+            .buttonStyle(GhostButtonStyle())
+        }
+        .cardStyle()
+    }
+
+    private var usageSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Appears In")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            if programsUsingExercise.isEmpty {
+                Text("This exercise is not currently in any visible program.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            } else {
+                ForEach(programsUsingExercise.prefix(6)) { program in
+                    NavigationLink {
+                        ProgramDetailView(program: program)
+                    } label: {
+                        HStack {
+                            Text(program.name)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.text)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.textFaint)
+                        }
+                        .padding(10)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .cardStyle()
+    }
+
+    private var programsUsingExercise: [Program] {
+        store.allPrograms.filter { program in
+            program.days.contains { day in
+                day.exercises.contains { planned in
+                    planned.exerciseId == exercise.id
+                }
+            }
+        }
     }
 
     private var instructionsSection: some View {
@@ -314,6 +414,30 @@ struct ExerciseDetailView: View {
             Spacer(minLength: 0)
         }
         .cardStyle()
+    }
+
+    private func imageFromDataURL(_ value: String) -> UIImage? {
+        let base64 = value.components(separatedBy: ",").last ?? value
+        guard let data = Data(base64Encoded: base64) else {
+            return nil
+        }
+        return UIImage(data: data)
+    }
+}
+
+private extension View {
+    func exerciseDetailFieldStyle() -> some View {
+        self
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
     }
 }
 

@@ -134,6 +134,12 @@ struct ProgramEditorView: View {
 
                 Spacer()
 
+                Button("Duplicate") {
+                    duplicateDay(at: dayIndex)
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.accentLight)
+
                 Button("Remove") {
                     draft.days.remove(at: dayIndex)
                     draft.daysPerWeek = max(1, draft.days.count)
@@ -170,6 +176,12 @@ struct ProgramEditorView: View {
 
                 Spacer()
 
+                Button("Duplicate") {
+                    duplicateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.accentLight)
+
                 Button("Remove") {
                     draft.days[dayIndex].exercises.remove(at: exerciseIndex)
                 }
@@ -194,6 +206,24 @@ struct ProgramEditorView: View {
                 get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
             ))
+
+            HStack(spacing: 10) {
+                Button {
+                    linkSupersetWithPrevious(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
+                } label: {
+                    Text("Link Previous")
+                }
+                .buttonStyle(GhostButtonStyle())
+                .disabled(exerciseIndex == 0)
+                .opacity(exerciseIndex == 0 ? 0.5 : 1)
+
+                Button {
+                    draft.days[dayIndex].exercises[exerciseIndex].groupId = nil
+                } label: {
+                    Text("Clear Group")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
             field("Notes", text: Binding(
                 get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
                 set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
@@ -345,6 +375,39 @@ struct ProgramEditorView: View {
 
     private func blankPlannedExercise() -> PlannedExercise {
         PlannedExercise(exerciseId: "", name: nil, sets: 0, reps: "", restSec: 0, notes: nil, groupId: nil)
+    }
+
+    private func duplicateDay(at index: Int) {
+        guard draft.days.indices.contains(index) else { return }
+        var copy = draft.days[index]
+        copy.id = "day-\(UUID().uuidString)"
+        copy.name = copy.name.isEmpty ? "Day \(draft.days.count + 1)" : "\(copy.name) Copy"
+        draft.days.insert(copy, at: index + 1)
+        draft.daysPerWeek = max(1, draft.days.count)
+    }
+
+    private func duplicateExercise(dayIndex: Int, exerciseIndex: Int) {
+        guard draft.days.indices.contains(dayIndex),
+              draft.days[dayIndex].exercises.indices.contains(exerciseIndex) else {
+            return
+        }
+
+        let copy = draft.days[dayIndex].exercises[exerciseIndex]
+        draft.days[dayIndex].exercises.insert(copy, at: exerciseIndex + 1)
+    }
+
+    private func linkSupersetWithPrevious(dayIndex: Int, exerciseIndex: Int) {
+        guard draft.days.indices.contains(dayIndex),
+              exerciseIndex > 0,
+              draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
+              draft.days[dayIndex].exercises.indices.contains(exerciseIndex - 1) else {
+            return
+        }
+
+        let existing = draft.days[dayIndex].exercises[exerciseIndex - 1].groupId
+        let group = existing?.isEmpty == false ? existing! : "A"
+        draft.days[dayIndex].exercises[exerciseIndex - 1].groupId = group
+        draft.days[dayIndex].exercises[exerciseIndex].groupId = group
     }
 
     private static func blankProgram() -> Program {

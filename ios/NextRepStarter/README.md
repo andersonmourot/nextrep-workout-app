@@ -34,9 +34,12 @@ Observation, URLSession, and Keychain Services.
   and metric progress bars used across Dashboard, Profile, Nutrition, Max
   Tracker, Program Detail, and Active Workout.
 - `ProgramEditorView.swift` supports first-pass custom program/day/exercise
-  creation and editing, including superset group labels.
+  creation and editing, including duplicate day/exercise controls and superset
+  group helpers.
 - `ExerciseEditorView.swift` supports first-pass custom exercise creation and
   editing.
+- Exercise detail supports reference photos when present, private notes/cues,
+  and showing visible programs where an exercise appears.
 - `WorkoutSummaryView.swift` shows the just-finished workout before returning to
   the previous screen.
 - Custom Program and Exercise detail screens include share/unshare/remove flows

@@ -445,6 +445,26 @@ final class AppStore {
         scheduleSync()
     }
 
+    func setExerciseNote(exerciseId: String, note: String) {
+        let clean = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty {
+            appData.exerciseNotes.removeValue(forKey: exerciseId)
+        } else {
+            appData.exerciseNotes[exerciseId] = clean
+        }
+        scheduleSync()
+    }
+
+    func setExerciseCue(exerciseId: String, cue: String) {
+        let clean = cue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clean.isEmpty {
+            appData.exerciseSubheaders.removeValue(forKey: exerciseId)
+        } else {
+            appData.exerciseSubheaders[exerciseId] = clean
+        }
+        scheduleSync()
+    }
+
     func addBodyWeight(_ weight: Double) {
         let entry = BodyWeightEntry(
             id: UUID().uuidString,

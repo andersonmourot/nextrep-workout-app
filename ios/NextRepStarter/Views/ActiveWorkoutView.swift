@@ -157,6 +157,7 @@ struct ActiveWorkoutView: View {
                     name: exerciseName(for: planned),
                     planned: planned,
                     unit: store.appData.unit,
+                    previousHint: previousSetHint(for: planned),
                     startsRestAfterSet: startsRestAfterSet,
                     rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
                     onWeightChange: { setIndex, delta in
@@ -226,6 +227,17 @@ struct ActiveWorkoutView: View {
         }
 
         return planned.restSec
+    }
+
+    private func previousSetHint(for planned: PlannedExercise) -> String? {
+        for log in store.appData.logs.sorted(by: { $0.date > $1.date }) {
+            guard let exercise = log.exercises.first(where: { $0.exerciseId == planned.exerciseId }),
+                  let set = exercise.sets.last else {
+                continue
+            }
+            return "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
+        }
+        return nil
     }
 
     private func completedSets(_ active: ActiveWorkout) -> Int {
@@ -328,6 +340,7 @@ private struct WorkoutExerciseCard: View {
     let name: String
     let planned: PlannedExercise
     let unit: String
+    let previousHint: String?
     let startsRestAfterSet: Bool
     let rows: [SetLog]
     let onWeightChange: (Int, Double) -> Void
@@ -346,6 +359,12 @@ private struct WorkoutExerciseCard: View {
                     Text("\(planned.sets) x \(planned.reps) · \(planned.restSec)s rest")
                         .font(.caption)
                         .foregroundStyle(Theme.textDim)
+
+                    if let previousHint {
+                        Text(previousHint)
+                            .font(.caption)
+                            .foregroundStyle(accent)
+                    }
 
                     if let groupId = planned.groupId, !groupId.isEmpty {
                         Text("Superset \(groupId)")

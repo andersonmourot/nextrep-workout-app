@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var passwordMessage: String?
     @State private var showingResetConfirm = false
     @State private var showingLogoutConfirm = false
+    @State private var showingPasswordFields = false
 
     private let themeColors = ["#355E3B", "#2563EB", "#7C3AED", "#DC2626", "#EA580C", "#0D9488", "#CA8A04"]
 
@@ -85,14 +86,24 @@ struct SettingsView: View {
     @ViewBuilder
     private var adminSection: some View {
         if store.user?.isAdmin == true {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Label("Admin", systemImage: "shield.checkered")
                     .font(.headline)
                     .foregroundStyle(Theme.text)
 
-                Text("Admin user/catalog management is available in the web app. Native admin screens can be added later.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
+                NavigationLink {
+                    AdminUsersView()
+                } label: {
+                    settingsRow(title: "Users", subtitle: "View accounts and reset passwords", systemImage: "person.2")
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    AdminCatalogView()
+                } label: {
+                    settingsRow(title: "Catalog", subtitle: "Review and publish built-in catalog", systemImage: "list.bullet.rectangle")
+                }
+                .buttonStyle(.plain)
             }
             .cardStyle()
         }
@@ -213,12 +224,14 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.textDim)
             }
 
-            SecureField("Current password", text: $currentPassword)
-                .settingsSecureFieldStyle()
-            SecureField("New password", text: $newPassword)
-                .settingsSecureFieldStyle()
-            SecureField("Confirm new password", text: $confirmPassword)
-                .settingsSecureFieldStyle()
+            if showingPasswordFields {
+                SecureField("Current password", text: $currentPassword)
+                    .settingsSecureFieldStyle()
+                SecureField("New password", text: $newPassword)
+                    .settingsSecureFieldStyle()
+                SecureField("Confirm new password", text: $confirmPassword)
+                    .settingsSecureFieldStyle()
+            }
 
             if let passwordMessage {
                 Text(passwordMessage)
@@ -226,10 +239,24 @@ struct SettingsView: View {
                     .foregroundStyle(passwordMessage.contains("updated") ? Theme.accentLight : .red.opacity(0.9))
             }
 
-            Button("Change Password") {
-                Task { await changePassword() }
+            Button(showingPasswordFields ? "Update Password" : "Change Password") {
+                if showingPasswordFields {
+                    Task { await changePassword() }
+                } else {
+                    showingPasswordFields = true
+                    passwordMessage = nil
+                }
             }
             .buttonStyle(GhostButtonStyle())
+
+            if showingPasswordFields {
+                Button("Cancel Password Change") {
+                    resetPasswordFields()
+                    showingPasswordFields = false
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+            }
 
             Button(role: .destructive) {
                 showingLogoutConfirm = true
@@ -316,6 +343,27 @@ struct SettingsView: View {
             }
     }
 
+    private func settingsRow(title: String, subtitle: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(Theme.accentLight)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.textFaint)
+        }
+        .padding(.vertical, 6)
+    }
+
     private func changePassword() async {
         guard newPassword.count >= 8 else {
             passwordMessage = "New password must be at least 8 characters."
@@ -328,13 +376,18 @@ struct SettingsView: View {
 
         let ok = await store.changePassword(currentPassword: currentPassword, newPassword: newPassword)
         if ok {
-            currentPassword = ""
-            newPassword = ""
-            confirmPassword = ""
+            resetPasswordFields()
+            showingPasswordFields = false
             passwordMessage = "Password updated."
         } else {
             passwordMessage = store.authError ?? "Could not change password."
         }
+    }
+
+    private func resetPasswordFields() {
+        currentPassword = ""
+        newPassword = ""
+        confirmPassword = ""
     }
 }
 
@@ -419,4 +472,239 @@ struct LegalDocumentView: View {
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
     }
+}
+
+struct AdminUsersView: View {
+    @Environment(AppStore.self) private var store
+    @State private var users: [AdminUser] = []
+    @State private var isLoading = false
+    @State private var resetPasswords: [String: String] = [:]
+    @State private var message: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+
+                if let message {
+                    Text(message)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(message.contains("updated") ? Theme.accentLight : .red.opacity(0.9))
+                        .cardStyle()
+                }
+
+                if isLoading {
+                    ProgressView()
+                        .tint(Theme.accentLight)
+                        .frame(maxWidth: .infinity)
+                        .cardStyle()
+                } else if users.isEmpty {
+                    Text("No users found.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(users) { user in
+                        userCard(user)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Admin Users")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await loadUsers() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .tint(Theme.accentLight)
+            }
+        }
+        .screenBackground()
+        .task {
+            await loadUsers()
+        }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Users")
+                .font(.system(size: 34, weight: .bold, design: .default))
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.text)
+
+            Text("\(users.count) registered accounts")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textDim)
+        }
+    }
+
+    private func userCard(_ user: AdminUser) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(user.name)
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+                Text(user.email)
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+                Text("Created \(shortDate(user.createdAt)) · Active \(shortDate(user.lastActive))")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textFaint)
+            }
+
+            HStack(spacing: 10) {
+                SecureField("New password", text: Binding(
+                    get: { resetPasswords[user.id] ?? "" },
+                    set: { resetPasswords[user.id] = $0 }
+                ))
+                .settingsSecureFieldStyle()
+
+                Button("Reset") {
+                    Task { await resetPassword(for: user) }
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .cardStyle()
+    }
+
+    private func loadUsers() async {
+        isLoading = true
+        users = await store.adminUsers()
+        isLoading = false
+    }
+
+    private func resetPassword(for user: AdminUser) async {
+        let password = resetPasswords[user.id] ?? ""
+        guard password.count >= 8 else {
+            message = "Password must be at least 8 characters."
+            return
+        }
+
+        if await store.adminResetPassword(userId: user.id, newPassword: password) {
+            resetPasswords[user.id] = ""
+            message = "Password updated for \(user.name)."
+        } else {
+            message = store.authError ?? "Could not reset password."
+        }
+    }
+}
+
+struct AdminCatalogView: View {
+    @Environment(AppStore.self) private var store
+    @State private var message: String?
+    @State private var isPublishing = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                catalogStats
+
+                if let message {
+                    Text(message)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(message.contains("published") ? Theme.accentLight : .red.opacity(0.9))
+                        .cardStyle()
+                }
+
+                Button(isPublishing ? "Publishing..." : "Publish Current Catalog") {
+                    Task { await publishCatalog() }
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isPublishing)
+
+                Text("This replaces the built-in backend catalog with the currently loaded catalog. Detailed native catalog item editing can be added as a follow-up; use the existing Program and Exercise editors for user-created content.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+                    .cardStyle()
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Admin Catalog")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Catalog")
+                .font(.system(size: 34, weight: .bold, design: .default))
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.text)
+
+            Text("Admin built-in program and exercise catalog.")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textDim)
+        }
+    }
+
+    private var catalogStats: some View {
+        HStack(spacing: 10) {
+            AdminCatalogStatTile(icon: "square.grid.2x2", value: "\(store.catalog.programs.count)", label: "Programs")
+            AdminCatalogStatTile(icon: "figure.strengthtraining.traditional", value: "\(store.catalog.exercises.count)", label: "Exercises")
+        }
+    }
+
+    private func publishCatalog() async {
+        isPublishing = true
+        let ok = await store.adminPublishCatalog()
+        isPublishing = false
+        message = ok ? "Catalog published." : (store.authError ?? "Could not publish catalog.")
+    }
+}
+
+private struct AdminCatalogStatTile: View {
+    let icon: String
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundStyle(Theme.accentLight)
+
+            Text(value)
+                .font(.title3.monospacedDigit().weight(.bold))
+                .foregroundStyle(Theme.text)
+
+            Text(label)
+                .font(.caption2.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.0)
+                .foregroundStyle(Theme.textFaint)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(.white.opacity(0.05), lineWidth: 1)
+        }
+    }
+}
+
+private func shortDate(_ value: String) -> String {
+    if let date = ISO8601DateFormatter().date(from: value) {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    return value
 }

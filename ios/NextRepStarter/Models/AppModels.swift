@@ -19,6 +19,24 @@ struct AuthResponse: Codable, Equatable {
     var user: SessionUser
 }
 
+struct AdminUser: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String
+    var email: String
+    var createdAt: String
+    var lastLogin: String
+    var lastActive: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case email
+        case createdAt = "created_at"
+        case lastLogin = "last_login"
+        case lastActive = "last_active"
+    }
+}
+
 struct Catalog: Codable, Equatable {
     var programs: [Program]
     var exercises: [Exercise]

@@ -29,6 +29,14 @@ struct DataPutRequest: Encodable {
     var data: AppData
 }
 
+struct PasswordResetRequest: Encodable {
+    var newPassword: String
+
+    enum CodingKeys: String, CodingKey {
+        case newPassword = "new_password"
+    }
+}
+
 struct ProgramPutRequest: Encodable {
     var program: Program
 }
@@ -74,6 +82,28 @@ final class APIClient {
 
     func catalog() async throws -> Catalog {
         try await request("/api/catalog")
+    }
+
+    func adminUsers(token: String) async throws -> [AdminUser] {
+        try await request("/api/admin/users", token: token)
+    }
+
+    func adminResetPassword(token: String, userId: String, newPassword: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/admin/users/\(userId)/reset-password",
+            method: "POST",
+            token: token,
+            body: PasswordResetRequest(newPassword: newPassword)
+        )
+    }
+
+    func adminPutCatalog(token: String, catalog: Catalog) async throws -> Catalog {
+        try await request(
+            "/api/admin/catalog",
+            method: "PUT",
+            token: token,
+            body: catalog
+        )
     }
 
     func appData(token: String) async throws -> AppData {

@@ -131,6 +131,65 @@ final class AppStore {
         }
     }
 
+    func adminUsers() async -> [AdminUser] {
+        guard user?.isAdmin == true else {
+            authError = "Admin access required."
+            return []
+        }
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return []
+        }
+
+        do {
+            authError = nil
+            return try await apiClient.adminUsers(token: token)
+        } catch {
+            authError = error.localizedDescription
+            return []
+        }
+    }
+
+    func adminResetPassword(userId: String, newPassword: String) async -> Bool {
+        guard user?.isAdmin == true else {
+            authError = "Admin access required."
+            return false
+        }
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            try await apiClient.adminResetPassword(token: token, userId: userId, newPassword: newPassword)
+            authError = nil
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
+    func adminPublishCatalog() async -> Bool {
+        guard user?.isAdmin == true else {
+            authError = "Admin access required."
+            return false
+        }
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            catalog = try await apiClient.adminPutCatalog(token: token, catalog: catalog)
+            authError = nil
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
     func setDisplayName(_ name: String) {
         appData.name = name
         if var currentUser = user {

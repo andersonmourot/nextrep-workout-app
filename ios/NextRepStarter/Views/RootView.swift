@@ -19,7 +19,7 @@ struct RootView: View {
                 ZStack {
                     Color.black.opacity(0.35).ignoresSafeArea()
                     ProgressView()
-                        .tint(Theme.accentLight)
+                        .tint(Color(hex: store.appData.themeColor))
                         .padding(24)
                         .background(Theme.surface)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -30,6 +30,8 @@ struct RootView: View {
 }
 
 struct AppShellView: View {
+    @Environment(AppStore.self) private var store
+
     var body: some View {
         TabView {
             NavigationStack {
@@ -67,7 +69,7 @@ struct AppShellView: View {
                 Label("Profile", systemImage: "person")
             }
         }
-        .tint(Theme.accentLight)
+        .tint(Color(hex: store.appData.themeColor))
     }
 }
 

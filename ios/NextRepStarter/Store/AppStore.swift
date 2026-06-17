@@ -734,8 +734,8 @@ final class AppStore {
         )
 
         appData.activeProgramId = program.id
-        addWorkoutLog(log, program: program)
         appData.activeWorkout = nil
+        addWorkoutLog(log, program: program)
         restNotifier.cancelRestComplete()
         scheduleSync()
         return log

@@ -76,7 +76,7 @@ struct DashboardView: View {
                     NavigationLink {
                         ActiveWorkoutView(program: program, day: day, week: run.week)
                     } label: {
-                        Text(isActiveWorkout(program: program, day: day) ? "Resume Workout" : "Start Workout")
+                        Text(isActiveWorkout(program: program, day: day, week: run.week) ? "Resume Workout" : "Start Workout")
                     }
                     .buttonStyle(PrimaryButtonStyle())
                 }
@@ -212,12 +212,23 @@ struct DashboardView: View {
         return domainResolveProgramDay(program, dayIndex: run.dayIndex, week: run.week)
     }
 
-    private func isActiveWorkout(program: Program, day: ProgramDay) -> Bool {
+    private func isActiveWorkout(program: Program, day: ProgramDay, week: Int) -> Bool {
         guard let activeWorkout = store.appData.activeWorkout else {
             return false
         }
 
-        return activeWorkout.programId == program.id && activeWorkout.dayId == day.id
+        let sameSlot = activeWorkout.programId == program.id &&
+            activeWorkout.dayId == day.id &&
+            (activeWorkout.week ?? 1) == week
+        guard sameSlot else {
+            return false
+        }
+
+        return !store.appData.logs.contains { log in
+            log.programId == program.id &&
+                log.dayId == day.id &&
+                (log.week ?? 1) == week
+        }
     }
 }
 

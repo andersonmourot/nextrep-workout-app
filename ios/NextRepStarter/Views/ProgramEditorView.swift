@@ -90,7 +90,7 @@ struct ProgramEditorView: View {
     }
 
     private func menuPicker(_ title: String, selection: Binding<String>, options: [String]) -> some View {
-        Menu {
+        return Menu {
             ForEach(options, id: \.self) { option in
                 Button(option) {
                     selection.wrappedValue = option
@@ -174,7 +174,7 @@ struct ProgramEditorView: View {
     }
 
     private func togglePill(_ title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        return Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(isSelected ? .white : Theme.textDim)
@@ -220,7 +220,7 @@ struct ProgramEditorView: View {
         let dayId = draft.days[dayIndex].id
         let isCollapsed = collapsedDayIds.contains(dayId)
 
-        VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Button {
                     if isCollapsed {
@@ -282,7 +282,7 @@ struct ProgramEditorView: View {
     }
 
     private func exerciseEditor(dayIndex: Int, exerciseIndex: Int) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Exercise \(exerciseIndex + 1)")
                     .font(.caption.weight(.semibold))
@@ -336,7 +336,7 @@ struct ProgramEditorView: View {
     }
 
     private func moveExerciseControls(dayIndex: Int, exerciseIndex: Int) -> some View {
-        VStack(spacing: 0) {
+        return VStack(spacing: 0) {
             Button {
                 moveExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex, direction: -1)
             } label: {
@@ -360,6 +360,7 @@ struct ProgramEditorView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
+    @ViewBuilder
     private func supersetControls(dayIndex: Int, exerciseIndex: Int) -> some View {
         HStack(spacing: 10) {
             if exerciseIndex < draft.days[dayIndex].exercises.count - 1 {
@@ -481,7 +482,7 @@ struct ProgramEditorView: View {
     }
 
     private func field(_ placeholder: String, text: Binding<String>) -> some View {
-        TextField("", text: text, axis: .vertical)
+        return TextField("", text: text, axis: .vertical)
             .programEditorInputStyle(placeholder: placeholder, isEmpty: text.wrappedValue.isEmpty)
             .foregroundStyle(Theme.text)
             .tint(Theme.accentLight)

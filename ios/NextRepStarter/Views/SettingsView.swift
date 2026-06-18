@@ -863,9 +863,21 @@ struct AdminCatalogView: View {
     private var catalogList: some View {
         if selectedKind == "Programs" {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Programs")
-                    .font(.headline)
-                    .foregroundStyle(Theme.text)
+                HStack {
+                    Text("Programs")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Spacer()
+
+                    NavigationLink {
+                        ProgramEditorView(catalogMode: true)
+                    } label: {
+                        Label("New", systemImage: "plus")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accentLight)
+                }
 
                 if filteredPrograms.isEmpty {
                     Text(emptyCatalogMessage)
@@ -874,9 +886,12 @@ struct AdminCatalogView: View {
                         .cardStyle()
                 } else {
                     ForEach(filteredPrograms) { program in
-                        AdminCatalogProgramRow(program: program) {
-                            pendingRemoval = AdminCatalogRemoval(kind: "Program", id: program.id, name: program.name)
-                        }
+                        AdminCatalogProgramRow(
+                            program: program,
+                            onRemove: {
+                                pendingRemoval = AdminCatalogRemoval(kind: "Program", id: program.id, name: program.name)
+                            }
+                        )
                     }
                 }
             }
@@ -1105,13 +1120,23 @@ private struct AdminCatalogProgramRow: View {
 
             Spacer()
 
-            Button(role: .destructive) {
-                onRemove()
-            } label: {
-                Image(systemName: "trash")
-                    .font(.caption.weight(.bold))
+            HStack(spacing: 10) {
+                NavigationLink {
+                    ProgramEditorView(program: program, catalogMode: true)
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(Theme.accentLight)
+
+                Button(role: .destructive) {
+                    onRemove()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(.red.opacity(0.85))
             }
-            .foregroundStyle(.red.opacity(0.85))
         }
         .cardStyle()
     }

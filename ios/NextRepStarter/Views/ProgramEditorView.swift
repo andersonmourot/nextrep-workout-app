@@ -5,24 +5,37 @@ struct ProgramEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: Program
     @State private var showingDeleteConfirm = false
+    @State private var saveMessage: String?
+    @State private var isSaving = false
     @State private var exerciseQueries: [String: String] = [:]
     @State private var collapsedDayIds: Set<String> = []
     @State private var selectedWeek = 1
     @State private var showingCopyWeekConfirm = false
     @FocusState private var focusedExerciseKey: String?
+    private let catalogMode: Bool
+    private let isEditingExistingProgram: Bool
 
     private let categories = ["Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
     private let levels = ["Beginner", "Intermediate", "Advanced"]
     private let accentColors = ["#e9b949", "#b91c1c", "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#ec4899"]
 
-    init(program: Program? = nil) {
+    init(program: Program? = nil, catalogMode: Bool = false) {
         _draft = State(initialValue: program ?? Self.blankProgram())
+        self.catalogMode = catalogMode
+        self.isEditingExistingProgram = program != nil
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                if let saveMessage {
+                    Text(saveMessage)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(saveMessage.contains("saved") ? Theme.accentLight : .red.opacity(0.9))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .cardStyle()
+                }
                 basics
                 daysEditor
                 actions
@@ -60,15 +73,22 @@ struct ProgramEditorView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(store.isCustomProgram(draft) ? "Edit Program" : "Create Program")
+            Text(headerTitle)
                 .font(.system(size: 34, weight: .bold, design: .default))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
 
-            Text("Build a simple custom plan you can run natively.")
+            Text(catalogMode ? "Edit the built-in program catalog for every user." : "Build a simple custom plan you can run natively.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textDim)
         }
+    }
+
+    private var headerTitle: String {
+        if catalogMode {
+            return isEditingExistingProgram ? "Edit Catalog Program" : "New Catalog Program"
+        }
+        return store.isCustomProgram(draft) ? "Edit Program" : "Create Program"
     }
 
     private var basics: some View {
@@ -645,17 +665,15 @@ struct ProgramEditorView: View {
     private var actions: some View {
         VStack(spacing: 10) {
             Button {
-                normalizeDraft()
-                store.saveCustomProgram(draft)
-                dismiss()
+                Task { await saveProgram() }
             } label: {
-                Text("Save Program")
+                Text(isSaving ? "Saving..." : catalogMode ? "Save Catalog Program" : "Save Program")
             }
             .buttonStyle(PrimaryButtonStyle())
-            .disabled(draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.days.isEmpty)
-            .opacity(draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || draft.days.isEmpty ? 0.5 : 1)
+            .disabled(!canSave || isSaving)
+            .opacity(!canSave || isSaving ? 0.5 : 1)
 
-            if store.isCustomProgram(draft) {
+            if !catalogMode && store.isCustomProgram(draft) {
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
                 } label: {
@@ -663,6 +681,48 @@ struct ProgramEditorView: View {
                 }
                 .buttonStyle(GhostButtonStyle())
             }
+        }
+    }
+
+    private var canSave: Bool {
+        !draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !draft.days.isEmpty
+    }
+
+    private func saveProgram() async {
+        saveMessage = nil
+        normalizeDraft()
+        guard canSave else {
+            saveMessage = "Give the program a name and at least one day."
+            return
+        }
+
+        if catalogMode {
+            await saveCatalogProgram()
+        } else {
+            store.saveCustomProgram(draft)
+            dismiss()
+        }
+    }
+
+    private func saveCatalogProgram() async {
+        let previousCatalog = store.catalog
+        isSaving = true
+        draft.version = Int(Date().timeIntervalSince1970 * 1000)
+        draft.ownerId = nil
+        draft.ownerName = nil
+        draft.collaborative = false
+        store.catalog.programs.removeAll { $0.id == draft.id }
+        store.catalog.programs.append(draft)
+        store.catalog.programs.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        let ok = await store.adminPublishCatalog()
+        isSaving = false
+
+        if ok {
+            saveMessage = "\(draft.name) saved to catalog."
+            dismiss()
+        } else {
+            store.catalog = previousCatalog
+            saveMessage = store.authError ?? "Could not save catalog program."
         }
     }
 

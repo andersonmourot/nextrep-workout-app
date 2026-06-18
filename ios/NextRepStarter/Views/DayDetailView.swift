@@ -29,7 +29,8 @@ struct DayDetailView: View {
                                 index: index + 1,
                                 planned: planned,
                                 exercise: exercise(for: planned),
-                                fallbackName: exerciseName(for: planned)
+                                fallbackName: exerciseName(for: planned),
+                                exerciseId: planned.exerciseId
                             )
                         }
                     }
@@ -166,6 +167,7 @@ private struct DayExerciseCard: View {
     let planned: PlannedExercise
     let exercise: Exercise?
     let fallbackName: String
+    let exerciseId: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -219,8 +221,84 @@ private struct DayExerciseCard: View {
                     .foregroundStyle(Theme.textFaint)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            ExerciseNotesCuePanel(exerciseId: exerciseId, exerciseName: fallbackName)
         }
         .cardStyle()
+    }
+}
+
+struct ExerciseNotesCuePanel: View {
+    @Environment(AppStore.self) private var store
+    @State private var isExpanded = false
+    let exerciseId: String
+    let exerciseName: String
+
+    var body: some View {
+        if exerciseId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            EmptyView()
+        } else {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                VStack(alignment: .leading, spacing: 10) {
+                    TextField("Cue shown under exercise name", text: cueBinding, axis: .vertical)
+                        .exerciseNotesInputStyle()
+
+                    TextField("Private notes", text: noteBinding, axis: .vertical)
+                        .exerciseNotesInputStyle(minHeight: 74)
+
+                    Text("Private to you. These notes and cues are not shared with programs or exercises.")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textFaint)
+                }
+                .padding(.top, 8)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: hasSavedText ? "note.text" : "pencil")
+                    Text(hasSavedText ? "Edit Notes & Cues" : "Add Notes & Cues")
+                    Spacer()
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.accentLight)
+            }
+        }
+    }
+
+    private var cueBinding: Binding<String> {
+        Binding(
+            get: { store.appData.exerciseSubheaders[exerciseId] ?? "" },
+            set: { store.setExerciseCue(exerciseId: exerciseId, cue: $0) }
+        )
+    }
+
+    private var noteBinding: Binding<String> {
+        Binding(
+            get: { store.appData.exerciseNotes[exerciseId] ?? "" },
+            set: { store.setExerciseNote(exerciseId: exerciseId, note: $0) }
+        )
+    }
+
+    private var hasSavedText: Bool {
+        let cue = store.appData.exerciseSubheaders[exerciseId]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let note = store.appData.exerciseNotes[exerciseId]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !cue.isEmpty || !note.isEmpty
+    }
+}
+
+private extension View {
+    func exerciseNotesInputStyle(minHeight: CGFloat = 44) -> some View {
+        self
+            .font(.caption)
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 9)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
     }
 }
 

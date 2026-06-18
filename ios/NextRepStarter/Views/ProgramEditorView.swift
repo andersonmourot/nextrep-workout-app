@@ -433,6 +433,13 @@ struct ProgramEditorView: View {
                     }
                 }
             ))
+
+            if !planned.exerciseId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                ExerciseNotesCuePanel(
+                    exerciseId: planned.exerciseId,
+                    exerciseName: exerciseDisplayName(for: planned)
+                )
+            }
         }
         .padding(12)
         .background(Theme.inputBg.opacity(0.65))

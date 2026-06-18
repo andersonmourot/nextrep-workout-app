@@ -647,6 +647,15 @@ final class AppStore {
         scheduleSync()
     }
 
+    func toggleFavoriteUser(id: String) {
+        if appData.favoriteUserIds.contains(id) {
+            appData.favoriteUserIds.removeAll { $0 == id }
+        } else if appData.favoriteUserIds.count < 3 {
+            appData.favoriteUserIds.append(id)
+        }
+        scheduleSync()
+    }
+
     func hideProgram(id: String) {
         if !appData.hiddenProgramIds.contains(id) {
             appData.hiddenProgramIds.append(id)

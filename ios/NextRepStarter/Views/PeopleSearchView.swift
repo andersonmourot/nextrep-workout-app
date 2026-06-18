@@ -6,6 +6,9 @@ struct PeopleSearchView: View {
     @State private var results: [DiscoverUser] = []
     @State private var followingUsers: [FollowUser] = []
     @State private var isSearching = false
+    @State private var hasSearched = false
+    @State private var busyUserId: String?
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -54,6 +57,9 @@ struct PeopleSearchView: View {
         .task {
             await loadFollowing()
         }
+        .onDisappear {
+            searchTask?.cancel()
+        }
     }
 
     private var header: some View {
@@ -78,12 +84,17 @@ struct PeopleSearchView: View {
                 .foregroundStyle(Theme.text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
+                .onChange(of: query) { value in
+                    scheduleSearch(value)
+                }
                 .onSubmit {
-                    Task { await runSearch() }
+                    searchTask?.cancel()
+                    Task { await runSearch(query) }
                 }
 
             Button("Search") {
-                Task { await runSearch() }
+                searchTask?.cancel()
+                Task { await runSearch(query) }
             }
             .font(.caption.weight(.bold))
             .foregroundStyle(Theme.accentLight)
@@ -103,7 +114,7 @@ struct PeopleSearchView: View {
         if !followingUsers.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    Text("Following")
+                    Text("Following \(followingUsers.count)")
                         .font(.headline)
                         .foregroundStyle(Theme.text)
                     Spacer()
@@ -116,14 +127,23 @@ struct PeopleSearchView: View {
                     .foregroundStyle(Theme.accentLight)
                 }
 
-                ForEach(followingUsers) { follow in
+                ForEach(sortedFollowingUsers) { follow in
                     let user = discoverUser(from: follow)
                     NavigationLink {
                         SharedUserDetailView(user: user)
                     } label: {
-                        DiscoverUserRow(user: user) {
-                            toggleFollow(user)
-                        }
+                        FollowingUserRow(
+                            user: follow,
+                            isFavorited: store.appData.favoriteUserIds.contains(follow.id),
+                            canFavorite: canFavoriteUser(follow.id),
+                            isBusy: busyUserId == follow.id,
+                            onToggleFavorite: {
+                                store.toggleFavoriteUser(id: follow.id)
+                            },
+                            onUnfollow: {
+                                toggleFollow(user)
+                            }
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -133,11 +153,11 @@ struct PeopleSearchView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Search for users" : "No users found", systemImage: "person.2")
+            Label(emptyTitle, systemImage: "person.2")
                 .font(.headline)
                 .foregroundStyle(Theme.text)
 
-            Text("Enter a name to discover people and their shared programs or exercises.")
+            Text(emptyMessage)
                 .font(.subheadline)
                 .foregroundStyle(Theme.textDim)
         }
@@ -145,26 +165,86 @@ struct PeopleSearchView: View {
         .cardStyle()
     }
 
-    private func runSearch() async {
+    private var sortedFollowingUsers: [FollowUser] {
+        followingUsers.sorted { lhs, rhs in
+            let lhsFavorite = store.appData.favoriteUserIds.contains(lhs.id)
+            let rhsFavorite = store.appData.favoriteUserIds.contains(rhs.id)
+            if lhsFavorite != rhsFavorite {
+                return lhsFavorite
+            }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    private var emptyTitle: String {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Search for users"
+        }
+        return hasSearched ? "No users found" : "Ready to search"
+    }
+
+    private var emptyMessage: String {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "Enter a name to discover people and their shared programs or exercises."
+        }
+        if hasSearched {
+            return "No users found for \"\(trimmed)\"."
+        }
+        return "Search runs automatically as you type."
+    }
+
+    private func canFavoriteUser(_ id: String) -> Bool {
+        store.appData.favoriteUserIds.contains(id) || store.appData.favoriteUserIds.count < 3
+    }
+
+    private func scheduleSearch(_ value: String) {
+        searchTask?.cancel()
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             results = []
+            hasSearched = false
+            isSearching = false
+            return
+        }
+
+        searchTask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            await runSearch(trimmed)
+        }
+    }
+
+    private func runSearch(_ value: String) async {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            results = []
+            hasSearched = false
             return
         }
 
         isSearching = true
         results = await store.searchUsers(query: trimmed)
+        hasSearched = true
         isSearching = false
     }
 
     private func toggleFollow(_ user: DiscoverUser) {
         Task {
+            busyUserId = user.id
+            defer { busyUserId = nil }
             if user.following {
                 await store.unfollow(userId: user.id)
+                if store.appData.favoriteUserIds.contains(user.id) {
+                    store.toggleFavoriteUser(id: user.id)
+                }
             } else {
                 await store.follow(userId: user.id)
             }
-            await runSearch()
+            if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                await runSearch(query)
+            }
             await loadFollowing()
         }
     }
@@ -376,7 +456,7 @@ private struct DiscoverUserRow: View {
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(Theme.accent)
+                .fill(Color(hex: user.color))
                 .frame(width: 44, height: 44)
                 .overlay {
                     Text(String(user.name.prefix(1)).uppercased())
@@ -407,6 +487,76 @@ private struct DiscoverUserRow: View {
                     .background(user.following ? Theme.surface2 : Theme.accent)
                     .clipShape(Capsule())
             }
+            .buttonStyle(.plain)
+
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(Theme.textFaint)
+        }
+        .cardStyle()
+    }
+}
+
+private struct FollowingUserRow: View {
+    let user: FollowUser
+    let isFavorited: Bool
+    let canFavorite: Bool
+    let isBusy: Bool
+    let onToggleFavorite: () -> Void
+    let onUnfollow: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color(hex: user.color))
+                .frame(width: 44, height: 44)
+                .overlay {
+                    Text(String(user.name.prefix(1)).uppercased())
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(.white)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(user.name)
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Text("\(user.programCount) programs · \(user.exerciseCount) exercises")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            Spacer()
+
+            Button {
+                onToggleFavorite()
+            } label: {
+                Image(systemName: isFavorited ? "star.fill" : "star")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(isFavorited ? Theme.accentLight : Theme.textDim)
+                    .frame(width: 32, height: 32)
+                    .background(isFavorited ? Theme.accent.opacity(0.18) : Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isFavorited ? Theme.accentLight.opacity(0.35) : .white.opacity(0.08), lineWidth: 1)
+                    }
+            }
+            .disabled(!canFavorite)
+            .buttonStyle(.plain)
+
+            Button {
+                onUnfollow()
+            } label: {
+                Text(isBusy ? "..." : "Unfollow")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textDim)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.surface2)
+                    .clipShape(Capsule())
+            }
+            .disabled(isBusy)
             .buttonStyle(.plain)
 
             Image(systemName: "chevron.right")

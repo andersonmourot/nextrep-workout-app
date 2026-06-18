@@ -90,7 +90,7 @@ struct ProgramDetailView: View {
                 dismiss()
             }
         } message: {
-            Text("This removes the custom program from your synced data.")
+            Text("This moves the custom program to Trash. You can restore it from the Programs screen.")
         }
         .alert("Hide Program?", isPresented: $showingHideConfirm) {
             Button("Cancel", role: .cancel) {}

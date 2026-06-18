@@ -3,24 +3,42 @@ import SwiftUI
 struct ProgramsListView: View {
     @Environment(AppStore.self) private var store
     @State private var query = ""
+    @State private var selectedCategory = "All"
+    @State private var isManaging = false
+    @State private var showingHiddenPrograms = false
+    @State private var showingTrash = false
+    @State private var pendingManageProgram: Program?
+
+    private let categories = ["All", "Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                header
-                searchField
-
-                if filteredPrograms.isEmpty {
-                    emptyState
+                if showingHiddenPrograms {
+                    hiddenProgramsContent
+                } else if showingTrash {
+                    trashedProgramsContent
                 } else {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredPrograms) { program in
-                            NavigationLink {
-                                ProgramDetailView(program: program)
-                            } label: {
-                                ProgramCard(program: program, isActive: program.id == store.appData.activeProgramId)
+                    header
+                    searchField
+                    categoryFilters
+
+                    if orderedPrograms.isEmpty {
+                        emptyState
+                    } else {
+                        LazyVStack(spacing: 12) {
+                            ForEach(orderedPrograms) { program in
+                                ProgramListRow(
+                                    program: program,
+                                    isActive: program.id == store.appData.activeProgramId,
+                                    isCustom: store.isCustomProgram(program),
+                                    isFavorite: store.appData.favoriteProgramIds.contains(program.id),
+                                    isManaging: isManaging,
+                                    onManage: {
+                                        pendingManageProgram = program
+                                    }
+                                )
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -53,10 +71,31 @@ struct ProgramsListView: View {
 
                     if !store.appData.hiddenProgramIds.isEmpty {
                         Button {
-                            store.restoreHiddenPrograms()
+                            showingHiddenPrograms = true
+                            isManaging = true
                         } label: {
                             Image(systemName: "eye")
                         }
+                    }
+
+                    if !store.appData.trashedPrograms.isEmpty {
+                        Button {
+                            showingTrash = true
+                            isManaging = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                    }
+
+                    Button {
+                        isManaging.toggle()
+                        pendingManageProgram = nil
+                        if !isManaging {
+                            showingHiddenPrograms = false
+                            showingTrash = false
+                        }
+                    } label: {
+                        Image(systemName: isManaging ? "checkmark" : "slider.horizontal.3")
                     }
                 }
                 .tint(Theme.accentLight)
@@ -71,6 +110,29 @@ struct ProgramsListView: View {
             }
         }
         .screenBackground()
+        .alert("Manage Program", isPresented: Binding(
+            get: { pendingManageProgram != nil },
+            set: { if !$0 { pendingManageProgram = nil } }
+        )) {
+            if let program = pendingManageProgram {
+                if store.isCustomProgram(program) {
+                    Button("Move to Trash", role: .destructive) {
+                        store.deleteCustomProgram(id: program.id)
+                        pendingManageProgram = nil
+                    }
+                } else {
+                    Button("Hide Program", role: .destructive) {
+                        store.hideProgram(id: program.id)
+                        pendingManageProgram = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) { pendingManageProgram = nil }
+            }
+        } message: {
+            if let program = pendingManageProgram {
+                Text(store.isCustomProgram(program) ? "Move \(program.name) to Trash? You can restore it later from Programs." : "Hide \(program.name)? You can restore hidden defaults from Programs.")
+            }
+        }
     }
 
     private var header: some View {
@@ -80,11 +142,37 @@ struct ProgramsListView: View {
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
 
-            Text("\(filteredPrograms.count) available")
+            Text("\(orderedPrograms.count) available")
                 .font(.caption)
                 .textCase(.uppercase)
                 .tracking(1.5)
                 .foregroundStyle(Theme.accentLight)
+        }
+    }
+
+    private var categoryFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(categories, id: \.self) { category in
+                    Button {
+                        selectedCategory = category
+                    } label: {
+                        Text(category)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(selectedCategory == category ? .white : Theme.textDim)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 8)
+                            .background(selectedCategory == category ? Theme.accent : Theme.inputBg)
+                            .clipShape(Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(.white.opacity(selectedCategory == category ? 0 : 0.08), lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 1)
         }
     }
 
@@ -114,7 +202,7 @@ struct ProgramsListView: View {
                 .font(.headline)
                 .foregroundStyle(Theme.text)
 
-            Text("Try a different search, or verify that /api/catalog is reachable.")
+            Text(emptyMessage)
                 .font(.subheadline)
                 .foregroundStyle(Theme.textDim)
         }
@@ -124,11 +212,15 @@ struct ProgramsListView: View {
 
     private var filteredPrograms: [Program] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let categoryFiltered = selectedCategory == "All"
+            ? store.allPrograms
+            : store.allPrograms.filter { $0.category == selectedCategory }
+
         guard !trimmed.isEmpty else {
-            return store.allPrograms
+            return categoryFiltered
         }
 
-        return store.allPrograms.filter { program in
+        return categoryFiltered.filter { program in
             let haystack = [
                 program.name,
                 program.summary,
@@ -144,11 +236,189 @@ struct ProgramsListView: View {
             return haystack
         }
     }
+
+    private var orderedPrograms: [Program] {
+        filteredPrograms.sorted { lhs, rhs in
+            let lhsRank = programRank(lhs)
+            let rhsRank = programRank(rhs)
+            if lhsRank != rhsRank {
+                return lhsRank < rhsRank
+            }
+
+            let lhsCustom = store.isCustomProgram(lhs)
+            let rhsCustom = store.isCustomProgram(rhs)
+            if lhsCustom != rhsCustom {
+                return lhsCustom
+            }
+
+            let nameComparison = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+            if nameComparison != .orderedSame {
+                return nameComparison == .orderedAscending
+            }
+
+            return lhs.id < rhs.id
+        }
+    }
+
+    private var hiddenPrograms: [Program] {
+        store.catalog.programs
+            .filter { store.appData.hiddenProgramIds.contains($0.id) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
+    private var sortedTrashedPrograms: [TrashedProgram] {
+        store.appData.trashedPrograms.sorted { lhs, rhs in
+            lhs.deletedAt > rhs.deletedAt
+        }
+    }
+
+    private var emptyMessage: String {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return "No programs match \"\(trimmed)\"."
+        }
+        if selectedCategory != "All" {
+            return "No \(selectedCategory) programs are currently visible."
+        }
+        return "No programs are currently visible."
+    }
+
+    private func programRank(_ program: Program) -> Int {
+        if program.id == store.appData.activeProgramId {
+            return 0
+        }
+        if let favoriteIndex = store.appData.favoriteProgramIds.firstIndex(of: program.id) {
+            return 1 + favoriteIndex
+        }
+        return 100
+    }
+
+    private var hiddenProgramsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Button {
+                showingHiddenPrograms = false
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.textDim)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Hidden Programs")
+                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .textCase(.uppercase)
+                    .foregroundStyle(Theme.text)
+                Text("Restore defaults to return them to your main list.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            if hiddenPrograms.isEmpty {
+                Text("No hidden programs.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .cardStyle()
+            } else {
+                ForEach(hiddenPrograms) { program in
+                    HiddenProgramRow(program: program) {
+                        store.restoreHiddenProgram(id: program.id)
+                    }
+                }
+
+                Button {
+                    store.restoreHiddenPrograms()
+                } label: {
+                    Label("Restore All", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+        }
+    }
+
+    private var trashedProgramsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Button {
+                showingTrash = false
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Theme.textDim)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Trash")
+                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .textCase(.uppercase)
+                    .foregroundStyle(Theme.text)
+                Text("Restore deleted custom programs or delete them permanently.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            if sortedTrashedPrograms.isEmpty {
+                Text("No deleted custom programs.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .cardStyle()
+            } else {
+                ForEach(sortedTrashedPrograms) { trashed in
+                    TrashedProgramRow(
+                        trashed: trashed,
+                        onRestore: {
+                            store.restoreTrashedProgram(id: trashed.program.id)
+                        },
+                        onPurge: {
+                            store.purgeTrashedProgram(id: trashed.program.id)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct ProgramListRow: View {
+    let program: Program
+    let isActive: Bool
+    let isCustom: Bool
+    let isFavorite: Bool
+    let isManaging: Bool
+    let onManage: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            NavigationLink {
+                ProgramDetailView(program: program)
+            } label: {
+                ProgramCard(program: program, isActive: isActive, isCustom: isCustom, isFavorite: isFavorite)
+            }
+            .buttonStyle(.plain)
+
+            if isManaging {
+                Button {
+                    onManage()
+                } label: {
+                    Image(systemName: isCustom ? "trash" : "eye.slash")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(isCustom ? .red.opacity(0.9) : Theme.accentLight)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.inputBg.opacity(0.9))
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .padding(10)
+            }
+        }
+    }
 }
 
 struct ProgramCard: View {
     let program: Program
     let isActive: Bool
+    var isCustom: Bool = false
+    var isFavorite: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -167,9 +437,16 @@ struct ProgramCard: View {
 
                 Spacer()
 
+                if isCustom {
+                    statusIcon("pencil")
+                }
+
                 if isActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(accent)
+                    statusIcon("checkmark.circle.fill")
+                }
+
+                if isFavorite {
+                    statusIcon("star.fill")
                 }
 
                 Image(systemName: "chevron.right")
@@ -207,6 +484,15 @@ struct ProgramCard: View {
         Color(hex: program.accent)
     }
 
+    private func statusIcon(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(accent)
+            .padding(5)
+            .background(accent.opacity(0.16))
+            .clipShape(Circle())
+    }
+
     private func meta(systemImage: String, text: String) -> some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage)
@@ -218,5 +504,74 @@ struct ProgramCard: View {
         .padding(.vertical, 6)
         .background(Theme.surface2)
         .clipShape(Capsule())
+    }
+}
+
+private struct HiddenProgramRow: View {
+    let program: Program
+    let onRestore: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(program.name)
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+                Text("\(program.category) · \(program.level) · \(program.durationWeeks) weeks")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            Spacer()
+
+            Button {
+                onRestore()
+            } label: {
+                Label("Restore", systemImage: "arrow.counterclockwise")
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.accentLight)
+        }
+        .cardStyle()
+    }
+}
+
+private struct TrashedProgramRow: View {
+    let trashed: TrashedProgram
+    let onRestore: () -> Void
+    let onPurge: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(trashed.program.name)
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+                    Text("\(trashed.program.category) · \(trashed.program.level)")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: 10) {
+                Button {
+                    onRestore()
+                } label: {
+                    Label("Restore", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(GhostButtonStyle())
+
+                Button(role: .destructive) {
+                    onPurge()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
+        }
+        .cardStyle()
     }
 }

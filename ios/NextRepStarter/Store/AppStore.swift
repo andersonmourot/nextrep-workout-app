@@ -611,10 +611,28 @@ final class AppStore {
     }
 
     func deleteCustomProgram(id: String) {
+        if let program = appData.customPrograms.first(where: { $0.id == id }) {
+            appData.trashedPrograms.removeAll { $0.program.id == id }
+            appData.trashedPrograms.append(TrashedProgram(program: program, deletedAt: Date().timeIntervalSince1970 * 1000))
+        }
         appData.customPrograms.removeAll { $0.id == id }
         if appData.activeProgramId == id {
             appData.activeProgramId = nil
         }
+        appData.favoriteProgramIds.removeAll { $0 == id }
+        scheduleSync()
+    }
+
+    func restoreTrashedProgram(id: String) {
+        guard let trashed = appData.trashedPrograms.first(where: { $0.program.id == id }) else { return }
+        appData.customPrograms.removeAll { $0.id == id }
+        appData.customPrograms.append(trashed.program)
+        appData.trashedPrograms.removeAll { $0.program.id == id }
+        scheduleSync()
+    }
+
+    func purgeTrashedProgram(id: String) {
+        appData.trashedPrograms.removeAll { $0.program.id == id }
         scheduleSync()
     }
 
@@ -663,11 +681,17 @@ final class AppStore {
         if appData.activeProgramId == id {
             appData.activeProgramId = nil
         }
+        appData.favoriteProgramIds.removeAll { $0 == id }
         scheduleSync()
     }
 
     func restoreHiddenPrograms() {
         appData.hiddenProgramIds = []
+        scheduleSync()
+    }
+
+    func restoreHiddenProgram(id: String) {
+        appData.hiddenProgramIds.removeAll { $0 == id }
         scheduleSync()
     }
 

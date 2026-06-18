@@ -101,14 +101,6 @@ struct ProgramsListView: View {
                 }
                 .tint(Theme.accentLight)
             }
-
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Log Out") {
-                    store.logout()
-                }
-                .font(.footnote.weight(.semibold))
-                .tint(Theme.textDim)
-            }
         }
         .screenBackground()
         .alert("Manage Program", isPresented: Binding(

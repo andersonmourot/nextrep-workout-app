@@ -140,9 +140,17 @@ struct WorkoutHistoryView: View {
                 Spacer()
 
                 if let latest = sortedBodyWeight.last {
-                    Text("\(formatWeight(latest.weight)) \(store.appData.unit)")
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(Theme.accentLight)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(formatWeight(latest.weight)) \(store.appData.unit)")
+                            .font(.caption.monospacedDigit().weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+
+                        if let delta = bodyWeightDeltaText {
+                            Text(delta)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(bodyWeightDeltaColor)
+                        }
+                    }
                 }
             }
 
@@ -213,6 +221,34 @@ struct WorkoutHistoryView: View {
 
     private var sortedBodyWeight: [BodyWeightEntry] {
         store.appData.bodyWeight.sorted { $0.date < $1.date }
+    }
+
+    private var bodyWeightDeltaText: String? {
+        guard let first = sortedBodyWeight.first,
+              let latest = sortedBodyWeight.last,
+              sortedBodyWeight.count >= 2 else {
+            return nil
+        }
+        let delta = latest.weight - first.weight
+        if delta == 0 {
+            return "No change since start"
+        }
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(formatWeight(delta)) \(store.appData.unit) since start"
+    }
+
+    private var bodyWeightDeltaColor: Color {
+        guard let first = sortedBodyWeight.first,
+              let latest = sortedBodyWeight.last else {
+            return Theme.textFaint
+        }
+        if latest.weight < first.weight {
+            return .green.opacity(0.9)
+        }
+        if latest.weight > first.weight {
+            return Theme.accentLight
+        }
+        return Theme.textFaint
     }
 
     private var recentWorkoutsSection: some View {

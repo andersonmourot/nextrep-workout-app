@@ -94,6 +94,8 @@ struct ResetPasswordView: View {
     @State private var done = false
     @State private var localError: String?
     @State private var isBusy = false
+    @State private var passwordVisible = false
+    @State private var confirmPasswordVisible = false
 
     var body: some View {
         ScrollView {
@@ -119,18 +121,28 @@ struct ResetPasswordView: View {
                             .autocorrectionDisabled()
                             .authFieldStyle()
 
-                        SecureField("New password", text: $password)
-                            .textContentType(.newPassword)
-                            .authFieldStyle()
+                        PasswordVisibilityField(
+                            placeholder: "New password",
+                            text: $password,
+                            isVisible: $passwordVisible,
+                            textContentType: .newPassword
+                        )
 
-                        SecureField("Confirm new password", text: $confirmPassword)
-                            .textContentType(.newPassword)
-                            .authFieldStyle()
+                        PasswordHintsView(password: password, showWhenEmpty: true)
 
-                        Text("Password must be at least 6 characters.")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textFaint)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        PasswordVisibilityField(
+                            placeholder: "Confirm new password",
+                            text: $confirmPassword,
+                            isVisible: $confirmPasswordVisible,
+                            textContentType: .newPassword
+                        )
+
+                        if !confirmPassword.isEmpty {
+                            Label(password == confirmPassword ? "Passwords match" : "Passwords do not match", systemImage: password == confirmPassword ? "checkmark.circle.fill" : "xmark.circle")
+                                .font(.caption)
+                                .foregroundStyle(password == confirmPassword ? Theme.accentLight : .red.opacity(0.9))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
 
                         if let error = localError ?? store.authError {
                             Text(error)

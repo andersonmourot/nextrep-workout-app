@@ -6,6 +6,7 @@ struct AuthView: View {
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
+    @State private var passwordVisible = false
 
     var body: some View {
         ScrollView {
@@ -42,9 +43,14 @@ struct AuthView: View {
                         .autocorrectionDisabled()
                         .fieldStyle()
 
-                    SecureField("Password", text: $password)
-                        .textContentType(isSignup ? .newPassword : .password)
-                        .fieldStyle()
+                    PasswordVisibilityField(
+                        placeholder: isSignup ? "At least 6 characters" : "Password",
+                        text: $password,
+                        isVisible: $passwordVisible,
+                        textContentType: isSignup ? .newPassword : .password
+                    )
+
+                    PasswordHintsView(password: password, showWhenEmpty: isSignup)
 
                     if !isSignup {
                         NavigationLink {
@@ -116,5 +122,69 @@ private extension View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(.white.opacity(0.08), lineWidth: 1)
             }
+    }
+}
+
+struct PasswordVisibilityField: View {
+    let placeholder: String
+    @Binding var text: String
+    @Binding var isVisible: Bool
+    var textContentType: UITextContentType? = .password
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Group {
+                if isVisible {
+                    TextField(placeholder, text: $text)
+                        .textContentType(textContentType)
+                } else {
+                    SecureField(placeholder, text: $text)
+                        .textContentType(textContentType)
+                }
+            }
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+
+            Button {
+                isVisible.toggle()
+            } label: {
+                Image(systemName: isVisible ? "eye.slash" : "eye")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textDim)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isVisible ? "Hide password" : "Show password")
+        }
+        .fieldStyle()
+    }
+}
+
+struct PasswordHintsView: View {
+    let password: String
+    var showWhenEmpty = false
+
+    var body: some View {
+        if showWhenEmpty || !password.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                passwordHint("At least 6 characters", isMet: password.count >= 6)
+                passwordHint("Contains a letter", isMet: password.rangeOfCharacter(from: .letters) != nil)
+                passwordHint("Contains a number", isMet: password.rangeOfCharacter(from: .decimalDigits) != nil)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func passwordHint(_ text: String, isMet: Bool) -> some View {
+        HStack(spacing: 7) {
+            Image(systemName: isMet ? "checkmark.circle.fill" : "circle")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(isMet ? Theme.accentLight : Theme.textFaint)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(isMet ? Theme.textDim : Theme.textFaint)
+        }
     }
 }

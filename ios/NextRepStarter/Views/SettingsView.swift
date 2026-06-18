@@ -10,6 +10,9 @@ struct SettingsView: View {
     @State private var showingResetConfirm = false
     @State private var showingLogoutConfirm = false
     @State private var showingPasswordFields = false
+    @State private var currentPasswordVisible = false
+    @State private var newPasswordVisible = false
+    @State private var confirmPasswordVisible = false
 
     private let themeColors = ["#355e3b", "#e9b949", "#7f1d1d", "#3b82f6", "#22c55e", "#a855f7", "#f97316", "#14b8a6", "#ec4899"]
 
@@ -226,12 +229,30 @@ struct SettingsView: View {
             }
 
             if showingPasswordFields {
-                SecureField("Current password", text: $currentPassword)
-                    .settingsSecureFieldStyle()
-                SecureField("New password", text: $newPassword)
-                    .settingsSecureFieldStyle()
-                SecureField("Confirm new password", text: $confirmPassword)
-                    .settingsSecureFieldStyle()
+                PasswordVisibilityField(
+                    placeholder: "Current password",
+                    text: $currentPassword,
+                    isVisible: $currentPasswordVisible,
+                    textContentType: .password
+                )
+                PasswordVisibilityField(
+                    placeholder: "New password",
+                    text: $newPassword,
+                    isVisible: $newPasswordVisible,
+                    textContentType: .newPassword
+                )
+                PasswordHintsView(password: newPassword, showWhenEmpty: true)
+                PasswordVisibilityField(
+                    placeholder: "Confirm new password",
+                    text: $confirmPassword,
+                    isVisible: $confirmPasswordVisible,
+                    textContentType: .newPassword
+                )
+                if !confirmPassword.isEmpty {
+                    Label(newPassword == confirmPassword ? "Passwords match" : "Passwords do not match", systemImage: newPassword == confirmPassword ? "checkmark.circle.fill" : "xmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(newPassword == confirmPassword ? Theme.accentLight : .red.opacity(0.9))
+                }
             }
 
             if let passwordMessage {
@@ -366,8 +387,8 @@ struct SettingsView: View {
     }
 
     private func changePassword() async {
-        guard newPassword.count >= 8 else {
-            passwordMessage = "New password must be at least 8 characters."
+        guard newPassword.count >= 6 else {
+            passwordMessage = "New password must be at least 6 characters."
             return
         }
         guard newPassword == confirmPassword else {
@@ -389,6 +410,9 @@ struct SettingsView: View {
         currentPassword = ""
         newPassword = ""
         confirmPassword = ""
+        currentPasswordVisible = false
+        newPasswordVisible = false
+        confirmPasswordVisible = false
     }
 }
 
@@ -590,6 +614,7 @@ struct AdminUsersView: View {
     @State private var users: [AdminUser] = []
     @State private var isLoading = false
     @State private var resetPasswords: [String: String] = [:]
+    @State private var visibleResetPasswordIds: Set<String> = []
     @State private var message: String?
 
     var body: some View {
@@ -669,22 +694,39 @@ struct AdminUsersView: View {
                     .foregroundStyle(Theme.textFaint)
             }
 
-            HStack(spacing: 10) {
-                SecureField("New password", text: Binding(
-                    get: { resetPasswords[user.id] ?? "" },
-                    set: { resetPasswords[user.id] = $0 }
-                ))
-                .settingsSecureFieldStyle()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 10) {
+                    PasswordVisibilityField(
+                        placeholder: "New password",
+                        text: Binding(
+                            get: { resetPasswords[user.id] ?? "" },
+                            set: { resetPasswords[user.id] = $0 }
+                        ),
+                        isVisible: Binding(
+                            get: { visibleResetPasswordIds.contains(user.id) },
+                            set: { isVisible in
+                                if isVisible {
+                                    visibleResetPasswordIds.insert(user.id)
+                                } else {
+                                    visibleResetPasswordIds.remove(user.id)
+                                }
+                            }
+                        ),
+                        textContentType: .newPassword
+                    )
 
-                Button("Reset") {
-                    Task { await resetPassword(for: user) }
+                    Button("Reset") {
+                        Task { await resetPassword(for: user) }
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Theme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Theme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                PasswordHintsView(password: resetPasswords[user.id] ?? "")
             }
         }
         .cardStyle()
@@ -698,13 +740,14 @@ struct AdminUsersView: View {
 
     private func resetPassword(for user: AdminUser) async {
         let password = resetPasswords[user.id] ?? ""
-        guard password.count >= 8 else {
-            message = "Password must be at least 8 characters."
+        guard password.count >= 6 else {
+            message = "Password must be at least 6 characters."
             return
         }
 
         if await store.adminResetPassword(userId: user.id, newPassword: password) {
             resetPasswords[user.id] = ""
+            visibleResetPasswordIds.remove(user.id)
             message = "Password updated for \(user.name)."
         } else {
             message = store.authError ?? "Could not reset password."

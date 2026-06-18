@@ -52,7 +52,7 @@ struct ExerciseEditorView: View {
         } message: {
             Text("This removes the custom exercise from your synced data.")
         }
-        .onChange(of: selectedPhotoItems) { newItems in
+        .onChange(of: selectedPhotoItems) { _, newItems in
             Task { await loadPhotos(newItems) }
         }
     }

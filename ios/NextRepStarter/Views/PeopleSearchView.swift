@@ -84,8 +84,8 @@ struct PeopleSearchView: View {
                 .foregroundStyle(Theme.text)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
-                .onChange(of: query) { value in
-                    scheduleSearch(value)
+                .onChange(of: query) { _, newValue in
+                    scheduleSearch(newValue)
                 }
                 .onSubmit {
                     searchTask?.cancel()

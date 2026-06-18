@@ -367,10 +367,10 @@ private struct RestTimerCard: View {
             .onAppear {
                 signalCompletionIfNeeded(remaining: remaining)
             }
-            .onChange(of: active.restEndsAt) { _ in
+            .onChange(of: active.restEndsAt) { _, _ in
                 didSignalCompletion = false
             }
-            .onChange(of: remaining) { newValue in
+            .onChange(of: remaining) { _, newValue in
                 signalCompletionIfNeeded(remaining: newValue)
             }
         }
@@ -879,10 +879,10 @@ private struct FloatingRestBar: View {
             .onAppear {
                 signalIfNeeded(remaining: remaining)
             }
-            .onChange(of: active.restEndsAt) { _ in
+            .onChange(of: active.restEndsAt) { _, _ in
                 signaledSeconds = []
             }
-            .onChange(of: remaining) { newValue in
+            .onChange(of: remaining) { _, newValue in
                 signalIfNeeded(remaining: newValue)
             }
         }

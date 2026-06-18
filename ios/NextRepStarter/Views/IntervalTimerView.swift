@@ -56,11 +56,11 @@ struct IntervalTimerView: View {
             topMode = ["timer", "stopwatch", "interval"].contains(store.appData.timerMode) ? store.appData.timerMode : "timer"
             seedIntervalSettings()
         }
-        .onChange(of: mode) { _ in
+        .onChange(of: mode) { _, _ in
             resetTimer()
             store.setIntervalFormat(mode)
         }
-        .onChange(of: topMode) { newMode in
+        .onChange(of: topMode) { _, newMode in
             store.setTimerMode(newMode)
         }
         .onReceive(ticker) { _ in
@@ -119,7 +119,7 @@ struct IntervalTimerView: View {
                     .padding(.vertical, 10)
                     .background(Theme.inputBg)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .onChange(of: timerInput) { newValue in
+                    .onChange(of: timerInput) { _, newValue in
                         timerInput = maskTimerInput(newValue)
                     }
 
@@ -496,7 +496,7 @@ private struct StepperRow: View {
 
             Stepper("", value: $value, in: range, step: step)
                 .labelsHidden()
-                .onChange(of: value) { _ in
+                .onChange(of: value) { _, _ in
                     onChange()
                 }
         }

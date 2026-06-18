@@ -986,12 +986,14 @@ struct MaxTrackerView: View {
     @State private var maxName = ""
     @State private var maxWeightText = ""
     @State private var maxRepsText = ""
+    @State private var searchQuery = ""
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 inputCard
+                searchField
                 trackerList
             }
             .padding(16)
@@ -1041,6 +1043,26 @@ struct MaxTrackerView: View {
         .cardStyle()
     }
 
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(Theme.textFaint)
+
+            TextField("Search lifts", text: $searchQuery)
+                .foregroundStyle(Theme.text)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(Theme.inputBg)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(.white.opacity(0.08), lineWidth: 1)
+        }
+    }
+
     private var trackerList: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tracked Lifts")
@@ -1052,52 +1074,68 @@ struct MaxTrackerView: View {
                     .font(.subheadline)
                     .foregroundStyle(Theme.textDim)
                     .cardStyle()
+            } else if filteredTrackers.isEmpty {
+                Text("No lifts match \"\(searchQuery.trimmingCharacters(in: .whitespacesAndNewlines))\".")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+                    .cardStyle()
             } else {
-                ForEach(store.appData.maxTrackers) { tracker in
-                    HStack(spacing: 12) {
-                        NavigationLink {
-                            MaxTrackerDetailView(trackerId: tracker.id)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(tracker.name)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.text)
+                ForEach(filteredTrackers) { tracker in
+                    VStack(spacing: 8) {
+                        HStack(spacing: 12) {
+                            NavigationLink {
+                                MaxTrackerDetailView(trackerId: tracker.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(tracker.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Theme.text)
 
-                                Text(latestMaxText(tracker))
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.textDim)
+                                    Text(latestMaxText(tracker))
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.textDim)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .buttonStyle(.plain)
+
+                            Button {
+                                store.deleteMaxTracker(id: tracker.id)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                            .foregroundStyle(.red.opacity(0.8))
+
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(Theme.textFaint)
                         }
-                        .buttonStyle(.plain)
+                        .padding(10)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                        Button {
-                            store.deleteMaxTracker(id: tracker.id)
-                        } label: {
-                            Image(systemName: "trash")
-                                .font(.caption)
+                        let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
+                        if values.count >= 2 {
+                            MiniLineChart(values: values)
+                                .frame(height: 70)
+                                .padding(10)
+                                .background(Theme.inputBg.opacity(0.65))
+                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
-                        .foregroundStyle(.red.opacity(0.8))
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Theme.textFaint)
-                    }
-                    .padding(10)
-                    .background(Theme.surface2)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                    let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
-                    if values.count >= 2 {
-                        MiniLineChart(values: values)
-                            .frame(height: 70)
-                            .padding(10)
-                            .background(Theme.inputBg.opacity(0.65))
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                 }
             }
         }
+    }
+
+    private var filteredTrackers: [MaxTracker] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sorted = store.appData.maxTrackers.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        guard !trimmed.isEmpty else { return sorted }
+        return sorted.filter { $0.name.localizedCaseInsensitiveContains(trimmed) }
     }
 
     private func latestMaxText(_ tracker: MaxTracker) -> String {
@@ -1115,6 +1153,7 @@ struct MaxTrackerDetailView: View {
     @State private var weightText = ""
     @State private var repsText = ""
     @State private var pendingDeleteRecord: MaxRecord?
+    @State private var showingDeleteTrackerConfirm = false
     let trackerId: String
 
     private var tracker: MaxTracker? {
@@ -1157,25 +1196,116 @@ struct MaxTrackerDetailView: View {
         } message: {
             Text("This removes the max record from your synced data.")
         }
+        .alert("Delete Tracker?", isPresented: $showingDeleteTrackerConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                store.deleteMaxTracker(id: trackerId)
+            }
+        } message: {
+            Text("This deletes the tracker and all of its records.")
+        }
     }
 
     private func header(_ tracker: MaxTracker) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Max Tracker")
-                .font(.caption.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(1.4)
-                .foregroundStyle(Theme.accentLight)
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Max Tracker")
+                    .font(.caption.weight(.semibold))
+                    .textCase(.uppercase)
+                    .tracking(1.4)
+                    .foregroundStyle(Theme.accentLight)
 
-            Text(tracker.name)
-                .font(.system(size: 34, weight: .bold, design: .default))
-                .foregroundStyle(Theme.text)
-
-            if let best = tracker.records.map(\.weight).max(), best > 0 {
-                Text("Best: \(formatWeight(best)) \(store.appData.unit)")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
+                Text(tracker.name)
+                    .font(.system(size: 34, weight: .bold, design: .default))
+                    .foregroundStyle(Theme.text)
             }
+
+            HStack(spacing: 8) {
+                MaxMetricTile(label: "Best", value: bestWeightText(tracker))
+                MaxMetricTile(label: "Latest", value: latestWeightText(tracker))
+                MaxMetricTile(label: "e1RM", value: bestE1RMText(tracker))
+            }
+
+            Button(role: .destructive) {
+                showingDeleteTrackerConfirm = true
+            } label: {
+                Label("Delete Tracker", systemImage: "trash")
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.red.opacity(0.9))
+        }
+        .cardStyle()
+    }
+
+    private func bestWeightText(_ tracker: MaxTracker) -> String {
+        guard let best = tracker.records.max(by: { $0.weight < $1.weight }) else {
+            return "-"
+        }
+        return "\(formatWeight(best.weight)) \(store.appData.unit)"
+    }
+
+    private func latestWeightText(_ tracker: MaxTracker) -> String {
+        guard let latest = tracker.records.sorted(by: { $0.date > $1.date }).first else {
+            return "-"
+        }
+        return "\(formatWeight(latest.weight)) x \(latest.reps)"
+    }
+
+    private func bestE1RMText(_ tracker: MaxTracker) -> String {
+        guard let best = tracker.records
+            .map({ estimatedOneRepMax(weight: $0.weight, reps: $0.reps) })
+            .max() else {
+            return "-"
+        }
+        return "\(formatWeight(best)) \(store.appData.unit)"
+    }
+
+    private func trendDeltaText(_ records: [MaxRecord]) -> String? {
+        let sorted = records.sorted { $0.date < $1.date }
+        guard let first = sorted.first, let last = sorted.last, sorted.count >= 2 else {
+            return nil
+        }
+        let delta = last.weight - first.weight
+        if delta == 0 {
+            return "No change across logged entries"
+        }
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(formatWeight(delta)) \(store.appData.unit) from first to latest"
+    }
+
+    private func dateRangeText(_ records: [MaxRecord]) -> String? {
+        let sorted = records.sorted { $0.date < $1.date }
+        guard let first = sorted.first, let last = sorted.last, first.date != last.date else {
+            return nil
+        }
+        return "\(formatBodyWeightDate(first.date)) - \(formatBodyWeightDate(last.date))"
+    }
+
+    private func recordE1RMText(_ record: MaxRecord) -> String {
+        "e1RM \(formatWeight(estimatedOneRepMax(weight: record.weight, reps: record.reps))) \(store.appData.unit)"
+    }
+
+    private struct MaxMetricTile: View {
+        let label: String
+        let value: String
+
+        var body: some View {
+            VStack(spacing: 4) {
+                Text(value)
+                    .font(.caption.monospacedDigit().weight(.bold))
+                    .foregroundStyle(Theme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Text(label)
+                    .font(.caption2.weight(.semibold))
+                    .textCase(.uppercase)
+                    .foregroundStyle(Theme.textFaint)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(Theme.surface2)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 
@@ -1184,16 +1314,43 @@ struct MaxTrackerDetailView: View {
         let values = sorted.map(\.weight)
 
         return VStack(alignment: .leading, spacing: 12) {
-            Text("Trend")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Trend")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    if let range = dateRangeText(sorted) {
+                        Text(range)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textFaint)
+                    }
+                }
+
+                Spacer()
+
+                if let delta = trendDeltaText(sorted) {
+                    Text(delta)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.accentLight)
+                        .multilineTextAlignment(.trailing)
+                }
+            }
 
             if values.count >= 2 {
                 MiniLineChart(values: values)
-                    .frame(height: 110)
+                    .frame(height: 120)
                     .padding(12)
                     .background(Theme.inputBg.opacity(0.65))
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                HStack {
+                    Text("\(formatWeight(values.first ?? 0))")
+                    Spacer()
+                    Text("\(formatWeight(values.last ?? 0)) \(store.appData.unit)")
+                }
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
             } else {
                 Text(values.isEmpty ? "Log a max to start a trend line." : "Log one more max to see your trend.")
                     .font(.subheadline)
@@ -1239,14 +1396,23 @@ struct MaxTrackerDetailView: View {
                     .cardStyle()
             } else {
                 ForEach(tracker.records.sorted { $0.date > $1.date }) { record in
-                    HStack {
-                        Text(formatBodyWeightDate(record.date))
-                            .font(.caption)
-                            .foregroundStyle(Theme.textDim)
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(formatBodyWeightDate(record.date))
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.textDim)
+
+                            Text(recordE1RMText(record))
+                                .font(.caption)
+                                .foregroundStyle(Theme.textFaint)
+                        }
+
                         Spacer()
+
                         Text("\(formatWeight(record.weight)) \(store.appData.unit) x \(record.reps)")
                             .font(.subheadline.monospacedDigit().weight(.semibold))
                             .foregroundStyle(Theme.text)
+
                         Button {
                             pendingDeleteRecord = record
                         } label: {

@@ -22,6 +22,7 @@ struct ProgramsListView: View {
                     header
                     searchField
                     categoryFilters
+                    recoveryShortcuts
 
                     if orderedPrograms.isEmpty {
                         emptyState
@@ -173,6 +174,33 @@ struct ProgramsListView: View {
                 }
             }
             .padding(.horizontal, 1)
+        }
+    }
+
+    @ViewBuilder
+    private var recoveryShortcuts: some View {
+        if !store.appData.hiddenProgramIds.isEmpty || !store.appData.trashedPrograms.isEmpty {
+            HStack(spacing: 10) {
+                if !store.appData.hiddenProgramIds.isEmpty {
+                    Button {
+                        showingHiddenPrograms = true
+                        isManaging = true
+                    } label: {
+                        Label("Hidden (\(store.appData.hiddenProgramIds.count))", systemImage: "eye")
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                }
+
+                if !store.appData.trashedPrograms.isEmpty {
+                    Button {
+                        showingTrash = true
+                        isManaging = true
+                    } label: {
+                        Label("Trash (\(store.appData.trashedPrograms.count))", systemImage: "trash")
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                }
+            }
         }
     }
 

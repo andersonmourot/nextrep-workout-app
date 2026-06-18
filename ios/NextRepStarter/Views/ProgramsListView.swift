@@ -240,9 +240,14 @@ struct ProgramsListView: View {
 
     private var filteredPrograms: [Program] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        let categoryFiltered = selectedCategory == "All"
-            ? store.allPrograms
-            : store.allPrograms.filter { $0.category == selectedCategory }
+        let categoryFiltered: [Program]
+        if selectedCategory == "All" {
+            categoryFiltered = store.allPrograms
+        } else {
+            categoryFiltered = store.allPrograms.filter { program in
+                program.category == selectedCategory
+            }
+        }
 
         guard !trimmed.isEmpty else {
             return categoryFiltered

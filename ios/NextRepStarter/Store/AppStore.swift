@@ -1218,14 +1218,16 @@ final class AppStore {
 
     private func refreshSharedContent(token: String) async {
         let currentUserId = user?.id
-        let linkedProgramIds = Array(Set(appData.customPrograms.compactMap { program in
+        let linkedProgramIdSet = Set<String>(appData.customPrograms.compactMap { program -> String? in
             guard let ownerId = program.ownerId, ownerId != currentUserId else { return nil }
             return program.id
-        }))
-        let linkedExerciseIds = Array(Set(appData.customExercises.compactMap { exercise in
+        })
+        let linkedExerciseIdSet = Set<String>(appData.customExercises.compactMap { exercise -> String? in
             guard let ownerId = exercise.ownerId, ownerId != currentUserId else { return nil }
             return exercise.id
-        }))
+        })
+        let linkedProgramIds = Array(linkedProgramIdSet)
+        let linkedExerciseIds = Array(linkedExerciseIdSet)
 
         do {
             if !linkedProgramIds.isEmpty {

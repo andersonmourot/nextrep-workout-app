@@ -27,11 +27,11 @@ final class AppStore {
     @ObservationIgnored private var syncTask: Task<Void, Never>?
 
     init(
-        apiClient: APIClient = .production(),
+        apiClient: APIClient? = nil,
         keychain: KeychainStore = KeychainStore(),
         restNotifier: RestTimerNotifier = RestTimerNotifier()
     ) {
-        self.apiClient = apiClient
+        self.apiClient = apiClient ?? APIClient.production()
         self.keychain = keychain
         self.restNotifier = restNotifier
     }

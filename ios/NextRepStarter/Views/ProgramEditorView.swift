@@ -7,6 +7,8 @@ struct ProgramEditorView: View {
     @State private var showingDeleteConfirm = false
     @State private var exerciseQueries: [String: String] = [:]
     @State private var collapsedDayIds: Set<String> = []
+    @State private var selectedWeek = 1
+    @State private var showingCopyWeekConfirm = false
     @FocusState private var focusedExerciseKey: String?
 
     private let categories = ["Bodybuilding", "Strength", "HIIT", "Powerlifting", "Functional", "Bodyweight"]
@@ -45,6 +47,14 @@ struct ProgramEditorView: View {
             }
         } message: {
             Text("This moves the custom program to Trash. You can restore it from the Programs screen.")
+        }
+        .alert("Copy Week to All Weeks?", isPresented: $showingCopyWeekConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Copy", role: .destructive) {
+                copySelectedWeekToAllWeeks()
+            }
+        } message: {
+            Text("This makes every week match Week \(currentWeek) and clears week-specific edits.")
         }
     }
 
@@ -203,6 +213,8 @@ struct ProgramEditorView: View {
                 .foregroundStyle(Theme.accentLight)
             }
 
+            weekControls
+
             if draft.days.isEmpty {
                 Text("Add at least one day to start using this program.")
                     .font(.subheadline)
@@ -216,9 +228,57 @@ struct ProgramEditorView: View {
         }
     }
 
+    private var weekControls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Button {
+                    selectedWeek = max(1, currentWeek - 1)
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
+                .disabled(currentWeek <= 1)
+
+                Text("Week \(currentWeek) / \(totalWeeks)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.text)
+                    .frame(maxWidth: .infinity)
+
+                Button {
+                    selectedWeek = min(totalWeeks, currentWeek + 1)
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
+                .disabled(currentWeek >= totalWeeks)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+            HStack(spacing: 8) {
+                Text(currentWeek == 1 ? "Editing base week" : "Editing week-specific plan")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textFaint)
+
+                Spacer()
+
+                if totalWeeks > 1 {
+                    Button("Copy Week to All") {
+                        showingCopyWeekConfirm = true
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accentLight)
+                }
+            }
+        }
+    }
+
     private func dayEditor(dayIndex: Int) -> some View {
         let dayId = draft.days[dayIndex].id
         let isCollapsed = collapsedDayIds.contains(dayId)
+        let day = resolvedDay(dayIndex: dayIndex)
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -251,29 +311,42 @@ struct ProgramEditorView: View {
                 .foregroundStyle(Theme.accentLight)
 
                 Button("Remove") {
-                    draft.days.remove(at: dayIndex)
-                    draft.daysPerWeek = max(1, draft.days.count)
+                    removeDay(at: dayIndex)
                 }
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.red.opacity(0.85))
             }
 
             if !isCollapsed {
-                field("Day Name", text: $draft.days[dayIndex].name)
-                field("Focus", text: $draft.days[dayIndex].focus)
+                field("Day Name", text: Binding(
+                    get: { resolvedDay(dayIndex: dayIndex).name },
+                    set: { newValue in
+                        updateDay(dayIndex: dayIndex) { day in
+                            day.name = newValue
+                        }
+                    }
+                ))
+                field("Focus", text: Binding(
+                    get: { resolvedDay(dayIndex: dayIndex).focus },
+                    set: { newValue in
+                        updateDay(dayIndex: dayIndex) { day in
+                            day.focus = newValue
+                        }
+                    }
+                ))
 
-                ForEach(draft.days[dayIndex].exercises.indices, id: \.self) { exerciseIndex in
+                ForEach(day.exercises.indices, id: \.self) { exerciseIndex in
                     exerciseEditor(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
                 }
 
                 Button {
-                    draft.days[dayIndex].exercises.append(blankPlannedExercise())
+                    addExercise(dayIndex: dayIndex)
                 } label: {
                     Label("Add Exercise", systemImage: "plus")
                 }
                 .buttonStyle(GhostButtonStyle())
             } else {
-                Text("\(draft.days[dayIndex].exercises.count) exercise\(draft.days[dayIndex].exercises.count == 1 ? "" : "s")")
+                Text("\(day.exercises.count) exercise\(day.exercises.count == 1 ? "" : "s")")
                     .font(.caption)
                     .foregroundStyle(Theme.textDim)
             }
@@ -282,6 +355,8 @@ struct ProgramEditorView: View {
     }
 
     private func exerciseEditor(dayIndex: Int, exerciseIndex: Int) -> some View {
+        let planned = plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) ?? blankPlannedExercise()
+
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Exercise \(exerciseIndex + 1)")
@@ -301,7 +376,7 @@ struct ProgramEditorView: View {
                 .foregroundStyle(Theme.accentLight)
 
                 Button("Remove") {
-                    draft.days[dayIndex].exercises.remove(at: exerciseIndex)
+                    removeExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
                 }
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.red.opacity(0.85))
@@ -311,22 +386,52 @@ struct ProgramEditorView: View {
 
             numericField(
                 "Sets",
-                value: $draft.days[dayIndex].exercises[exerciseIndex].sets,
+                value: Binding(
+                    get: { plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)?.sets ?? planned.sets },
+                    set: { newValue in
+                        updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                            exercise.sets = newValue
+                        }
+                    }
+                ),
                 emptyWhenZero: true
             )
-            field("Reps", text: $draft.days[dayIndex].exercises[exerciseIndex].reps)
+            field("Reps", text: Binding(
+                get: { plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)?.reps ?? planned.reps },
+                set: { newValue in
+                    updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                        exercise.reps = newValue
+                    }
+                }
+            ))
             numericField(
                 "Rest",
-                value: $draft.days[dayIndex].exercises[exerciseIndex].restSec,
+                value: Binding(
+                    get: { plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)?.restSec ?? planned.restSec },
+                    set: { newValue in
+                        updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                            exercise.restSec = newValue
+                        }
+                    }
+                ),
                 emptyWhenZero: true
             )
             field("Superset Group (optional)", text: Binding(
-                get: { draft.days[dayIndex].exercises[exerciseIndex].groupId ?? "" },
-                set: { draft.days[dayIndex].exercises[exerciseIndex].groupId = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                get: { plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)?.groupId ?? "" },
+                set: { newValue in
+                    updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                        let clean = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                        exercise.groupId = clean.isEmpty ? nil : clean
+                    }
+                }
             ))
             field("Notes", text: Binding(
-                get: { draft.days[dayIndex].exercises[exerciseIndex].notes ?? "" },
-                set: { draft.days[dayIndex].exercises[exerciseIndex].notes = $0.isEmpty ? nil : $0 }
+                get: { plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex)?.notes ?? "" },
+                set: { newValue in
+                    updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                        exercise.notes = newValue.isEmpty ? nil : newValue
+                    }
+                }
             ))
         }
         .padding(12)
@@ -350,7 +455,7 @@ struct ProgramEditorView: View {
             } label: {
                 Image(systemName: "chevron.down")
             }
-            .disabled(exerciseIndex >= draft.days[dayIndex].exercises.count - 1)
+            .disabled(exerciseIndex >= resolvedDay(dayIndex: dayIndex).exercises.count - 1)
         }
         .font(.caption.weight(.bold))
         .foregroundStyle(Theme.textDim)
@@ -361,22 +466,26 @@ struct ProgramEditorView: View {
 
     private func exerciseSelector(dayIndex: Int, exerciseIndex: Int) -> some View {
         let key = exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex)
-        let planned = draft.days[dayIndex].exercises[exerciseIndex]
+        let planned = plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) ?? blankPlannedExercise()
         let query = exerciseQueries[key] ?? exerciseDisplayName(for: planned)
         let isFocused = focusedExerciseKey == key
         let matches = isFocused ? Array(filteredExercises(query: query).prefix(5)) : []
 
         return VStack(alignment: .leading, spacing: 8) {
             TextField("", text: Binding(
-                get: { exerciseQueries[key] ?? exerciseDisplayName(for: draft.days[dayIndex].exercises[exerciseIndex]) },
+                get: { exerciseQueries[key] ?? exerciseDisplayName(for: plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) ?? planned) },
                 set: { newValue in
                     exerciseQueries[key] = newValue
                     if let exact = store.allExercises.first(where: { $0.name.localizedCaseInsensitiveCompare(newValue) == .orderedSame }) {
-                        draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exact.id
-                        draft.days[dayIndex].exercises[exerciseIndex].name = nil
+                        updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                            exercise.exerciseId = exact.id
+                            exercise.name = nil
+                        }
                     } else {
-                        draft.days[dayIndex].exercises[exerciseIndex].exerciseId = "custom-\(key)"
-                        draft.days[dayIndex].exercises[exerciseIndex].name = newValue
+                        updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                            exercise.exerciseId = "custom-\(key)"
+                            exercise.name = newValue
+                        }
                     }
                 }
             ))
@@ -394,8 +503,10 @@ struct ProgramEditorView: View {
                 VStack(spacing: 0) {
                     ForEach(matches) { exercise in
                         Button {
-                            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exercise.id
-                            draft.days[dayIndex].exercises[exerciseIndex].name = nil
+                            updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { planned in
+                                planned.exerciseId = exercise.id
+                                planned.name = nil
+                            }
                             exerciseQueries[key] = exercise.name
                             focusedExerciseKey = nil
                         } label: {
@@ -430,6 +541,98 @@ struct ProgramEditorView: View {
                     .foregroundStyle(Theme.textFaint)
             }
         }
+    }
+
+    private var totalWeeks: Int {
+        max(1, draft.durationWeeks)
+    }
+
+    private var currentWeek: Int {
+        min(max(1, selectedWeek), totalWeeks)
+    }
+
+    private func resolvedDay(dayIndex: Int) -> ProgramDay {
+        domainResolveProgramDay(draft, dayIndex: dayIndex, week: currentWeek) ?? draft.days[dayIndex]
+    }
+
+    private func plannedExercise(dayIndex: Int, exerciseIndex: Int) -> PlannedExercise? {
+        let day = resolvedDay(dayIndex: dayIndex)
+        guard day.exercises.indices.contains(exerciseIndex) else {
+            return nil
+        }
+        return day.exercises[exerciseIndex]
+    }
+
+    private func updateDay(dayIndex: Int, mutate: (inout ProgramDay) -> Void) {
+        guard draft.days.indices.contains(dayIndex) else { return }
+        var day = resolvedDay(dayIndex: dayIndex)
+        mutate(&day)
+        commitDay(day, dayIndex: dayIndex)
+    }
+
+    private func commitDay(_ day: ProgramDay, dayIndex: Int) {
+        guard draft.days.indices.contains(dayIndex) else { return }
+        let baseId = draft.days[dayIndex].id
+        var normalized = day
+        normalized.id = baseId
+
+        if currentWeek <= 1 {
+            draft.days[dayIndex] = normalized
+            return
+        }
+
+        var overrides = draft.weekOverrides ?? [:]
+        var list = overrides[baseId] ?? []
+        list.removeAll { $0.fromWeek == currentWeek }
+        list.append(ProgramWeekOverride(fromWeek: currentWeek, day: normalized))
+        list.sort { $0.fromWeek < $1.fromWeek }
+        overrides[baseId] = list
+        draft.weekOverrides = overrides
+    }
+
+    private func updateExercise(dayIndex: Int, exerciseIndex: Int, mutate: (inout PlannedExercise) -> Void) {
+        updateDay(dayIndex: dayIndex) { day in
+            guard day.exercises.indices.contains(exerciseIndex) else { return }
+            mutate(&day.exercises[exerciseIndex])
+        }
+    }
+
+    private func addExercise(dayIndex: Int) {
+        updateDay(dayIndex: dayIndex) { day in
+            day.exercises.append(blankPlannedExercise())
+        }
+    }
+
+    private func removeExercise(dayIndex: Int, exerciseIndex: Int) {
+        updateDay(dayIndex: dayIndex) { day in
+            guard day.exercises.indices.contains(exerciseIndex) else { return }
+            day.exercises.remove(at: exerciseIndex)
+        }
+    }
+
+    private func removeDay(at index: Int) {
+        guard draft.days.indices.contains(index) else { return }
+        let id = draft.days[index].id
+        draft.days.remove(at: index)
+        draft.daysPerWeek = max(1, draft.days.count)
+        draft.weekOverrides?[id] = nil
+        if draft.weekOverrides?.isEmpty == true {
+            draft.weekOverrides = nil
+        }
+        selectedWeek = min(selectedWeek, totalWeeks)
+    }
+
+    private func copySelectedWeekToAllWeeks() {
+        guard !draft.days.isEmpty else { return }
+        let baseIds = draft.days.map(\.id)
+        let copiedDays = draft.days.indices.map { index in
+            var day = resolvedDay(dayIndex: index)
+            day.id = baseIds[index]
+            return day
+        }
+        draft.days = copiedDays
+        draft.weekOverrides = nil
+        selectedWeek = 1
     }
 
     private var actions: some View {
@@ -491,10 +694,35 @@ struct ProgramEditorView: View {
         draft.description = draft.description.trimmingCharacters(in: .whitespacesAndNewlines)
         draft.daysPerWeek = max(1, draft.days.count)
         for dayIndex in draft.days.indices {
+            draft.days[dayIndex].name = draft.days[dayIndex].name.trimmingCharacters(in: .whitespacesAndNewlines)
+            draft.days[dayIndex].focus = draft.days[dayIndex].focus.trimmingCharacters(in: .whitespacesAndNewlines)
             for exerciseIndex in draft.days[dayIndex].exercises.indices {
                 draft.days[dayIndex].exercises[exerciseIndex].sets = max(1, draft.days[dayIndex].exercises[exerciseIndex].sets)
                 draft.days[dayIndex].exercises[exerciseIndex].restSec = max(0, draft.days[dayIndex].exercises[exerciseIndex].restSec)
             }
+        }
+
+        if var overrides = draft.weekOverrides {
+            for (dayId, list) in overrides {
+                let normalizedList = list.map { override in
+                    var updated = override
+                    updated.day.name = updated.day.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    updated.day.focus = updated.day.focus.trimmingCharacters(in: .whitespacesAndNewlines)
+                    for exerciseIndex in updated.day.exercises.indices {
+                        updated.day.exercises[exerciseIndex].sets = max(1, updated.day.exercises[exerciseIndex].sets)
+                        updated.day.exercises[exerciseIndex].restSec = max(0, updated.day.exercises[exerciseIndex].restSec)
+                    }
+                    return updated
+                }
+                .filter { $0.fromWeek > 1 && $0.fromWeek <= totalWeeks }
+
+                if normalizedList.isEmpty {
+                    overrides.removeValue(forKey: dayId)
+                } else {
+                    overrides[dayId] = normalizedList
+                }
+            }
+            draft.weekOverrides = overrides.isEmpty ? nil : overrides
         }
     }
 
@@ -504,7 +732,7 @@ struct ProgramEditorView: View {
 
     private func duplicateDay(at index: Int) {
         guard draft.days.indices.contains(index) else { return }
-        var copy = draft.days[index]
+        var copy = resolvedDay(dayIndex: index)
         copy.id = "day-\(UUID().uuidString)"
         copy.name = copy.name.isEmpty ? "Day \(draft.days.count + 1)" : "\(copy.name) Copy"
         draft.days.insert(copy, at: index + 1)
@@ -513,22 +741,27 @@ struct ProgramEditorView: View {
 
     private func duplicateExercise(dayIndex: Int, exerciseIndex: Int) {
         guard draft.days.indices.contains(dayIndex),
-              draft.days[dayIndex].exercises.indices.contains(exerciseIndex) else {
+              resolvedDay(dayIndex: dayIndex).exercises.indices.contains(exerciseIndex) else {
             return
         }
 
-        let copy = draft.days[dayIndex].exercises[exerciseIndex]
-        draft.days[dayIndex].exercises.insert(copy, at: exerciseIndex + 1)
+        updateDay(dayIndex: dayIndex) { day in
+            guard day.exercises.indices.contains(exerciseIndex) else { return }
+            let copy = day.exercises[exerciseIndex]
+            day.exercises.insert(copy, at: exerciseIndex + 1)
+        }
     }
 
     private func moveExercise(dayIndex: Int, exerciseIndex: Int, direction: Int) {
         guard draft.days.indices.contains(dayIndex) else { return }
         let target = exerciseIndex + direction
-        guard draft.days[dayIndex].exercises.indices.contains(exerciseIndex),
-              draft.days[dayIndex].exercises.indices.contains(target) else {
-            return
+        updateDay(dayIndex: dayIndex) { day in
+            guard day.exercises.indices.contains(exerciseIndex),
+                  day.exercises.indices.contains(target) else {
+                return
+            }
+            day.exercises.swapAt(exerciseIndex, target)
         }
-        draft.days[dayIndex].exercises.swapAt(exerciseIndex, target)
     }
 
     private static func blankProgram() -> Program {
@@ -591,29 +824,34 @@ struct ProgramEditorView: View {
     private func commitExerciseQuery(for key: String) {
         guard let indices = exerciseIndices(for: key),
               draft.days.indices.contains(indices.dayIndex),
-              draft.days[indices.dayIndex].exercises.indices.contains(indices.exerciseIndex) else {
+              resolvedDay(dayIndex: indices.dayIndex).exercises.indices.contains(indices.exerciseIndex) else {
             return
         }
 
         let dayIndex = indices.dayIndex
         let exerciseIndex = indices.exerciseIndex
-        let value = (exerciseQueries[key] ?? exerciseDisplayName(for: draft.days[dayIndex].exercises[exerciseIndex]))
+        let planned = plannedExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) ?? blankPlannedExercise()
+        let value = (exerciseQueries[key] ?? exerciseDisplayName(for: planned))
             .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let exact = store.allExercises.first(where: { $0.name.localizedCaseInsensitiveCompare(value) == .orderedSame }) {
-            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = exact.id
-            draft.days[dayIndex].exercises[exerciseIndex].name = nil
+            updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                exercise.exerciseId = exact.id
+                exercise.name = nil
+            }
             exerciseQueries[key] = exact.name
         } else if !value.isEmpty {
-            draft.days[dayIndex].exercises[exerciseIndex].exerciseId = "custom-\(key)"
-            draft.days[dayIndex].exercises[exerciseIndex].name = value
+            updateExercise(dayIndex: dayIndex, exerciseIndex: exerciseIndex) { exercise in
+                exercise.exerciseId = "custom-\(key)"
+                exercise.name = value
+            }
             exerciseQueries[key] = value
         }
     }
 
     private func exerciseIndices(for key: String) -> (dayIndex: Int, exerciseIndex: Int)? {
         for dayIndex in draft.days.indices {
-            for exerciseIndex in draft.days[dayIndex].exercises.indices where exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex) == key {
+            for exerciseIndex in resolvedDay(dayIndex: dayIndex).exercises.indices where exerciseKey(dayIndex: dayIndex, exerciseIndex: exerciseIndex) == key {
                 return (dayIndex, exerciseIndex)
             }
         }

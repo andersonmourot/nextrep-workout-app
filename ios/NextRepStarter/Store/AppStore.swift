@@ -28,12 +28,12 @@ final class AppStore {
 
     init(
         apiClient: APIClient? = nil,
-        keychain: KeychainStore = KeychainStore(),
-        restNotifier: RestTimerNotifier = RestTimerNotifier()
+        keychain: KeychainStore? = nil,
+        restNotifier: RestTimerNotifier? = nil
     ) {
         self.apiClient = apiClient ?? APIClient.production()
-        self.keychain = keychain
-        self.restNotifier = restNotifier
+        self.keychain = keychain ?? KeychainStore()
+        self.restNotifier = restNotifier ?? RestTimerNotifier()
     }
 
     var allPrograms: [Program] {

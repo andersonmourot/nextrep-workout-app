@@ -1,6 +1,44 @@
 import AudioToolbox
+import AVFoundation
 import Combine
 import SwiftUI
+
+struct NextRepTimerSound: Identifiable, Equatable {
+    let id: String
+    let label: String
+    let systemSoundId: SystemSoundID?
+    let vibrates: Bool
+}
+
+let nextRepTimerSounds: [NextRepTimerSound] = [
+    NextRepTimerSound(id: "beep", label: "Beep", systemSoundId: 1057, vibrates: false),
+    NextRepTimerSound(id: "bell", label: "Bell", systemSoundId: 1025, vibrates: false),
+    NextRepTimerSound(id: "chime", label: "Chime", systemSoundId: 1054, vibrates: false),
+    NextRepTimerSound(id: "alert", label: "Alert", systemSoundId: 1005, vibrates: false),
+    NextRepTimerSound(id: "vibrate", label: "Vibrate", systemSoundId: nil, vibrates: true)
+]
+
+func nextRepTimerSound(for id: String) -> NextRepTimerSound {
+    nextRepTimerSounds.first { $0.id == id } ?? nextRepTimerSounds[0]
+}
+
+func playNextRepTimerSound(_ id: String) {
+    let sound = nextRepTimerSound(for: id)
+    configureNextRepAudioSession()
+    if let systemSoundId = sound.systemSoundId {
+        AudioServicesPlaySystemSound(systemSoundId)
+    }
+    if sound.vibrates || sound.systemSoundId == nil {
+        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+    }
+}
+
+private func configureNextRepAudioSession() {
+    #if os(iOS)
+    try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
+    try? AVAudioSession.sharedInstance().setActive(true, options: [])
+    #endif
+}
 
 struct IntervalTimerView: View {
     @Environment(AppStore.self) private var store
@@ -32,6 +70,7 @@ struct IntervalTimerView: View {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 topModePicker
+                soundCard
                 switch topMode {
                 case "stopwatch":
                     stopwatchCard
@@ -94,6 +133,52 @@ struct IntervalTimerView: View {
             Text("Interval").tag("interval")
         }
         .pickerStyle(.segmented)
+    }
+
+    private var soundCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Completion Sound")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+                    Text("Used for countdown, interval, and workout rest completion.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                }
+
+                Spacer()
+
+                Button("Preview") {
+                    playNextRepTimerSound(store.appData.timerSound)
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.accentLight)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 94), spacing: 8)], spacing: 8) {
+                ForEach(nextRepTimerSounds) { sound in
+                    Button {
+                        store.setTimerSound(sound.id)
+                        playNextRepTimerSound(sound.id)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: sound.id == "vibrate" ? "iphone.radiowaves.left.and.right" : "speaker.wave.2.fill")
+                                .font(.caption.weight(.bold))
+                            Text(sound.label)
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundStyle(store.appData.timerSound == sound.id ? .white : Theme.textDim)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(store.appData.timerSound == sound.id ? Theme.accent : Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .cardStyle()
     }
 
     private var countdownCard: some View {
@@ -344,7 +429,7 @@ struct IntervalTimerView: View {
             timerRemaining = 0
             timerRunning = false
             timerDone = true
-            AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+            playNextRepTimerSound(store.appData.timerSound)
         }
     }
 
@@ -369,7 +454,7 @@ struct IntervalTimerView: View {
     }
 
     private func advancePhase() {
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
+        playNextRepTimerSound(store.appData.timerSound)
 
         switch mode {
         case "EMOM":

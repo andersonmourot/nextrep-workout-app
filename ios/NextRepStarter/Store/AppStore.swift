@@ -257,6 +257,11 @@ final class AppStore {
         scheduleSync()
     }
 
+    func setTimerSound(_ sound: String) {
+        appData.timerSound = sound
+        scheduleSync()
+    }
+
     func addSavedTimer(seconds: Int) {
         guard seconds > 0 else { return }
         let timer = SavedTimer(id: UUID().uuidString, label: formatClock(seconds), seconds: seconds)

@@ -85,6 +85,7 @@ struct ActiveWorkoutView: View {
                 FloatingRestBar(
                     active: active,
                     accent: accent,
+                    timerSound: store.appData.timerSound,
                     onAddTime: { store.extendRest(by: 15) },
                     onSkip: { store.stopRest() }
                 )
@@ -825,6 +826,7 @@ private extension View {
 private struct FloatingRestBar: View {
     let active: ActiveWorkout
     let accent: Color
+    let timerSound: String
     let onAddTime: () -> Void
     let onSkip: () -> Void
     @State private var signaledSeconds: Set<Int> = []
@@ -904,7 +906,11 @@ private struct FloatingRestBar: View {
             return
         }
         signaledSeconds.insert(remaining)
-        AudioServicesPlaySystemSound(remaining == 0 ? kSystemSoundID_Vibrate : 1104)
+        if remaining == 0 {
+            playNextRepTimerSound(timerSound)
+        } else {
+            AudioServicesPlaySystemSound(1104)
+        }
     }
 }
 private func formatClock(_ seconds: Int) -> String {

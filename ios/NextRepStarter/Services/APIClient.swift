@@ -45,6 +45,10 @@ struct ExercisePutRequest: Encodable {
     var exercise: Exercise
 }
 
+struct BatchRequest: Encodable {
+    var ids: [String]
+}
+
 private struct EmptyRequest: Encodable {}
 
 final class APIClient {
@@ -175,6 +179,28 @@ final class APIClient {
 
     func userExercises(token: String, userId: String) async throws -> SharedExercises {
         try await request("/api/users/\(userId)/exercises", token: token)
+    }
+
+    func programsBatch(token: String, ids: [String]) async throws -> [Program] {
+        guard !ids.isEmpty else { return [] }
+        let response: SharedProgramsBatch = try await request(
+            "/api/programs/batch",
+            method: "POST",
+            token: token,
+            body: BatchRequest(ids: ids)
+        )
+        return response.programs
+    }
+
+    func exercisesBatch(token: String, ids: [String]) async throws -> [Exercise] {
+        guard !ids.isEmpty else { return [] }
+        let response: SharedExercisesBatch = try await request(
+            "/api/exercises/batch",
+            method: "POST",
+            token: token,
+            body: BatchRequest(ids: ids)
+        )
+        return response.exercises
     }
 
     func addProgram(token: String, programId: String) async throws -> Program {

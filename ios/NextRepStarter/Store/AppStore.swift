@@ -1,6 +1,11 @@
 import Foundation
 import Observation
 
+enum SharedProgramAddMode {
+    case follow
+    case duplicate
+}
+
 @MainActor
 @Observable
 final class AppStore {
@@ -438,46 +443,131 @@ final class AppStore {
         }
     }
 
-    func addSharedProgram(id: String) async {
+    @discardableResult
+    func addSharedProgram(id: String) async -> Bool {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
-            return
+            return false
         }
 
         do {
             let program = try await apiClient.addProgram(token: token, programId: id)
             upsertCustomProgram(program)
             scheduleSync()
+            return true
         } catch {
             authError = error.localizedDescription
+            return false
         }
     }
 
-    func addSharedExercise(id: String) async {
+    @discardableResult
+    func addSharedProgram(
+        _ program: Program,
+        ownerName: String,
+        ownerExercises: [Exercise],
+        mode: SharedProgramAddMode
+    ) async -> Program? {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
-            return
+            return nil
+        }
+
+        do {
+            let baseProgram: Program
+            switch mode {
+            case .follow:
+                baseProgram = try await apiClient.addProgram(token: token, programId: program.id)
+            case .duplicate:
+                baseProgram = program
+            }
+
+            let prepared = makeSharedProgramSelfContained(
+                baseProgram,
+                ownerName: ownerName,
+                ownerExercises: ownerExercises
+            )
+            importReferencedSharedExercises(prepared.referencedExercises, ownerName: ownerName)
+
+            var savedProgram = prepared.program
+            if mode == .duplicate {
+                savedProgram.id = "ios-\(UUID().uuidString)"
+                savedProgram.ownerId = user?.id
+                savedProgram.ownerName = user?.name ?? appData.name
+                if let name = user?.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    savedProgram.coach = name
+                }
+                savedProgram.collaborative = false
+                savedProgram.version = Int(Date().timeIntervalSince1970 * 1000)
+                savedProgram = try await apiClient.upsertProgram(token: token, program: savedProgram)
+            }
+
+            upsertCustomProgram(savedProgram)
+            scheduleSync()
+            return savedProgram
+        } catch {
+            authError = error.localizedDescription
+            return nil
+        }
+    }
+
+    @discardableResult
+    func addSharedExercise(id: String) async -> Bool {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
         }
 
         do {
             let exercise = try await apiClient.addExercise(token: token, exerciseId: id)
             upsertCustomExercise(exercise)
             scheduleSync()
+            return true
         } catch {
             authError = error.localizedDescription
+            return false
+        }
+    }
+
+    @discardableResult
+    func addSharedExercise(_ exercise: Exercise, ownerName: String) async -> Bool {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            var saved = try await apiClient.addExercise(token: token, exerciseId: exercise.id)
+            saved.shared = false
+            let savedOwnerName = saved.ownerName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if savedOwnerName.isEmpty {
+                saved.ownerName = ownerName
+            }
+            upsertCustomExercise(saved)
+            scheduleSync()
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
         }
     }
 
     func removeSharedProgram(id: String) async {
+        await removeSharedProgram(sharedId: id, localId: id)
+    }
+
+    func removeSharedProgram(sharedId: String, localId: String) async {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
             return
         }
 
         do {
-            try await apiClient.removeProgramMember(token: token, programId: id)
-            appData.customPrograms.removeAll { $0.id == id }
-            if appData.activeProgramId == id {
+            if sharedId == localId {
+                try await apiClient.removeProgramMember(token: token, programId: sharedId)
+            }
+            appData.customPrograms.removeAll { $0.id == localId }
+            if appData.activeProgramId == localId {
                 appData.activeProgramId = nil
             }
             scheduleSync()
@@ -994,6 +1084,7 @@ final class AppStore {
     private func loadInitialData(token: String) async throws {
         catalog = try await apiClient.catalog()
         appData = try await apiClient.appData(token: token)
+        await refreshSharedContent(token: token)
         UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
     }
 
@@ -1089,6 +1180,119 @@ final class AppStore {
     private func scheduleRestNotification(seconds: Int, exerciseName: String?) {
         Task {
             await restNotifier.scheduleRestComplete(after: seconds, exerciseName: exerciseName)
+        }
+    }
+
+    private func refreshSharedContent(token: String) async {
+        let currentUserId = user?.id
+        let linkedProgramIds = Array(Set(appData.customPrograms.compactMap { program in
+            guard let ownerId = program.ownerId, ownerId != currentUserId else { return nil }
+            return program.id
+        }))
+        let linkedExerciseIds = Array(Set(appData.customExercises.compactMap { exercise in
+            guard let ownerId = exercise.ownerId, ownerId != currentUserId else { return nil }
+            return exercise.id
+        }))
+
+        do {
+            if !linkedProgramIds.isEmpty {
+                let remotePrograms = try await apiClient.programsBatch(token: token, ids: linkedProgramIds)
+                let remoteById = Dictionary(uniqueKeysWithValues: remotePrograms.map { ($0.id, $0) })
+                appData.customPrograms = appData.customPrograms.map { local in
+                    guard let remote = remoteById[local.id],
+                          (remote.version ?? 0) > (local.version ?? 0) else {
+                        return local
+                    }
+                    return remote
+                }
+            }
+
+            if !linkedExerciseIds.isEmpty {
+                let remoteExercises = try await apiClient.exercisesBatch(token: token, ids: linkedExerciseIds)
+                let remoteById = Dictionary(uniqueKeysWithValues: remoteExercises.map { ($0.id, $0) })
+                appData.customExercises = appData.customExercises.map { local in
+                    guard var remote = remoteById[local.id],
+                          (remote.version ?? 0) > (local.version ?? 0) else {
+                        return local
+                    }
+                    remote.shared = local.shared
+                    return remote
+                }
+            }
+        } catch {
+            authError = error.localizedDescription
+        }
+    }
+
+    private func makeSharedProgramSelfContained(
+        _ program: Program,
+        ownerName: String,
+        ownerExercises: [Exercise]
+    ) -> (program: Program, referencedExercises: [Exercise]) {
+        var prepared = program
+        if prepared.coach.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            prepared.coach = ownerName
+        }
+
+        var ownerExerciseById: [String: Exercise] = [:]
+        for exercise in ownerExercises {
+            ownerExerciseById[exercise.id] = exercise
+        }
+
+        var referencedExerciseIds = Set<String>()
+
+        func fixPlannedExercise(_ planned: PlannedExercise) -> PlannedExercise {
+            var updated = planned
+            if let ownerExercise = ownerExerciseById[planned.exerciseId] {
+                let isCatalogExercise = catalog.exercises.contains { $0.id == planned.exerciseId }
+                if !isCatalogExercise {
+                    referencedExerciseIds.insert(planned.exerciseId)
+                }
+                let plannedName = updated.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if plannedName.isEmpty {
+                    updated.name = ownerExercise.name
+                }
+            }
+            return updated
+        }
+
+        prepared.days = prepared.days.map { day in
+            var updated = day
+            updated.exercises = day.exercises.map(fixPlannedExercise)
+            return updated
+        }
+
+        if let weekOverrides = prepared.weekOverrides {
+            var updatedOverrides: [String: [ProgramWeekOverride]] = [:]
+            for (week, overrides) in weekOverrides {
+                updatedOverrides[week] = overrides.map { override in
+                    var updatedOverride = override
+                    var updatedDay = override.day
+                    updatedDay.exercises = override.day.exercises.map(fixPlannedExercise)
+                    updatedOverride.day = updatedDay
+                    return updatedOverride
+                }
+            }
+            prepared.weekOverrides = updatedOverrides
+        }
+
+        let referencedExercises = referencedExerciseIds.compactMap { ownerExerciseById[$0] }
+        return (prepared, referencedExercises)
+    }
+
+    private func importReferencedSharedExercises(_ exercises: [Exercise], ownerName: String) {
+        for exercise in exercises {
+            let alreadyKnown = catalog.exercises.contains { $0.id == exercise.id }
+                || appData.customExercises.contains { $0.id == exercise.id }
+            guard !alreadyKnown else { continue }
+
+            var imported = exercise
+            imported.shared = false
+            let importedOwnerName = imported.ownerName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if importedOwnerName.isEmpty {
+                imported.ownerName = ownerName
+            }
+            upsertCustomExercise(imported)
         }
     }
 

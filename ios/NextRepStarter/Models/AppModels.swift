@@ -96,6 +96,14 @@ struct SharedExercises: Codable, Equatable {
     var exercises: [Exercise]
 }
 
+struct SharedProgramsBatch: Codable, Equatable {
+    var programs: [Program]
+}
+
+struct SharedExercisesBatch: Codable, Equatable {
+    var exercises: [Exercise]
+}
+
 struct ProgramResponse: Codable, Equatable {
     var program: Program
 }

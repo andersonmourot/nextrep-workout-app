@@ -190,6 +190,10 @@ struct SharedUserDetailView: View {
     @State private var programs: [Program] = []
     @State private var exercises: [Exercise] = []
     @State private var isLoading = false
+    @State private var addedProgramLocalIds: [String: String] = [:]
+    @State private var choosingProgram: Program?
+    @State private var isChoosingProgramMode = false
+    @State private var removingProgramId: String?
     let user: DiscoverUser
 
     var body: some View {
@@ -208,6 +212,19 @@ struct SharedUserDetailView: View {
         .screenBackground()
         .task {
             await loadSharedContent()
+        }
+        .sheet(item: $choosingProgram) { program in
+            SharedProgramAddChoiceView(
+                program: program,
+                ownerName: user.name,
+                isChoosing: isChoosingProgramMode,
+                onChoose: { mode in
+                    Task { await chooseSharedProgram(program, mode: mode) }
+                },
+                onCancel: {
+                    choosingProgram = nil
+                }
+            )
         }
     }
 
@@ -258,15 +275,20 @@ struct SharedUserDetailView: View {
                     .cardStyle()
             } else {
                 ForEach(programs) { program in
-                    SharedProgramCard(program: program, isAdded: store.allPrograms.contains(where: { $0.id == program.id })) {
-                        Task {
-                            if store.allPrograms.contains(where: { $0.id == program.id }) {
-                                await store.removeSharedProgram(id: program.id)
-                            } else {
-                                await store.addSharedProgram(id: program.id)
-                            }
+                    let localId = addedProgramLocalId(for: program)
+                    let isOwner = program.ownerId != nil && program.ownerId == store.user?.id
+                    SharedProgramCard(
+                        program: program,
+                        localId: localId,
+                        isOwner: isOwner,
+                        isRemoving: removingProgramId == program.id,
+                        onAdd: {
+                            choosingProgram = program
+                        },
+                        onRemove: {
+                            Task { await removeSharedProgram(program) }
                         }
-                    }
+                    )
                 }
             }
         }
@@ -291,7 +313,7 @@ struct SharedUserDetailView: View {
                             if store.allExercises.contains(where: { $0.id == exercise.id }) {
                                 await store.removeSharedExercise(id: exercise.id)
                             } else {
-                                await store.addSharedExercise(id: exercise.id)
+                                await store.addSharedExercise(exercise, ownerName: user.name)
                             }
                         }
                     }
@@ -305,6 +327,45 @@ struct SharedUserDetailView: View {
         programs = await store.sharedPrograms(for: user.id)
         exercises = await store.sharedExercises(for: user.id)
         isLoading = false
+    }
+
+    private func addedProgramLocalId(for program: Program) -> String? {
+        if let localId = addedProgramLocalIds[program.id] {
+            return localId
+        }
+        if store.allPrograms.contains(where: { $0.id == program.id }) {
+            return program.id
+        }
+        return nil
+    }
+
+    private func chooseSharedProgram(_ program: Program, mode: SharedProgramAddMode) async {
+        isChoosingProgramMode = true
+        defer {
+            isChoosingProgramMode = false
+            choosingProgram = nil
+        }
+
+        guard let saved = await store.addSharedProgram(
+            program,
+            ownerName: user.name,
+            ownerExercises: exercises,
+            mode: mode
+        ) else {
+            return
+        }
+        addedProgramLocalIds[program.id] = saved.id
+    }
+
+    private func removeSharedProgram(_ program: Program) async {
+        guard let localId = addedProgramLocalId(for: program) else {
+            return
+        }
+
+        removingProgramId = program.id
+        await store.removeSharedProgram(sharedId: program.id, localId: localId)
+        addedProgramLocalIds.removeValue(forKey: program.id)
+        removingProgramId = nil
     }
 }
 
@@ -358,8 +419,11 @@ private struct DiscoverUserRow: View {
 
 private struct SharedProgramCard: View {
     let program: Program
-    let isAdded: Bool
-    let onToggle: () -> Void
+    let localId: String?
+    let isOwner: Bool
+    let isRemoving: Bool
+    let onAdd: () -> Void
+    let onRemove: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -378,15 +442,36 @@ private struct SharedProgramCard: View {
 
                 Spacer()
 
-                Button(isAdded ? "Remove" : "Add") {
-                    onToggle()
+                if isOwner {
+                    Text("Yours")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textDim)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Theme.surface2)
+                        .clipShape(Capsule())
+                } else if localId != nil {
+                    Button(isRemoving ? "Removing..." : "Remove") {
+                        onRemove()
+                    }
+                    .disabled(isRemoving)
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.red.opacity(0.9))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Theme.surface2)
+                    .clipShape(Capsule())
+                } else {
+                    Button("Add") {
+                        onAdd()
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(hex: program.accent))
+                    .clipShape(Capsule())
                 }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(isAdded ? .red.opacity(0.9) : .white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(isAdded ? Theme.surface2 : Color(hex: program.accent))
-                .clipShape(Capsule())
             }
 
             Text(program.summary)
@@ -395,6 +480,105 @@ private struct SharedProgramCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .cardStyle()
+    }
+}
+
+private struct SharedProgramAddChoiceView: View {
+    let program: Program
+    let ownerName: String
+    let isChoosing: Bool
+    let onChoose: (SharedProgramAddMode) -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Add \(program.name)")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(Theme.text)
+
+                Text("Choose how you want to add \(ownerName)'s program.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            VStack(spacing: 10) {
+                Button {
+                    onChoose(.duplicate)
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Duplicate")
+                                .font(.headline)
+                                .foregroundStyle(Theme.text)
+                            Text("Make your own editable copy. Future changes by the original creator will not affect it.")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textDim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(isChoosing)
+
+                Button {
+                    onChoose(.follow)
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.title3.weight(.bold))
+                            .foregroundStyle(Theme.accentLight)
+                            .frame(width: 28)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Follow")
+                                .font(.headline)
+                                .foregroundStyle(Theme.text)
+                            Text("Save it to your Programs and stay linked to creator updates. Only the creator can edit it unless it is collaborative.")
+                                .font(.caption)
+                                .foregroundStyle(Theme.textDim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(.white.opacity(0.08), lineWidth: 1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(isChoosing)
+            }
+
+            Button(isChoosing ? "Adding..." : "Cancel") {
+                onCancel()
+            }
+            .buttonStyle(GhostButtonStyle())
+            .disabled(isChoosing)
+        }
+        .padding(20)
+        .frame(maxWidth: 448)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .background(Theme.bg)
+        .screenBackground()
     }
 }
 

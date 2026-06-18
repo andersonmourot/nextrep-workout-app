@@ -1,4 +1,5 @@
 import Foundation
+import PhotosUI
 import SwiftUI
 import UIKit
 
@@ -401,6 +402,7 @@ struct NutritionTrackerView: View {
     @State private var goalCarbsText = ""
     @State private var goalFatText = ""
     @State private var goalWaterText = ""
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     var body: some View {
         ScrollView {
@@ -409,6 +411,7 @@ struct NutritionTrackerView: View {
                 datePickerCard
                 todaySummary
                 inputCard
+                photoCard
                 targetCard
                 recentNutrition
             }
@@ -421,6 +424,9 @@ struct NutritionTrackerView: View {
         .screenBackground()
         .onAppear {
             seedGoalFieldsIfNeeded()
+        }
+        .onChange(of: selectedPhotoItems) { _, newItems in
+            Task { await loadNutritionPhotos(newItems) }
         }
     }
 
@@ -472,11 +478,30 @@ struct NutritionTrackerView: View {
             }
 
             if let selectedNutrition {
-                HStack(spacing: 8) {
-                    ProfileMiniMetric(value: "\(selectedNutrition.protein)g", label: "Protein")
-                    ProfileMiniMetric(value: "\(selectedNutrition.carbs)g", label: "Carbs")
-                    ProfileMiniMetric(value: "\(selectedNutrition.fat)g", label: "Fat")
-                    ProfileMiniMetric(value: "\(selectedNutrition.water)", label: "Water")
+                HStack(spacing: 18) {
+                    ProgressRing(
+                        value: nutritionProgress(current: selectedNutrition.calories, target: store.appData.nutritionGoals.calories),
+                        size: 118,
+                        lineWidth: 11,
+                        color: Theme.accentLight,
+                        center: "\(selectedNutrition.calories)",
+                        caption: "kcal"
+                    )
+
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("\(max(0, store.appData.nutritionGoals.calories - selectedNutrition.calories)) kcal left")
+                            .font(.headline)
+                            .foregroundStyle(Theme.text)
+                        Text("Goal \(store.appData.nutritionGoals.calories) kcal")
+                            .font(.caption)
+                            .foregroundStyle(Theme.textDim)
+
+                        HStack(spacing: 6) {
+                            ProfileMiniMetric(value: "\(selectedNutrition.protein)g", label: "Protein")
+                            ProfileMiniMetric(value: "\(selectedNutrition.carbs)g", label: "Carbs")
+                            ProfileMiniMetric(value: "\(selectedNutrition.fat)g", label: "Fat")
+                        }
+                    }
                 }
             } else {
                 Text("No nutrition logged for this day.")
@@ -534,9 +559,53 @@ struct NutritionTrackerView: View {
 
     private var inputCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Log Nutrition")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Add Nutrition")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+                Text("Use Add fields for quick logging, or Save Nutrition to set exact values.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            NutritionAddField(label: "Add calories", unit: "kcal") { value in
+                adjustNutrition(calories: value)
+            }
+
+            VStack(spacing: 12) {
+                NutritionMacroAddRow(
+                    label: "Protein",
+                    value: selectedNutrition?.protein ?? 0,
+                    goal: store.appData.nutritionGoals.protein,
+                    color: Color(hex: "#3B82F6")
+                ) { value in
+                    adjustNutrition(protein: value)
+                }
+
+                NutritionMacroAddRow(
+                    label: "Carbs",
+                    value: selectedNutrition?.carbs ?? 0,
+                    goal: store.appData.nutritionGoals.carbs,
+                    color: Color(hex: "#F97316")
+                ) { value in
+                    adjustNutrition(carbs: value)
+                }
+
+                NutritionMacroAddRow(
+                    label: "Fat",
+                    value: selectedNutrition?.fat ?? 0,
+                    goal: store.appData.nutritionGoals.fat,
+                    color: Color(hex: "#A855F7")
+                ) { value in
+                    adjustNutrition(fat: value)
+                }
+            }
+
+            Divider().overlay(.white.opacity(0.08))
+
+            Text("Set exact values")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
 
             HStack(spacing: 10) {
                 profileInput("Calories", text: $caloriesText, keyboard: .numberPad)
@@ -563,6 +632,78 @@ struct NutritionTrackerView: View {
                 waterText = ""
             }
             .buttonStyle(PrimaryButtonStyle())
+        }
+        .cardStyle()
+    }
+
+    private var photoCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Photos", systemImage: "photo")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                Text("\(selectedPhotos.count) / 3")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            Text("Add up to 3 photos for this day.")
+                .font(.caption)
+                .foregroundStyle(Theme.textDim)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 8)], spacing: 8) {
+                ForEach(Array(selectedPhotos.enumerated()), id: \.offset) { index, photo in
+                    ZStack(alignment: .topTrailing) {
+                        nutritionImage(photo)
+                            .frame(height: 92)
+                            .frame(maxWidth: .infinity)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .stroke(.white.opacity(0.08), lineWidth: 1)
+                            }
+
+                        Button {
+                            var next = selectedPhotos
+                            next.remove(at: index)
+                            store.setNutritionPhotos(date: selectedDateKey, photos: next)
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 24, height: 24)
+                                .background(.black.opacity(0.65))
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(5)
+                    }
+                }
+
+                if selectedPhotos.count < 3 {
+                    PhotosPicker(selection: $selectedPhotoItems, maxSelectionCount: 3 - selectedPhotos.count, matching: .images) {
+                        VStack(spacing: 6) {
+                            Image(systemName: "photo.badge.plus")
+                                .font(.title3.weight(.semibold))
+                            Text("Add photo")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .foregroundStyle(Theme.accentLight)
+                        .frame(height: 92)
+                        .frame(maxWidth: .infinity)
+                        .background(Theme.inputBg)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+                                .foregroundStyle(.white.opacity(0.14))
+                        }
+                    }
+                }
+            }
         }
         .cardStyle()
     }
@@ -623,7 +764,7 @@ struct NutritionTrackerView: View {
                                 Text(formatBodyWeightDate(entry.date))
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(Theme.text)
-                                Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)")
+                                Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)\(photoCountText(entry))")
                                     .font(.caption)
                                     .foregroundStyle(Theme.textDim)
                             }
@@ -646,8 +787,22 @@ struct NutritionTrackerView: View {
         store.appData.nutritionLog.first { $0.date == selectedDateKey }
     }
 
+    private var selectedPhotos: [String] {
+        selectedNutrition?.photos ?? []
+    }
+
     private var selectedDateKey: String {
         BodyWeightDateFormatter.input.string(from: selectedDate)
+    }
+
+    private func nutritionProgress(current: Int, target: Int) -> Double {
+        guard target > 0 else { return 0 }
+        return min(1, max(0, Double(current) / Double(target)))
+    }
+
+    private func photoCountText(_ entry: NutritionEntry) -> String {
+        guard let count = entry.photos?.count, count > 0 else { return "" }
+        return " · \(count) photo\(count == 1 ? "" : "s")"
     }
 
     private func saveNutrition(calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
@@ -659,6 +814,65 @@ struct NutritionTrackerView: View {
             fat: fat,
             water: water
         )
+    }
+
+    private func adjustNutrition(calories: Int = 0, protein: Int = 0, carbs: Int = 0, fat: Int = 0, water: Int = 0) {
+        let current = selectedNutrition
+        saveNutrition(
+            calories: max(0, (current?.calories ?? 0) + calories),
+            protein: max(0, (current?.protein ?? 0) + protein),
+            carbs: max(0, (current?.carbs ?? 0) + carbs),
+            fat: max(0, (current?.fat ?? 0) + fat),
+            water: max(0, (current?.water ?? 0) + water)
+        )
+    }
+
+    private func loadNutritionPhotos(_ items: [PhotosPickerItem]) async {
+        var next = selectedPhotos
+        for item in items.prefix(max(0, 3 - next.count)) {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data),
+                  let dataURL = nutritionCompressedDataURL(from: image) else {
+                continue
+            }
+            next.append(dataURL)
+        }
+        store.setNutritionPhotos(date: selectedDateKey, photos: Array(next.prefix(3)))
+        selectedPhotoItems = []
+    }
+
+    private func nutritionCompressedDataURL(from image: UIImage) -> String? {
+        let maxDimension: CGFloat = 1080
+        let size = image.size
+        let scale = min(1, maxDimension / max(size.width, size.height))
+        let target = CGSize(width: max(1, size.width * scale), height: max(1, size.height * scale))
+        let renderer = UIGraphicsImageRenderer(size: target)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: target))
+        }
+        guard let data = resized.jpegData(compressionQuality: 0.6) else { return nil }
+        return "data:image/jpeg;base64,\(data.base64EncodedString())"
+    }
+
+    private func nutritionUIImage(from dataURL: String) -> UIImage? {
+        let base64 = dataURL.components(separatedBy: ",").last ?? dataURL
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return UIImage(data: data)
+    }
+
+    @ViewBuilder
+    private func nutritionImage(_ dataURL: String) -> some View {
+        if let image = nutritionUIImage(from: dataURL) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+        } else {
+            ZStack {
+                Theme.surface2
+                Image(systemName: "photo")
+                    .foregroundStyle(Theme.textFaint)
+            }
+        }
     }
 
     private func seedGoalFieldsIfNeeded() {
@@ -678,6 +892,92 @@ struct NutritionTrackerView: View {
         if force || goalCarbsText.isEmpty { goalCarbsText = "\(store.appData.nutritionGoals.carbs)" }
         if force || goalFatText.isEmpty { goalFatText = "\(store.appData.nutritionGoals.fat)" }
         if force || goalWaterText.isEmpty { goalWaterText = "\(store.appData.nutritionGoals.water)" }
+    }
+}
+
+private struct NutritionAddField: View {
+    let label: String
+    let unit: String
+    let onAdd: (Int) -> Void
+    @State private var text = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text("\(label) (\(unit))")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+
+            HStack(spacing: 10) {
+                profileInput("0", text: $text, keyboard: .numberPad)
+
+                Button {
+                    submit()
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+        }
+    }
+
+    private func submit() {
+        let value = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        guard value != 0 else { return }
+        onAdd(value)
+        text = ""
+    }
+}
+
+private struct NutritionMacroAddRow: View {
+    let label: String
+    let value: Int
+    let goal: Int
+    let color: Color
+    let onAdd: (Int) -> Void
+    @State private var text = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            HStack {
+                Text(label)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.textDim)
+                Spacer()
+                Text("\(value) / \(goal)g")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Theme.text)
+            }
+
+            MetricProgressBar(label: label, value: Double(value), target: Double(goal), suffix: "g", color: color)
+
+            HStack(spacing: 10) {
+                profileInput("0", text: $text, keyboard: .numberPad)
+
+                Button {
+                    submit()
+                } label: {
+                    Label("Add", systemImage: "plus")
+                }
+                .font(.caption.weight(.bold))
+                .foregroundStyle(Theme.text)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(Theme.surface2)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+        }
+    }
+
+    private func submit() {
+        let amount = Int(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+        guard amount != 0 else { return }
+        onAdd(amount)
+        text = ""
     }
 }
 

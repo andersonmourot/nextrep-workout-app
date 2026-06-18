@@ -772,6 +772,7 @@ final class AppStore {
     }
 
     func setNutritionEntry(date: String, calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
+        let existingPhotos = appData.nutritionLog.first { $0.date == date }?.photos
         let entry = NutritionEntry(
             date: date,
             calories: max(0, calories),
@@ -779,9 +780,26 @@ final class AppStore {
             carbs: max(0, carbs),
             fat: max(0, fat),
             water: max(0, water),
-            photos: nil
+            photos: existingPhotos
         )
         appData.nutritionLog.removeAll { $0.date == entry.date }
+        appData.nutritionLog.append(entry)
+        appData.nutritionLog.sort { $0.date < $1.date }
+        scheduleSync()
+    }
+
+    func setNutritionPhotos(date: String, photos: [String]) {
+        let existing = appData.nutritionLog.first { $0.date == date }
+        let entry = NutritionEntry(
+            date: date,
+            calories: existing?.calories ?? 0,
+            protein: existing?.protein ?? 0,
+            carbs: existing?.carbs ?? 0,
+            fat: existing?.fat ?? 0,
+            water: existing?.water ?? 0,
+            photos: Array(photos.prefix(3))
+        )
+        appData.nutritionLog.removeAll { $0.date == date }
         appData.nutritionLog.append(entry)
         appData.nutritionLog.sort { $0.date < $1.date }
         scheduleSync()

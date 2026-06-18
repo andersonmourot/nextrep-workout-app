@@ -762,6 +762,7 @@ struct AdminCatalogView: View {
     @State private var selectedKind = "Programs"
     @State private var searchQuery = ""
     @State private var pendingRemoval: AdminCatalogRemoval?
+    @State private var editingExercise: AdminCatalogExerciseEditorState?
 
     var body: some View {
         ScrollView {
@@ -773,7 +774,7 @@ struct AdminCatalogView: View {
                 if let message {
                     Text(message)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(message.contains("published") || message.contains("removed") ? Theme.accentLight : .red.opacity(0.9))
+                        .foregroundStyle(message.contains("published") || message.contains("removed") || message.contains("saved") ? Theme.accentLight : .red.opacity(0.9))
                         .cardStyle()
                 }
 
@@ -881,9 +882,35 @@ struct AdminCatalogView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Exercises")
-                    .font(.headline)
-                    .foregroundStyle(Theme.text)
+                HStack {
+                    Text("Exercises")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Spacer()
+
+                    Button {
+                        editingExercise = AdminCatalogExerciseEditorState(exercise: blankCatalogExercise(), isNew: true)
+                    } label: {
+                        Label("New", systemImage: "plus")
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.accentLight)
+                }
+
+                if let editingExercise {
+                    AdminCatalogExerciseForm(
+                        initial: editingExercise.exercise,
+                        isNew: editingExercise.isNew,
+                        isSaving: isPublishing,
+                        onCancel: {
+                            self.editingExercise = nil
+                        },
+                        onSave: { exercise in
+                            Task { await saveExercise(exercise, isNew: editingExercise.isNew) }
+                        }
+                    )
+                }
 
                 if filteredExercises.isEmpty {
                     Text(emptyCatalogMessage)
@@ -892,9 +919,15 @@ struct AdminCatalogView: View {
                         .cardStyle()
                 } else {
                     ForEach(filteredExercises) { exercise in
-                        AdminCatalogExerciseRow(exercise: exercise) {
-                            pendingRemoval = AdminCatalogRemoval(kind: "Exercise", id: exercise.id, name: exercise.name)
-                        }
+                        AdminCatalogExerciseRow(
+                            exercise: exercise,
+                            onEdit: {
+                                editingExercise = AdminCatalogExerciseEditorState(exercise: exercise, isNew: false)
+                            },
+                            onRemove: {
+                                pendingRemoval = AdminCatalogRemoval(kind: "Exercise", id: exercise.id, name: exercise.name)
+                            }
+                        )
                     }
                 }
             }
@@ -971,12 +1004,84 @@ struct AdminCatalogView: View {
             message = store.authError ?? "Could not update catalog."
         }
     }
+
+    private func saveExercise(_ exercise: Exercise, isNew: Bool) async {
+        let cleanName = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else {
+            message = "Give the exercise a name."
+            return
+        }
+
+        var updated = exercise
+        updated.name = cleanName
+        if updated.id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            updated.id = slugifyCatalogId(cleanName)
+        }
+        updated.version = Int(Date().timeIntervalSince1970 * 1000)
+
+        let previousCatalog = store.catalog
+        isPublishing = true
+        store.catalog.exercises.removeAll { $0.id == updated.id }
+        if isNew {
+            store.catalog.exercises.insert(updated, at: 0)
+        } else {
+            store.catalog.exercises.append(updated)
+            store.catalog.exercises.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        }
+
+        let ok = await store.adminPublishCatalog()
+        isPublishing = false
+        if ok {
+            editingExercise = nil
+            selectedKind = "Exercises"
+            message = "\(updated.name) saved and catalog published."
+        } else {
+            store.catalog = previousCatalog
+            message = store.authError ?? "Could not save exercise."
+        }
+    }
+
+    private func blankCatalogExercise() -> Exercise {
+        Exercise(
+            id: "",
+            name: "",
+            primaryMuscle: "Chest",
+            secondaryMuscles: [],
+            equipment: "Barbell",
+            difficulty: "Beginner",
+            instructions: [],
+            tips: [],
+            photos: nil,
+            shared: nil,
+            ownerName: nil,
+            ownerId: nil,
+            collaborative: nil,
+            version: nil
+        )
+    }
 }
 
 private struct AdminCatalogRemoval {
     let kind: String
     let id: String
     let name: String
+}
+
+private struct AdminCatalogExerciseEditorState {
+    var exercise: Exercise
+    var isNew: Bool
+}
+
+private func slugifyCatalogId(_ name: String) -> String {
+    let lower = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    let allowed = CharacterSet.alphanumerics
+    let replaced = lower.unicodeScalars.map { scalar in
+        allowed.contains(scalar) ? String(scalar) : "-"
+    }.joined()
+    let collapsed = replaced
+        .split(separator: "-", omittingEmptySubsequences: true)
+        .joined(separator: "-")
+    return collapsed.isEmpty ? "exercise-\(UUID().uuidString)" : collapsed
 }
 
 private struct AdminCatalogProgramRow: View {
@@ -1014,6 +1119,7 @@ private struct AdminCatalogProgramRow: View {
 
 private struct AdminCatalogExerciseRow: View {
     let exercise: Exercise
+    let onEdit: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
@@ -1035,15 +1141,190 @@ private struct AdminCatalogExerciseRow: View {
 
             Spacer()
 
-            Button(role: .destructive) {
-                onRemove()
-            } label: {
-                Image(systemName: "trash")
-                    .font(.caption.weight(.bold))
+            HStack(spacing: 10) {
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(Theme.accentLight)
+
+                Button(role: .destructive) {
+                    onRemove()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.caption.weight(.bold))
+                }
+                .foregroundStyle(.red.opacity(0.85))
             }
-            .foregroundStyle(.red.opacity(0.85))
         }
         .cardStyle()
+    }
+}
+
+private struct AdminCatalogExerciseForm: View {
+    let initial: Exercise
+    let isNew: Bool
+    let isSaving: Bool
+    let onCancel: () -> Void
+    let onSave: (Exercise) -> Void
+
+    @State private var name: String
+    @State private var primaryMuscle: String
+    @State private var secondaryText: String
+    @State private var equipment: String
+    @State private var difficulty: String
+    @State private var instructionsText: String
+    @State private var tipsText: String
+
+    private let muscles = [
+        "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings",
+        "Glutes", "Calves", "Core", "Forearms", "Full Body"
+    ]
+    private let equipmentOptions = ["Barbell", "Dumbbell", "Machine", "Cable", "Bodyweight", "Kettlebell", "Bands"]
+    private let difficulties = ["Beginner", "Intermediate", "Advanced"]
+
+    init(
+        initial: Exercise,
+        isNew: Bool,
+        isSaving: Bool,
+        onCancel: @escaping () -> Void,
+        onSave: @escaping (Exercise) -> Void
+    ) {
+        self.initial = initial
+        self.isNew = isNew
+        self.isSaving = isSaving
+        self.onCancel = onCancel
+        self.onSave = onSave
+        _name = State(initialValue: initial.name)
+        _primaryMuscle = State(initialValue: initial.primaryMuscle)
+        _secondaryText = State(initialValue: initial.secondaryMuscles.joined(separator: ", "))
+        _equipment = State(initialValue: initial.equipment)
+        _difficulty = State(initialValue: initial.difficulty)
+        _instructionsText = State(initialValue: initial.instructions.joined(separator: "\n"))
+        _tipsText = State(initialValue: initial.tips.joined(separator: "\n"))
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(isNew ? "New Exercise" : "Edit Exercise")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            catalogField("Name", text: $name)
+
+            HStack(spacing: 10) {
+                catalogMenu("Primary", selection: $primaryMuscle, options: muscles)
+                catalogMenu("Equipment", selection: $equipment, options: equipmentOptions)
+            }
+
+            HStack(spacing: 10) {
+                catalogMenu("Difficulty", selection: $difficulty, options: difficulties)
+                catalogField("Secondary, comma separated", text: $secondaryText)
+            }
+
+            catalogField("Instructions, one per line", text: $instructionsText, minHeight: 90)
+            catalogField("Tips, one per line", text: $tipsText, minHeight: 72)
+
+            HStack(spacing: 10) {
+                Button(isSaving ? "Saving..." : "Save Exercise") {
+                    onSave(normalizedExercise)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+
+                Button("Cancel") {
+                    onCancel()
+                }
+                .buttonStyle(GhostButtonStyle())
+                .disabled(isSaving)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var normalizedExercise: Exercise {
+        var exercise = initial
+        exercise.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        exercise.primaryMuscle = primaryMuscle
+        exercise.secondaryMuscles = commaList(secondaryText)
+        exercise.equipment = equipment
+        exercise.difficulty = difficulty
+        exercise.instructions = lineList(instructionsText)
+        exercise.tips = lineList(tipsText)
+        return exercise
+    }
+
+    private func catalogMenu(_ title: String, selection: Binding<String>, options: [String]) -> some View {
+        Menu {
+            ForEach(options, id: \.self) { option in
+                Button(option) {
+                    selection.wrappedValue = option
+                }
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(Theme.textFaint)
+                    Text(selection.wrappedValue)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.text)
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Theme.textFaint)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func catalogField(_ placeholder: String, text: Binding<String>, minHeight: CGFloat = 44) -> some View {
+        TextField("", text: text, axis: .vertical)
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .frame(minHeight: minHeight, alignment: .topLeading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay(alignment: .topLeading) {
+                if text.wrappedValue.isEmpty {
+                    Text(placeholder)
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim.opacity(0.95))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+    }
+
+    private func commaList(_ value: String) -> [String] {
+        value
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func lineList(_ value: String) -> [String] {
+        value
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }
 

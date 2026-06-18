@@ -759,17 +759,21 @@ struct AdminCatalogView: View {
     @Environment(AppStore.self) private var store
     @State private var message: String?
     @State private var isPublishing = false
+    @State private var selectedKind = "Programs"
+    @State private var searchQuery = ""
+    @State private var pendingRemoval: AdminCatalogRemoval?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 catalogStats
+                catalogControls
 
                 if let message {
                     Text(message)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(message.contains("published") ? Theme.accentLight : .red.opacity(0.9))
+                        .foregroundStyle(message.contains("published") || message.contains("removed") ? Theme.accentLight : .red.opacity(0.9))
                         .cardStyle()
                 }
 
@@ -779,10 +783,7 @@ struct AdminCatalogView: View {
                 .buttonStyle(PrimaryButtonStyle())
                 .disabled(isPublishing)
 
-                Text("This replaces the built-in backend catalog with the currently loaded catalog. Detailed native catalog item editing can be added as a follow-up; use the existing Program and Exercise editors for user-created content.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textDim)
-                    .cardStyle()
+                catalogList
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -791,6 +792,21 @@ struct AdminCatalogView: View {
         .navigationTitle("Admin Catalog")
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .alert("Remove Catalog Item?", isPresented: Binding(
+            get: { pendingRemoval != nil },
+            set: { if !$0 { pendingRemoval = nil } }
+        )) {
+            Button("Cancel", role: .cancel) { pendingRemoval = nil }
+            Button("Remove", role: .destructive) {
+                if let pendingRemoval {
+                    Task { await remove(pendingRemoval) }
+                }
+            }
+        } message: {
+            if let pendingRemoval {
+                Text("Remove \(pendingRemoval.name) from the built-in \(pendingRemoval.kind.lowercased()) catalog for everyone?")
+            }
+        }
     }
 
     private var header: some View {
@@ -813,11 +829,221 @@ struct AdminCatalogView: View {
         }
     }
 
+    private var catalogControls: some View {
+        VStack(spacing: 12) {
+            Picker("Catalog type", selection: $selectedKind) {
+                Text("Programs").tag("Programs")
+                Text("Exercises").tag("Exercises")
+            }
+            .pickerStyle(.segmented)
+
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(Theme.textFaint)
+
+                TextField("Search catalog", text: $searchQuery)
+                    .foregroundStyle(Theme.text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+        }
+        .cardStyle()
+    }
+
+    @ViewBuilder
+    private var catalogList: some View {
+        if selectedKind == "Programs" {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Programs")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                if filteredPrograms.isEmpty {
+                    Text(emptyCatalogMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(filteredPrograms) { program in
+                        AdminCatalogProgramRow(program: program) {
+                            pendingRemoval = AdminCatalogRemoval(kind: "Program", id: program.id, name: program.name)
+                        }
+                    }
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Exercises")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                if filteredExercises.isEmpty {
+                    Text(emptyCatalogMessage)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(filteredExercises) { exercise in
+                        AdminCatalogExerciseRow(exercise: exercise) {
+                            pendingRemoval = AdminCatalogRemoval(kind: "Exercise", id: exercise.id, name: exercise.name)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var filteredPrograms: [Program] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sorted = store.catalog.programs.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        guard !trimmed.isEmpty else { return sorted }
+        return sorted.filter { program in
+            [
+                program.name,
+                program.category,
+                program.level,
+                program.coach,
+                program.summary
+            ]
+            .joined(separator: " ")
+            .localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    private var filteredExercises: [Exercise] {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let sorted = store.catalog.exercises.sorted {
+            $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+        }
+        guard !trimmed.isEmpty else { return sorted }
+        return sorted.filter { exercise in
+            [
+                exercise.name,
+                exercise.primaryMuscle,
+                exercise.equipment,
+                exercise.difficulty
+            ]
+            .joined(separator: " ")
+            .localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    private var emptyCatalogMessage: String {
+        let trimmed = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return "No \(selectedKind.lowercased()) in the catalog."
+        }
+        return "No \(selectedKind.lowercased()) match \"\(trimmed)\"."
+    }
+
     private func publishCatalog() async {
         isPublishing = true
         let ok = await store.adminPublishCatalog()
         isPublishing = false
         message = ok ? "Catalog published." : (store.authError ?? "Could not publish catalog.")
+    }
+
+    private func remove(_ removal: AdminCatalogRemoval) async {
+        pendingRemoval = nil
+        isPublishing = true
+        let previousCatalog = store.catalog
+        if removal.kind == "Program" {
+            store.catalog.programs.removeAll { $0.id == removal.id }
+        } else {
+            store.catalog.exercises.removeAll { $0.id == removal.id }
+        }
+        let ok = await store.adminPublishCatalog()
+        isPublishing = false
+        if ok {
+            message = "\(removal.name) removed and catalog published."
+        } else {
+            store.catalog = previousCatalog
+            message = store.authError ?? "Could not update catalog."
+        }
+    }
+}
+
+private struct AdminCatalogRemoval {
+    let kind: String
+    let id: String
+    let name: String
+}
+
+private struct AdminCatalogProgramRow: View {
+    let program: Program
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(program.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+                Text("\(program.category) · \(program.level) · \(program.daysPerWeek) days/week")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+                Text(program.summary)
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textFaint)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Button(role: .destructive) {
+                onRemove()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(.red.opacity(0.85))
+        }
+        .cardStyle()
+    }
+}
+
+private struct AdminCatalogExerciseRow: View {
+    let exercise: Exercise
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+                Text("\(exercise.primaryMuscle) · \(exercise.equipment) · \(exercise.difficulty)")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+                if !exercise.secondaryMuscles.isEmpty {
+                    Text("Secondary: \(exercise.secondaryMuscles.joined(separator: ", "))")
+                        .font(.caption2)
+                        .foregroundStyle(Theme.textFaint)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            Button(role: .destructive) {
+                onRemove()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(.red.opacity(0.85))
+        }
+        .cardStyle()
     }
 }
 

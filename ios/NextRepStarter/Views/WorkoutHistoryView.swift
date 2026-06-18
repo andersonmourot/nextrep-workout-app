@@ -1081,31 +1081,31 @@ struct MaxTrackerView: View {
                     .cardStyle()
             } else {
                 ForEach(filteredTrackers) { tracker in
-                    VStack(spacing: 8) {
+                    NavigationLink {
+                        MaxTrackerDetailView(trackerId: tracker.id)
+                    } label: {
                         HStack(spacing: 12) {
-                            NavigationLink {
-                                MaxTrackerDetailView(trackerId: tracker.id)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(tracker.name)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Theme.text)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(tracker.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.text)
 
-                                    Text(latestMaxText(tracker))
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.textDim)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            .buttonStyle(.plain)
-
-                            Button {
-                                store.deleteMaxTracker(id: tracker.id)
-                            } label: {
-                                Image(systemName: "trash")
+                                Text(latestMaxText(tracker))
                                     .font(.caption)
+                                    .foregroundStyle(Theme.textDim)
                             }
-                            .foregroundStyle(.red.opacity(0.8))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            if let latest = tracker.records.sorted(by: { $0.date > $1.date }).first {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(formatWeight(latest.weight))")
+                                        .font(.subheadline.monospacedDigit().weight(.bold))
+                                        .foregroundStyle(Theme.text)
+                                    Text(store.appData.unit)
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(Theme.textFaint)
+                                }
+                            }
 
                             Image(systemName: "chevron.right")
                                 .font(.caption.weight(.bold))
@@ -1114,16 +1114,8 @@ struct MaxTrackerView: View {
                         .padding(10)
                         .background(Theme.surface2)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                        let values = tracker.records.sorted { $0.date < $1.date }.map { estimatedOneRepMax(weight: $0.weight, reps: $0.reps) }
-                        if values.count >= 2 {
-                            MiniLineChart(values: values)
-                                .frame(height: 70)
-                                .padding(10)
-                                .background(Theme.inputBg.opacity(0.65))
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        }
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }

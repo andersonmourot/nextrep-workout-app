@@ -11,6 +11,7 @@ struct ExerciseEditorView: View {
     @State private var tipsText: String
     @State private var showingDeleteConfirm = false
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    private let isEditingExistingExercise: Bool
 
     private let muscles = [
         "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Quads", "Hamstrings",
@@ -25,6 +26,7 @@ struct ExerciseEditorView: View {
         _secondaryText = State(initialValue: initial.secondaryMuscles.joined(separator: ", "))
         _instructionsText = State(initialValue: initial.instructions.joined(separator: "\n"))
         _tipsText = State(initialValue: initial.tips.joined(separator: "\n"))
+        self.isEditingExistingExercise = exercise != nil
     }
 
     var body: some View {
@@ -43,14 +45,18 @@ struct ExerciseEditorView: View {
         .navigationTitle(draft.name.isEmpty ? "New Exercise" : draft.name)
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
-        .alert("Delete Exercise?", isPresented: $showingDeleteConfirm) {
+        .alert(store.isCustomExercise(draft) ? "Delete Exercise?" : "Restore Default?", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                store.deleteCustomExercise(id: draft.id)
+            Button(store.isCustomExercise(draft) ? "Delete" : "Restore", role: .destructive) {
+                if store.isCustomExercise(draft) {
+                    store.deleteCustomExercise(id: draft.id)
+                } else {
+                    store.restoreExerciseOverride(id: draft.id)
+                }
                 dismiss()
             }
         } message: {
-            Text("This removes the custom exercise from your synced data.")
+            Text(store.isCustomExercise(draft) ? "This removes the custom exercise from your synced data." : "This restores the built-in exercise to its default catalog version.")
         }
         .onChange(of: selectedPhotoItems) { _, newItems in
             Task { await loadPhotos(newItems) }
@@ -59,12 +65,12 @@ struct ExerciseEditorView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(store.isCustomExercise(draft) ? "Edit Exercise" : "Create Exercise")
+            Text(isEditingExistingExercise ? "Edit Exercise" : "Create Exercise")
                 .font(.system(size: 34, weight: .bold, design: .default))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
 
-            Text("Create exercises you can add to custom programs.")
+            Text(isEditingExistingExercise && !store.isCustomExercise(draft) ? "Customize this built-in exercise for your account." : "Create exercises you can add to custom programs.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textDim)
         }
@@ -164,20 +170,24 @@ struct ExerciseEditorView: View {
         VStack(spacing: 10) {
             Button {
                 normalizeDraft()
-                store.saveCustomExercise(draft)
+                if isEditingExistingExercise && !store.isCustomExercise(draft) {
+                    store.saveExerciseOverride(draft)
+                } else {
+                    store.saveCustomExercise(draft)
+                }
                 dismiss()
             } label: {
-                Text("Save Exercise")
+                Text(isEditingExistingExercise && !store.isCustomExercise(draft) ? "Save Override" : "Save Exercise")
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(draft.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
 
-            if store.isCustomExercise(draft) {
+            if isEditingExistingExercise {
                 Button(role: .destructive) {
                     showingDeleteConfirm = true
                 } label: {
-                    Text("Delete Exercise")
+                    Text(store.isCustomExercise(draft) ? "Delete Exercise" : "Restore Default")
                 }
                 .buttonStyle(GhostButtonStyle())
             }

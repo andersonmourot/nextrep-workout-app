@@ -63,8 +63,11 @@ final class AppStore {
     var allExercises: [Exercise] {
         let hidden = Set(appData.hiddenExerciseIds)
         let trashed = Set(appData.trashedExercises.map(\.exercise.id))
+        let overriddenCatalog = catalog.exercises.map { exercise in
+            appData.exerciseOverrides[exercise.id] ?? exercise
+        }
 
-        return (catalog.exercises + appData.customExercises)
+        return (overriddenCatalog + appData.customExercises)
             .filter { !hidden.contains($0.id) && !trashed.contains($0.id) }
             .sorted { lhs, rhs in
                 lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
@@ -77,6 +80,10 @@ final class AppStore {
 
     func isCustomExercise(_ exercise: Exercise) -> Bool {
         appData.customExercises.contains(where: { $0.id == exercise.id })
+    }
+
+    func isExerciseOverride(_ exercise: Exercise) -> Bool {
+        appData.exerciseOverrides[exercise.id] != nil
     }
 
     func hideExercise(id: String) {
@@ -702,6 +709,16 @@ final class AppStore {
 
     func saveCustomExercise(_ exercise: Exercise) {
         upsertCustomExercise(exercise)
+        scheduleSync()
+    }
+
+    func saveExerciseOverride(_ exercise: Exercise) {
+        appData.exerciseOverrides[exercise.id] = exercise
+        scheduleSync()
+    }
+
+    func restoreExerciseOverride(id: String) {
+        appData.exerciseOverrides.removeValue(forKey: id)
         scheduleSync()
     }
 

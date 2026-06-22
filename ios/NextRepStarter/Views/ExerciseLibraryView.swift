@@ -230,15 +230,15 @@ struct ExerciseDetailView: View {
             cueText = store.appData.exerciseSubheaders[exercise.id] ?? ""
         }
         .toolbar {
-            if store.isCustomExercise(exercise) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 13) {
-                        NavigationLink {
-                            ExerciseEditorView(exercise: exercise)
-                        } label: {
-                            Image(systemName: "pencil")
-                        }
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 13) {
+                    NavigationLink {
+                        ExerciseEditorView(exercise: exercise)
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
 
+                    if store.isCustomExercise(exercise) {
                         Button {
                             if exercise.shared == true {
                                 store.unshareExercise(exercise)
@@ -253,8 +253,8 @@ struct ExerciseDetailView: View {
                             Image(systemName: exercise.shared == true ? "xmark.circle" : "square.and.arrow.up")
                         }
                     }
-                    .tint(Theme.accentLight)
                 }
+                .tint(Theme.accentLight)
             }
         }
         .screenBackground()
@@ -292,6 +292,11 @@ struct ExerciseDetailView: View {
             HStack(spacing: 8) {
                 chip(exercise.equipment)
                 chip(exercise.difficulty)
+                if store.isExerciseOverride(exercise) {
+                    chip("Edited")
+                } else if store.isCustomExercise(exercise) {
+                    chip("Custom")
+                }
             }
 
             if !exercise.secondaryMuscles.isEmpty {
@@ -495,18 +500,30 @@ private extension View {
 }
 
 private struct ExerciseCard: View {
+    @Environment(AppStore.self) private var store
     let exercise: Exercise
     let onManage: () -> Void
 
     var body: some View {
+        let isCustom = store.isCustomExercise(exercise)
+        let isOverride = store.isExerciseOverride(exercise)
+
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(exercise.primaryMuscle)
-                        .font(.caption.weight(.semibold))
-                        .textCase(.uppercase)
-                        .tracking(1.2)
-                        .foregroundStyle(Theme.accentLight)
+                    HStack(spacing: 6) {
+                        Text(exercise.primaryMuscle)
+                            .font(.caption.weight(.semibold))
+                            .textCase(.uppercase)
+                            .tracking(1.2)
+                            .foregroundStyle(Theme.accentLight)
+
+                        if isCustom {
+                            badge("Custom")
+                        } else if isOverride {
+                            badge("Edited")
+                        }
+                    }
 
                     Text(exercise.name)
                         .font(.headline)
@@ -518,7 +535,7 @@ private struct ExerciseCard: View {
                 Button {
                     onManage()
                 } label: {
-                    Image(systemName: exercise.id.hasPrefix("ios-ex-") ? "trash" : "eye.slash")
+                    Image(systemName: isCustom ? "trash" : "eye.slash")
                         .font(.caption)
                 }
                 .foregroundStyle(.red.opacity(0.8))
@@ -544,6 +561,17 @@ private struct ExerciseCard: View {
             .padding(.horizontal, 9)
             .padding(.vertical, 6)
             .background(Theme.surface2)
+            .clipShape(Capsule())
+    }
+
+    private func badge(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.bold))
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.accentLight)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Theme.accent.opacity(0.14))
             .clipShape(Capsule())
     }
 }
@@ -598,6 +626,7 @@ private struct HiddenExercisesView: View {
     private var hiddenExercises: [Exercise] {
         store.catalog.exercises
             .filter { store.appData.hiddenExerciseIds.contains($0.id) }
+            .map { store.appData.exerciseOverrides[$0.id] ?? $0 }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 }

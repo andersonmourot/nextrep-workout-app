@@ -93,5 +93,6 @@ trash retention and custom exercise placeholder relinking.
 5. Continue App Store/TestFlight polish, device testing, and any final UX
    refinements discovered during regression.
 
-See `docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the
+See `docs/ios-testflight-prep.md` for the TestFlight runbook. See
+`docs/ios-swiftui-handoff.md` and `docs/ios-swiftui-screens.md` for the
 complete migration specification.

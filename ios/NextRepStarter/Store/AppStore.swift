@@ -25,6 +25,7 @@ final class AppStore {
     private var sessionToken: String?
     private var hasAttemptedRestore = false
     @ObservationIgnored private var syncTask: Task<Void, Never>?
+    private static let trashTTLMilliseconds: Double = 7 * 24 * 60 * 60 * 1000
 
     init(
         apiClient: APIClient? = nil,
@@ -709,6 +710,7 @@ final class AppStore {
 
     func saveCustomExercise(_ exercise: Exercise) {
         upsertCustomExercise(exercise)
+        relinkExercisePlaceholders(to: exercise)
         scheduleSync()
     }
 
@@ -1157,6 +1159,7 @@ final class AppStore {
     private func loadInitialData(token: String) async throws {
         catalog = try await apiClient.catalog()
         appData = try await apiClient.appData(token: token)
+        purgeExpiredTrash()
         await refreshSharedContent(token: token)
         UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
     }
@@ -1297,6 +1300,67 @@ final class AppStore {
         } catch {
             authError = error.localizedDescription
         }
+    }
+
+    private func purgeExpiredTrash() {
+        let cutoff = Date().timeIntervalSince1970 * 1000 - Self.trashTTLMilliseconds
+        let oldProgramCount = appData.trashedPrograms.count
+        let oldExerciseCount = appData.trashedExercises.count
+        appData.trashedPrograms.removeAll { $0.deletedAt <= cutoff }
+        appData.trashedExercises.removeAll { $0.deletedAt <= cutoff }
+        if oldProgramCount != appData.trashedPrograms.count || oldExerciseCount != appData.trashedExercises.count {
+            scheduleSync()
+        }
+    }
+
+    private func relinkExercisePlaceholders(to exercise: Exercise) {
+        let targetName = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !targetName.isEmpty else { return }
+
+        var idMap: [String: String] = [:]
+
+        func relink(_ planned: PlannedExercise) -> PlannedExercise {
+            guard let plannedName = planned.name?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+                  plannedName == targetName,
+                  planned.exerciseId != exercise.id else {
+                return planned
+            }
+
+            var updated = planned
+            idMap[planned.exerciseId] = exercise.id
+            updated.exerciseId = exercise.id
+            updated.name = exercise.name
+            return updated
+        }
+
+        func relink(_ day: ProgramDay) -> ProgramDay {
+            var updated = day
+            updated.exercises = day.exercises.map(relink)
+            return updated
+        }
+
+        appData.customPrograms = appData.customPrograms.map { program in
+            var updated = program
+            updated.days = program.days.map(relink)
+            if let weekOverrides = program.weekOverrides {
+                var overrides: [String: [ProgramWeekOverride]] = [:]
+                for (dayId, list) in weekOverrides {
+                    overrides[dayId] = list.map { item in
+                        var updatedItem = item
+                        updatedItem.day = relink(item.day)
+                        return updatedItem
+                    }
+                }
+                updated.weekOverrides = overrides
+            }
+            return updated
+        }
+
+        guard !idMap.isEmpty, var active = appData.activeWorkout, let ids = active.exerciseIds else {
+            return
+        }
+        active.exerciseIds = ids.map { idMap[$0] ?? $0 }
+        appData.activeWorkout = active
     }
 
     private func makeSharedProgramSelfContained(

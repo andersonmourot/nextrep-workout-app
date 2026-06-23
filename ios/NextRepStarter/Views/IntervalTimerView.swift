@@ -64,13 +64,13 @@ struct IntervalTimerView: View {
     @State private var isWorkPhase = true
     @State private var isRunning = false
     @State private var isComplete = false
+    @State private var showingSoundPicker = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 header
                 topModePicker
-                soundCard
                 switch topMode {
                 case "stopwatch":
                     stopwatchCard
@@ -90,6 +90,35 @@ struct IntervalTimerView: View {
         }
         .navigationTitle("Timer")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingSoundPicker = true
+                } label: {
+                    Image(systemName: "speaker.wave.2")
+                }
+                .tint(Theme.accentLight)
+            }
+        }
+        .sheet(isPresented: $showingSoundPicker) {
+            NavigationStack {
+                soundCard
+                    .padding(16)
+                    .frame(maxWidth: 448)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .screenBackground()
+                    .navigationTitle("Completion Sound")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") {
+                                showingSoundPicker = false
+                            }
+                            .tint(Theme.accentLight)
+                        }
+                    }
+            }
+        }
         .screenBackground()
         .onAppear {
             topMode = ["timer", "stopwatch", "interval"].contains(store.appData.timerMode) ? store.appData.timerMode : "timer"

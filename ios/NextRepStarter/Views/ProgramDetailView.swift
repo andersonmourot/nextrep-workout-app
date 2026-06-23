@@ -8,6 +8,7 @@ struct ProgramDetailView: View {
     @State private var showingHideConfirm = false
     @State private var selectedWeek: Int?
     @State private var pendingStart: (dayId: String, week: Int)?
+    @State private var selectedDayIndex: Int?
     let program: Program
 
     var body: some View {
@@ -45,6 +46,9 @@ struct ProgramDetailView: View {
                                 loggedSummary: { planned, log in
                                     loggedSummary(for: planned, in: log)
                                 },
+                                onView: {
+                                    selectedDayIndex = index
+                                },
                                 onStart: {
                                     startDay(dayId: program.days[index].id, week: currentWeek)
                                 }
@@ -59,6 +63,20 @@ struct ProgramDetailView: View {
         }
         .navigationTitle(program.name)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: Binding(
+            get: { selectedDayIndex != nil },
+            set: { if !$0 { selectedDayIndex = nil } }
+        )) {
+            if let selectedDayIndex,
+               resolvedDays.indices.contains(selectedDayIndex) {
+                DayDetailView(
+                    program: program,
+                    day: resolvedDays[selectedDayIndex],
+                    dayNumber: selectedDayIndex + 1,
+                    week: currentWeek
+                )
+            }
+        }
         .toolbar {
             if store.isCustomProgram(program) {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -411,6 +429,7 @@ private struct ProgramDayCard: View {
     let loggedSetCount: Int
     let exerciseName: (PlannedExercise) -> String
     let loggedSummary: (PlannedExercise, WorkoutLog?) -> String?
+    let onView: () -> Void
     let onStart: () -> Void
 
     var body: some View {
@@ -452,19 +471,6 @@ private struct ProgramDayCard: View {
                 }
 
                 Spacer()
-
-                NavigationLink {
-                    DayDetailView(program: program, day: day, dayNumber: dayNumber, week: selectedWeek)
-                } label: {
-                    Text("View")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(accent)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(accent.opacity(0.14))
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
 
                 Button {
                     onStart()
@@ -511,6 +517,10 @@ private struct ProgramDayCard: View {
             }
         }
         .cardStyle()
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .onTapGesture {
+            onView()
+        }
         .overlay {
             if isUpNext {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)

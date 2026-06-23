@@ -438,16 +438,6 @@ private struct WorkoutExerciseCard: View {
                             .foregroundStyle(accent)
                     }
 
-                    if let groupId = planned.groupId, !groupId.isEmpty {
-                        Text("Superset \(groupId)")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(accent)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(accent.opacity(0.14))
-                            .clipShape(Capsule())
-                    }
-
                     if !cueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         Text(cueText)
                             .font(.caption.weight(.semibold))
@@ -459,15 +449,52 @@ private struct WorkoutExerciseCard: View {
                                     .frame(width: 3)
                             }
                     }
+
+                    if let groupId = planned.groupId, !groupId.isEmpty {
+                        Text("Superset \(groupId)")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(accent.opacity(0.14))
+                            .clipShape(Capsule())
+                    }
+
                 }
 
                 Spacer()
 
-                Button("Start Rest") {
-                    onStartRest()
+                HStack(spacing: 8) {
+                    Button {
+                        showingNotes.toggle()
+                    } label: {
+                        Image(systemName: "note.text")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(showingNotes ? accent : Theme.textDim)
+                            .frame(width: 32, height: 32)
+                            .background(Theme.surface2)
+                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+
+                    Button("Rest") {
+                        onStartRest()
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(accent)
                 }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(accent)
+            }
+
+            if showingNotes {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Exercise notes")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
+
+                    TextField("Private notes", text: $noteText, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                        .workoutInputStyle()
+                }
             }
 
             if let groupId = planned.groupId,
@@ -478,22 +505,8 @@ private struct WorkoutExerciseCard: View {
                     .foregroundStyle(Theme.textFaint)
             }
 
-            DisclosureGroup(isExpanded: $showingNotes) {
-                VStack(spacing: 10) {
-                    TextField("Cue", text: $cueText, axis: .vertical)
-                        .workoutInputStyle()
-                    TextField("Private notes", text: $noteText, axis: .vertical)
-                        .lineLimit(2, reservesSpace: true)
-                        .workoutInputStyle()
-                }
-                .padding(.top, 8)
-            } label: {
-                Label("Notes & Cues", systemImage: "pencil")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.textDim)
-            }
-
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
+                WorkoutSetHeader(unit: unit)
                 ForEach(Array(rows.enumerated()), id: \.offset) { index, set in
                     WorkoutSetRow(
                         index: index,
@@ -718,52 +731,71 @@ private struct WorkoutSetRow: View {
     let onToggleCompleted: (Bool) -> Void
 
     var body: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text("Set \(index + 1)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.text)
+        HStack(spacing: 8) {
+            Text("\(index + 1)")
+                .font(.subheadline.monospacedDigit().weight(.bold))
+                .foregroundStyle(Theme.textDim)
+                .frame(width: 28)
 
-                Spacer()
-
-                Button {
-                    onToggleCompleted(!set.completed)
-                } label: {
-                    Label(set.completed ? "Done" : "Mark Done", systemImage: set.completed ? "checkmark.circle.fill" : "circle")
-                        .font(.caption.weight(.bold))
+            WorkoutNumberField(
+                title: "Weight",
+                value: set.weight == 0 ? "" : formatWeight(set.weight),
+                unit: unit,
+                keyboard: .decimalPad,
+                onChange: { text in
+                    onWeightSet(Double(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0)
                 }
-                .foregroundStyle(set.completed ? accent : Theme.textDim)
-            }
+            )
 
-            HStack(spacing: 10) {
-                WorkoutNumberField(
-                    title: "Weight",
-                    value: set.weight == 0 ? "" : formatWeight(set.weight),
-                    unit: unit,
-                    keyboard: .decimalPad,
-                    onChange: { text in
-                        onWeightSet(Double(text.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0)
-                    }
-                )
+            WorkoutNumberField(
+                title: "Reps",
+                value: set.reps == 0 ? "" : "\(set.reps)",
+                unit: "",
+                keyboard: .numberPad,
+                onChange: { text in
+                    onRepsSet(Int(text.filter(\.isNumber)) ?? 0)
+                }
+            )
 
-                WorkoutNumberField(
-                    title: "Reps",
-                    value: set.reps == 0 ? "" : "\(set.reps)",
-                    unit: "",
-                    keyboard: .numberPad,
-                    onChange: { text in
-                        onRepsSet(Int(text.filter(\.isNumber)) ?? 0)
-                    }
-                )
+            Button {
+                onToggleCompleted(!set.completed)
+            } label: {
+                Image(systemName: set.completed ? "checkmark.circle.fill" : "circle")
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 34, height: 34)
             }
+            .foregroundStyle(set.completed ? accent : Theme.textDim)
         }
-        .padding(12)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(set.completed ? accent.opacity(0.14) : Theme.inputBg.opacity(0.65))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(set.completed ? accent.opacity(0.45) : .white.opacity(0.06), lineWidth: 1)
         }
+    }
+}
+
+private struct WorkoutSetHeader: View {
+    let unit: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text("Set")
+                .frame(width: 28, alignment: .center)
+            Text("Weight (\(unit))")
+                .frame(maxWidth: .infinity)
+            Text("Reps")
+                .frame(maxWidth: .infinity)
+            Text("Done")
+                .frame(width: 34, alignment: .center)
+        }
+        .font(.caption2.weight(.semibold))
+        .textCase(.uppercase)
+        .tracking(1.0)
+        .foregroundStyle(Theme.textFaint)
+        .padding(.horizontal, 10)
     }
 }
 
@@ -775,35 +807,19 @@ private struct WorkoutNumberField: View {
     let onChange: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
-            Text(title)
-                .font(.caption2.weight(.semibold))
-                .textCase(.uppercase)
-                .tracking(1.1)
-                .foregroundStyle(Theme.textFaint)
-
-            TextField(title, text: Binding(
+        TextField(title, text: Binding(
                 get: { value },
                 set: { onChange($0) }
             ))
             .keyboardType(keyboard)
             .multilineTextAlignment(.center)
-            .font(.headline.monospacedDigit())
+            .font(.subheadline.monospacedDigit().weight(.semibold))
             .foregroundStyle(Theme.text)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 9)
             .background(Theme.inputBg)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            if !unit.isEmpty {
-                Text(unit)
-                    .font(.caption2)
-                    .foregroundStyle(Theme.textFaint)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
-        .background(Theme.surface2)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .frame(maxWidth: .infinity)
     }
 }
 

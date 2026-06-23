@@ -434,18 +434,19 @@ struct NutritionTrackerView: View {
     @State private var goalFatText = ""
     @State private var goalWaterText = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    @State private var showingAllNutrition = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 datePickerCard
-                recentNutrition
                 caloriesCard
                 macrosCard
                 waterCard
                 targetCard
                 photoCard
+                recentNutrition
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -709,9 +710,21 @@ struct NutritionTrackerView: View {
 
     private var recentNutrition: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
+            HStack {
+                Text("Recent")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                if sortedNutritionEntries.count > 5 {
+                    Button(showingAllNutrition ? "Show Less" : "Show More") {
+                        showingAllNutrition.toggle()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.accentLight)
+                }
+            }
 
             if store.appData.nutritionLog.isEmpty {
                 Text("Nutrition history will show here.")
@@ -719,7 +732,7 @@ struct NutritionTrackerView: View {
                     .foregroundStyle(Theme.textDim)
                     .cardStyle()
             } else {
-                ForEach(store.appData.nutritionLog.sorted(by: { $0.date > $1.date }).prefix(7)) { entry in
+                ForEach(visibleNutritionEntries) { entry in
                     Button {
                         if let date = BodyWeightDateFormatter.input.date(from: entry.date) {
                             selectedDate = date
@@ -747,6 +760,14 @@ struct NutritionTrackerView: View {
                 }
             }
         }
+    }
+
+    private var sortedNutritionEntries: [NutritionEntry] {
+        store.appData.nutritionLog.sorted { $0.date > $1.date }
+    }
+
+    private var visibleNutritionEntries: [NutritionEntry] {
+        showingAllNutrition ? sortedNutritionEntries : Array(sortedNutritionEntries.prefix(5))
     }
 
     private var selectedNutrition: NutritionEntry? {
@@ -919,7 +940,17 @@ private struct NutritionMacroAddRow: View {
                     .foregroundStyle(Theme.text)
             }
 
-            MetricProgressBar(label: label, value: Double(value), target: Double(goal), suffix: "g", color: color)
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Theme.surface2)
+
+                    Capsule()
+                        .fill(color)
+                        .frame(width: proxy.size.width * CGFloat(progress))
+                }
+            }
+            .frame(height: 9)
 
             HStack(spacing: 10) {
                 profileInput("0", text: $text, keyboard: .numberPad)
@@ -944,6 +975,11 @@ private struct NutritionMacroAddRow: View {
         guard amount != 0 else { return }
         onAdd(amount)
         text = ""
+    }
+
+    private var progress: Double {
+        guard goal > 0 else { return 0 }
+        return min(1, max(0, Double(value) / Double(goal)))
     }
 }
 

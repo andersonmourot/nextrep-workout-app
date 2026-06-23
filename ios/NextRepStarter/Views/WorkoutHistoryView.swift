@@ -434,7 +434,6 @@ struct NutritionTrackerView: View {
     @State private var goalFatText = ""
     @State private var goalWaterText = ""
     @State private var selectedPhotoItems: [PhotosPickerItem] = []
-    @State private var showingAllNutrition = false
 
     var body: some View {
         ScrollView {
@@ -682,13 +681,13 @@ struct NutritionTrackerView: View {
                 .foregroundStyle(Theme.text)
 
             HStack(spacing: 10) {
-                profileInput("Calories", text: $goalCaloriesText, keyboard: .numberPad)
-                profileInput("Protein", text: $goalProteinText, keyboard: .numberPad)
+                targetInput("Calories", text: $goalCaloriesText)
+                targetInput("Protein", text: $goalProteinText)
             }
             HStack(spacing: 10) {
-                profileInput("Carbs", text: $goalCarbsText, keyboard: .numberPad)
-                profileInput("Fat", text: $goalFatText, keyboard: .numberPad)
-                profileInput("Water", text: $goalWaterText, keyboard: .numberPad)
+                targetInput("Carbs", text: $goalCarbsText)
+                targetInput("Fat", text: $goalFatText)
+                targetInput("Water", text: $goalWaterText)
             }
 
             Button("Save Targets") {
@@ -718,8 +717,10 @@ struct NutritionTrackerView: View {
                 Spacer()
 
                 if sortedNutritionEntries.count > 5 {
-                    Button(showingAllNutrition ? "Show Less" : "Show More") {
-                        showingAllNutrition.toggle()
+                    NavigationLink {
+                        NutritionHistoryView()
+                    } label: {
+                        Text("Show More")
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(Theme.accentLight)
@@ -732,29 +733,13 @@ struct NutritionTrackerView: View {
                     .foregroundStyle(Theme.textDim)
                     .cardStyle()
             } else {
-                ForEach(visibleNutritionEntries) { entry in
+                ForEach(Array(sortedNutritionEntries.prefix(5))) { entry in
                     Button {
                         if let date = BodyWeightDateFormatter.input.date(from: entry.date) {
                             selectedDate = date
                         }
                     } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(formatBodyWeightDate(entry.date))
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Theme.text)
-                                Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)\(photoCountText(entry))")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.textDim)
-                            }
-                            Spacer()
-                            Text("\(entry.calories)")
-                                .font(.caption.monospacedDigit().weight(.bold))
-                                .foregroundStyle(Theme.accentLight)
-                        }
-                        .padding(10)
-                        .background(Theme.surface2)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        NutritionHistoryRow(entry: entry)
                     }
                     .buttonStyle(.plain)
                 }
@@ -764,10 +749,6 @@ struct NutritionTrackerView: View {
 
     private var sortedNutritionEntries: [NutritionEntry] {
         store.appData.nutritionLog.sorted { $0.date > $1.date }
-    }
-
-    private var visibleNutritionEntries: [NutritionEntry] {
-        showingAllNutrition ? sortedNutritionEntries : Array(sortedNutritionEntries.prefix(5))
     }
 
     private var selectedNutrition: NutritionEntry? {
@@ -787,11 +768,6 @@ struct NutritionTrackerView: View {
         return min(1, max(0, Double(current) / Double(target)))
     }
 
-    private func photoCountText(_ entry: NutritionEntry) -> String {
-        guard let count = entry.photos?.count, count > 0 else { return "" }
-        return " · \(count) photo\(count == 1 ? "" : "s")"
-    }
-
     private func saveNutrition(calories: Int, protein: Int, carbs: Int, fat: Int, water: Int) {
         store.setNutritionEntry(
             date: selectedDateKey,
@@ -801,6 +777,16 @@ struct NutritionTrackerView: View {
             fat: fat,
             water: water
         )
+    }
+
+    private func targetInput(_ label: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.textDim)
+            profileInput("0", text: text, keyboard: .numberPad)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func adjustNutrition(calories: Int = 0, protein: Int = 0, carbs: Int = 0, fat: Int = 0, water: Int = 0) {
@@ -879,6 +865,66 @@ struct NutritionTrackerView: View {
         if force || goalCarbsText.isEmpty { goalCarbsText = "\(store.appData.nutritionGoals.carbs)" }
         if force || goalFatText.isEmpty { goalFatText = "\(store.appData.nutritionGoals.fat)" }
         if force || goalWaterText.isEmpty { goalWaterText = "\(store.appData.nutritionGoals.water)" }
+    }
+}
+
+struct NutritionHistoryView: View {
+    @Environment(AppStore.self) private var store
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if entries.isEmpty {
+                    Text("Nutrition history will show here.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.textDim)
+                        .cardStyle()
+                } else {
+                    ForEach(entries) { entry in
+                        NutritionHistoryRow(entry: entry)
+                    }
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity)
+        }
+        .navigationTitle("Nutrition History")
+        .navigationBarTitleDisplayMode(.inline)
+        .screenBackground()
+    }
+
+    private var entries: [NutritionEntry] {
+        store.appData.nutritionLog.sorted { $0.date > $1.date }
+    }
+}
+
+private struct NutritionHistoryRow: View {
+    let entry: NutritionEntry
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(formatBodyWeightDate(entry.date))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+                Text("P \(entry.protein)g · C \(entry.carbs)g · F \(entry.fat)g · Water \(entry.water)\(photoCountText(entry))")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+            Spacer()
+            Text("\(entry.calories)")
+                .font(.caption.monospacedDigit().weight(.bold))
+                .foregroundStyle(Theme.accentLight)
+        }
+        .padding(10)
+        .background(Theme.surface2)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private func photoCountText(_ entry: NutritionEntry) -> String {
+        guard let count = entry.photos?.count, count > 0 else { return "" }
+        return " · \(count) photo\(count == 1 ? "" : "s")"
     }
 }
 

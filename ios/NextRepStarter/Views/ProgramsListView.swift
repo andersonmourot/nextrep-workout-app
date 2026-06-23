@@ -72,7 +72,6 @@ struct ProgramsListView: View {
                     if !store.appData.hiddenProgramIds.isEmpty {
                         Button {
                             showingHiddenPrograms = true
-                            isManaging = true
                         } label: {
                             Image(systemName: "eye")
                         }
@@ -81,7 +80,6 @@ struct ProgramsListView: View {
                     if !store.appData.trashedPrograms.isEmpty {
                         Button {
                             showingTrash = true
-                            isManaging = true
                         } label: {
                             Image(systemName: "trash")
                         }
@@ -294,6 +292,7 @@ struct ProgramsListView: View {
         VStack(alignment: .leading, spacing: 16) {
             Button {
                 showingHiddenPrograms = false
+                isManaging = false
             } label: {
                 Label("Back", systemImage: "chevron.left")
             }
@@ -337,6 +336,7 @@ struct ProgramsListView: View {
         VStack(alignment: .leading, spacing: 16) {
             Button {
                 showingTrash = false
+                isManaging = false
             } label: {
                 Label("Back", systemImage: "chevron.left")
             }

@@ -90,6 +90,8 @@ struct IntervalTimerView: View {
         }
         .navigationTitle("Timer")
         .navigationBarTitleDisplayMode(.inline)
+        .accentColor(Color(hex: store.appData.themeColor))
+        .tint(Color(hex: store.appData.themeColor))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -106,6 +108,8 @@ struct IntervalTimerView: View {
                     .padding(16)
                     .frame(maxWidth: 448)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .accentColor(Color(hex: store.appData.themeColor))
+                    .tint(Color(hex: store.appData.themeColor))
                     .screenBackground()
                     .navigationTitle("Completion Sound")
                     .navigationBarTitleDisplayMode(.inline)
@@ -182,7 +186,7 @@ struct IntervalTimerView: View {
                     playNextRepTimerSound(store.appData.timerSound)
                 }
                 .font(.caption.weight(.bold))
-                .foregroundStyle(Theme.accentLight)
+                .foregroundStyle(Color(hex: store.appData.themeColor))
             }
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 94), spacing: 8)], spacing: 8) {
@@ -200,7 +204,7 @@ struct IntervalTimerView: View {
                         .foregroundStyle(store.appData.timerSound == sound.id ? .white : Theme.textDim)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(store.appData.timerSound == sound.id ? Theme.accent : Theme.surface2)
+                        .background(store.appData.timerSound == sound.id ? Color(hex: store.appData.themeColor) : Theme.surface2)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                     .buttonStyle(.plain)

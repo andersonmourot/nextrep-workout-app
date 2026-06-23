@@ -181,7 +181,10 @@ struct ActiveWorkoutView: View {
     }
 
     private func exercisesList(active: ActiveWorkout) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let namesById = exerciseNameLookup
+        let previousHintsById = previousHintLookup
+
+        return VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(domainSupersetGroups(day.exercises).enumerated()), id: \.offset) { _, group in
                 if group.isSuperset {
                     SupersetWorkoutCard(
@@ -190,8 +193,8 @@ struct ActiveWorkoutView: View {
                         plannedExercises: day.exercises,
                         activeSets: active.sets,
                         unit: store.appData.unit,
-                        exerciseName: exerciseName,
-                        previousHint: previousSetHint,
+                        exerciseName: { exerciseName(for: $0, lookup: namesById) },
+                        previousHint: { previousHintsById[$0.exerciseId] },
                         cueText: cueBinding,
                         noteText: noteBinding,
                         onWeightSet: { exerciseIndex, setIndex, weight in
@@ -207,14 +210,8 @@ struct ActiveWorkoutView: View {
                                 setIndex: setIndex,
                                 completed: completed,
                                 restSec: restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned),
-                                exerciseName: exerciseName(for: planned)
+                                exerciseName: exerciseName(for: planned, lookup: namesById)
                             )
-                        },
-                        onStartRest: {
-                            if let last = group.indices.last {
-                                let planned = day.exercises[last]
-                                store.startRest(seconds: planned.restSec, exerciseName: exerciseName(for: planned))
-                            }
                         }
                     )
                 } else if let exerciseIndex = group.indices.first {
@@ -223,10 +220,10 @@ struct ActiveWorkoutView: View {
                     let startsRestAfterSet = restAfterSet > 0
                     WorkoutExerciseCard(
                         accent: accent,
-                        name: exerciseName(for: planned),
+                        name: exerciseName(for: planned, lookup: namesById),
                         planned: planned,
                         unit: store.appData.unit,
-                        previousHint: previousSetHint(for: planned),
+                        previousHint: previousHintsById[planned.exerciseId],
                         startsRestAfterSet: startsRestAfterSet,
                         cueText: cueBinding(for: planned.exerciseId),
                         noteText: noteBinding(for: planned.exerciseId),
@@ -243,11 +240,8 @@ struct ActiveWorkoutView: View {
                                 setIndex: setIndex,
                                 completed: completed,
                                 restSec: restAfterSet,
-                                exerciseName: exerciseName(for: planned)
+                                exerciseName: exerciseName(for: planned, lookup: namesById)
                             )
-                        },
-                        onStartRest: {
-                            store.startRest(seconds: max(planned.restSec, restAfterSet), exerciseName: exerciseName(for: planned))
                         }
                     )
                 }
@@ -268,13 +262,38 @@ struct ActiveWorkoutView: View {
         .cardStyle()
     }
 
-    private func exerciseName(for planned: PlannedExercise) -> String {
+    private var exerciseNameLookup: [String: String] {
+        var lookup: [String: String] = [:]
+        for exercise in store.catalog.exercises {
+            lookup[exercise.id] = exercise.name
+        }
+        for exercise in store.appData.customExercises {
+            lookup[exercise.id] = exercise.name
+        }
+        return lookup
+    }
+
+    private var previousHintLookup: [String: String] {
+        var lookup: [String: String] = [:]
+        for log in store.appData.logs.sorted(by: { $0.date > $1.date }) {
+            for exercise in log.exercises where lookup[exercise.exerciseId] == nil {
+                if let set = exercise.sets.last {
+                    lookup[exercise.exerciseId] = "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
+                }
+            }
+        }
+        return lookup
+    }
+
+    private func exerciseName(for planned: PlannedExercise, lookup: [String: String]? = nil) -> String {
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
 
-        let allExercises = store.catalog.exercises + store.appData.customExercises
-        return allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+        if let name = lookup?[planned.exerciseId] {
+            return name
+        }
+        return exerciseNameLookup[planned.exerciseId] ?? planned.exerciseId
     }
 
     private func restSecondsAfterSet(exerciseIndex: Int, planned: PlannedExercise) -> Int {
@@ -289,17 +308,6 @@ struct ActiveWorkoutView: View {
         }
 
         return planned.restSec
-    }
-
-    private func previousSetHint(for planned: PlannedExercise) -> String? {
-        for log in store.appData.logs.sorted(by: { $0.date > $1.date }) {
-            guard let exercise = log.exercises.first(where: { $0.exerciseId == planned.exerciseId }),
-                  let set = exercise.sets.last else {
-                continue
-            }
-            return "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
-        }
-        return nil
     }
 
     private func cueBinding(for exerciseId: String) -> Binding<String> {
@@ -359,7 +367,7 @@ private struct RestTimerCard: View {
                 }
 
                 if active.restEndsAt == nil {
-                    Text("Complete a set or tap Start Rest on an exercise to begin.")
+                    Text("Mark a set Done to start the programmed rest timer.")
                         .font(.subheadline)
                         .foregroundStyle(Theme.textDim)
                 } else {
@@ -424,7 +432,6 @@ private struct WorkoutExerciseCard: View {
     let onWeightSet: (Int, Double) -> Void
     let onRepsSet: (Int, Int) -> Void
     let onToggleCompleted: (Int, Bool) -> Void
-    let onStartRest: () -> Void
     @State private var showingNotes = false
 
     var body: some View {
@@ -471,25 +478,17 @@ private struct WorkoutExerciseCard: View {
 
                 Spacer()
 
-                HStack(spacing: 8) {
-                    Button {
-                        showingNotes.toggle()
-                    } label: {
-                        Image(systemName: "note.text")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(showingNotes ? accent : Theme.textDim)
-                            .frame(width: 32, height: 32)
-                            .background(Theme.surface2)
-                            .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-
-                    Button("Rest") {
-                        onStartRest()
-                    }
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(accent)
+                Button {
+                    showingNotes.toggle()
+                } label: {
+                    Image(systemName: "note.text")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(showingNotes ? accent : Theme.textDim)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 }
+                .buttonStyle(.plain)
             }
 
             if showingNotes {
@@ -544,7 +543,6 @@ private struct SupersetWorkoutCard: View {
     let onWeightSet: (Int, Int, Double) -> Void
     let onRepsSet: (Int, Int, Int) -> Void
     let onToggleCompleted: (Int, Int, Bool) -> Void
-    let onStartRest: () -> Void
     @State private var showingNotesFor: Int?
 
     private var memberIndices: [Int] {
@@ -577,12 +575,6 @@ private struct SupersetWorkoutCard: View {
                 }
 
                 Spacer()
-
-                Button("Start Rest") {
-                    onStartRest()
-                }
-                .font(.caption.weight(.bold))
-                .foregroundStyle(accent)
             }
 
             legend

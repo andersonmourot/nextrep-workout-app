@@ -126,6 +126,7 @@ struct IntervalTimerView: View {
             .accentColor(Color(hex: store.appData.themeColor))
             .tint(Color(hex: store.appData.themeColor))
             .screenBackground()
+            .presentationBackground(Theme.bg)
         }
         .screenBackground()
         .onAppear {

@@ -85,7 +85,7 @@ struct AppShellView: View {
                 }
             }
             .tint(Color(hex: store.appData.themeColor))
-            .id(store.appData.themeColor)
+            .id("\(store.appData.themeColor)-\(store.appData.themeMode)")
 
             if let activeWorkoutContext {
                 ResumeWorkoutBanner(program: activeWorkoutContext.program, day: activeWorkoutContext.day) {

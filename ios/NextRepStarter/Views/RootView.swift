@@ -16,6 +16,8 @@ struct RootView: View {
         .task {
             await store.restoreSession()
         }
+        .accentColor(Color(hex: store.appData.themeColor))
+        .tint(Color(hex: store.appData.themeColor))
         .preferredColorScheme(preferredColorScheme)
         .overlay {
             if store.isLoading {

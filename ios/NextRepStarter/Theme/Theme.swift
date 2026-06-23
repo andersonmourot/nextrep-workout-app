@@ -14,9 +14,9 @@ enum Theme {
     static let textDim = Color(light: "#52525B", dark: "#A1A1AA")
     static let textFaint = Color(light: "#71717A", dark: "#71717A")
     static let border = Color(light: "#D4D4D0", dark: "#FFFFFF").opacity(0.10)
-    static var accent: Color { Color(hex: currentAccentHex) }
-    static var accentLight: Color { Color(hex: mixHex(currentAccentHex, toward: "#FFFFFF", amount: 0.22)) }
-    static var accentDark: Color { Color(hex: mixHex(currentAccentHex, toward: "#000000", amount: 0.22)) }
+    static var accent: Color { .accentColor }
+    static var accentLight: Color { .accentColor }
+    static var accentDark: Color { .accentColor }
 
     private static var currentAccentHex: String {
         UserDefaults.standard.string(forKey: accentStorageKey) ?? defaultAccentHex

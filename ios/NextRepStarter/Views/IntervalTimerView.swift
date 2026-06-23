@@ -114,19 +114,29 @@ struct IntervalTimerView: View {
                     Button("Done") {
                         showingSoundPicker = false
                     }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(hex: store.appData.themeColor))
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(Color(hex: store.appData.themeColor))
+                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
                 }
+                .padding(14)
+                .background(Theme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 soundCard
             }
             .padding(16)
             .frame(maxWidth: 448)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(Theme.bg.ignoresSafeArea())
             .accentColor(Color(hex: store.appData.themeColor))
             .tint(Color(hex: store.appData.themeColor))
-            .screenBackground()
-            .presentationBackground(Theme.bg)
+            .presentationBackground {
+                Theme.bg.ignoresSafeArea()
+            }
         }
         .screenBackground()
         .onAppear {

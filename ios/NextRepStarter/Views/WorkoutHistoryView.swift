@@ -428,11 +428,6 @@ private func profileInput(_ placeholder: String, text: Binding<String>, keyboard
 struct NutritionTrackerView: View {
     @Environment(AppStore.self) private var store
     @State private var selectedDate = Date()
-    @State private var caloriesText = ""
-    @State private var proteinText = ""
-    @State private var carbsText = ""
-    @State private var fatText = ""
-    @State private var waterText = ""
     @State private var goalCaloriesText = ""
     @State private var goalProteinText = ""
     @State private var goalCarbsText = ""
@@ -445,11 +440,12 @@ struct NutritionTrackerView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 datePickerCard
-                todaySummary
-                inputCard
-                photoCard
-                targetCard
                 recentNutrition
+                caloriesCard
+                macrosCard
+                waterCard
+                targetCard
+                photoCard
             }
             .padding(16)
             .frame(maxWidth: 448)
@@ -497,177 +493,111 @@ struct NutritionTrackerView: View {
         .cardStyle()
     }
 
-    private var todaySummary: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(selectedDateKey == todayKey() ? "Today" : formatBodyWeightDate(selectedDateKey))
-                    .font(.headline)
-                    .foregroundStyle(Theme.text)
-
-                Spacer()
-
-                if let selectedNutrition {
-                    Text("\(selectedNutrition.calories) cal")
-                        .font(.caption.monospacedDigit().weight(.bold))
-                        .foregroundStyle(Theme.accentLight)
-                }
-            }
-
-            if let selectedNutrition {
-                HStack(spacing: 18) {
-                    ProgressRing(
-                        value: nutritionProgress(current: selectedNutrition.calories, target: store.appData.nutritionGoals.calories),
-                        size: 118,
-                        lineWidth: 11,
-                        color: Theme.accentLight,
-                        center: "\(selectedNutrition.calories)",
-                        caption: "kcal"
-                    )
-
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("\(max(0, store.appData.nutritionGoals.calories - selectedNutrition.calories)) kcal left")
-                            .font(.headline)
-                            .foregroundStyle(Theme.text)
-                        Text("Goal \(store.appData.nutritionGoals.calories) kcal")
-                            .font(.caption)
-                            .foregroundStyle(Theme.textDim)
-
-                        HStack(spacing: 6) {
-                            ProfileMiniMetric(value: "\(selectedNutrition.protein)g", label: "Protein")
-                            ProfileMiniMetric(value: "\(selectedNutrition.carbs)g", label: "Carbs")
-                            ProfileMiniMetric(value: "\(selectedNutrition.fat)g", label: "Fat")
-                        }
-                    }
-                }
-            } else {
-                Text("No nutrition logged for this day.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
-            }
-
-            if let selectedNutrition {
-                VStack(spacing: 10) {
-                    MetricProgressBar(label: "Calories", value: Double(selectedNutrition.calories), target: Double(store.appData.nutritionGoals.calories), suffix: "")
-                    MetricProgressBar(label: "Protein", value: Double(selectedNutrition.protein), target: Double(store.appData.nutritionGoals.protein), suffix: "g")
-                    MetricProgressBar(label: "Carbs", value: Double(selectedNutrition.carbs), target: Double(store.appData.nutritionGoals.carbs), suffix: "g")
-                    MetricProgressBar(label: "Fat", value: Double(selectedNutrition.fat), target: Double(store.appData.nutritionGoals.fat), suffix: "g")
-                    MetricProgressBar(label: "Water", value: Double(selectedNutrition.water), target: Double(store.appData.nutritionGoals.water), suffix: "")
-                }
-
-                waterButtons(current: selectedNutrition.water)
-            } else {
-                waterButtons(current: 0)
-            }
-        }
-        .cardStyle()
+    private var currentNutrition: NutritionEntry {
+        selectedNutrition ?? NutritionEntry(date: selectedDateKey, calories: 0, protein: 0, carbs: 0, fat: 0, water: 0, photos: selectedPhotos)
     }
 
-    private func waterButtons(current: Int) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Water")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.textDim)
+    private var caloriesCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 18) {
+                ProgressRing(
+                    value: nutritionProgress(current: currentNutrition.calories, target: store.appData.nutritionGoals.calories),
+                    size: 118,
+                    lineWidth: 11,
+                    color: Theme.accentLight,
+                    center: "\(currentNutrition.calories)",
+                    caption: "kcal"
+                )
 
-            HStack(spacing: 8) {
-                ForEach(0..<max(store.appData.nutritionGoals.water, max(current, 1)), id: \.self) { index in
-                    Button {
-                        let next = current == index + 1 ? index : index + 1
-                        saveNutrition(
-                            calories: selectedNutrition?.calories ?? 0,
-                            protein: selectedNutrition?.protein ?? 0,
-                            carbs: selectedNutrition?.carbs ?? 0,
-                            fat: selectedNutrition?.fat ?? 0,
-                            water: next
-                        )
-                    } label: {
-                        Image(systemName: "drop.fill")
-                            .font(.caption)
-                            .foregroundStyle(index < current ? .white : Theme.textFaint)
-                            .frame(width: 28, height: 28)
-                            .background(index < current ? Theme.accent : Theme.surface2)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("\(max(0, store.appData.nutritionGoals.calories - currentNutrition.calories)) kcal left")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+                    Text("of \(store.appData.nutritionGoals.calories) kcal")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
                 }
-            }
-        }
-    }
-
-    private var inputCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Add Nutrition")
-                    .font(.headline)
-                    .foregroundStyle(Theme.text)
-                Text("Use Add fields for quick logging, or Save Nutrition to set exact values.")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textDim)
             }
 
             NutritionAddField(label: "Add calories", unit: "kcal") { value in
                 adjustNutrition(calories: value)
             }
+        }
+        .cardStyle()
+    }
 
-            VStack(spacing: 12) {
-                NutritionMacroAddRow(
-                    label: "Protein",
-                    value: selectedNutrition?.protein ?? 0,
-                    goal: store.appData.nutritionGoals.protein,
-                    color: Color(hex: "#3B82F6")
-                ) { value in
-                    adjustNutrition(protein: value)
+    private var macrosCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Macros")
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            NutritionMacroAddRow(
+                label: "Protein",
+                value: currentNutrition.protein,
+                goal: store.appData.nutritionGoals.protein,
+                color: Color(hex: "#3B82F6")
+            ) { value in
+                adjustNutrition(protein: value)
+            }
+
+            NutritionMacroAddRow(
+                label: "Carbs",
+                value: currentNutrition.carbs,
+                goal: store.appData.nutritionGoals.carbs,
+                color: Color(hex: "#F97316")
+            ) { value in
+                adjustNutrition(carbs: value)
+            }
+
+            NutritionMacroAddRow(
+                label: "Fat",
+                value: currentNutrition.fat,
+                goal: store.appData.nutritionGoals.fat,
+                color: Color(hex: "#A855F7")
+            ) { value in
+                adjustNutrition(fat: value)
+            }
+        }
+        .cardStyle()
+    }
+
+    private var waterCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Water", systemImage: "drop.fill")
+                    .font(.headline)
+                    .foregroundStyle(Theme.text)
+
+                Spacer()
+
+                Text("\(currentNutrition.water) / \(store.appData.nutritionGoals.water) glasses")
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Theme.textDim)
+            }
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(0..<max(store.appData.nutritionGoals.water, max(currentNutrition.water, 1)), id: \.self) { index in
+                    Button {
+                        let next = currentNutrition.water == index + 1 ? index : index + 1
+                        saveNutrition(
+                            calories: currentNutrition.calories,
+                            protein: currentNutrition.protein,
+                            carbs: currentNutrition.carbs,
+                            fat: currentNutrition.fat,
+                            water: next
+                        )
+                    } label: {
+                        Image(systemName: "drop.fill")
+                            .font(.caption)
+                            .foregroundStyle(index < currentNutrition.water ? .white : Theme.textFaint)
+                            .frame(width: 32, height: 32)
+                            .background(index < currentNutrition.water ? Color(hex: "#38BDF8").opacity(0.85) : Theme.surface2)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
                 }
-
-                NutritionMacroAddRow(
-                    label: "Carbs",
-                    value: selectedNutrition?.carbs ?? 0,
-                    goal: store.appData.nutritionGoals.carbs,
-                    color: Color(hex: "#F97316")
-                ) { value in
-                    adjustNutrition(carbs: value)
-                }
-
-                NutritionMacroAddRow(
-                    label: "Fat",
-                    value: selectedNutrition?.fat ?? 0,
-                    goal: store.appData.nutritionGoals.fat,
-                    color: Color(hex: "#A855F7")
-                ) { value in
-                    adjustNutrition(fat: value)
-                }
             }
-
-            Divider().overlay(.white.opacity(0.08))
-
-            Text("Set exact values")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.textDim)
-
-            HStack(spacing: 10) {
-                profileInput("Calories", text: $caloriesText, keyboard: .numberPad)
-                profileInput("Protein", text: $proteinText, keyboard: .numberPad)
-            }
-            HStack(spacing: 10) {
-                profileInput("Carbs", text: $carbsText, keyboard: .numberPad)
-                profileInput("Fat", text: $fatText, keyboard: .numberPad)
-                profileInput("Water", text: $waterText, keyboard: .numberPad)
-            }
-
-            Button("Save Nutrition") {
-                saveNutrition(
-                    calories: Int(caloriesText) ?? selectedNutrition?.calories ?? 0,
-                    protein: Int(proteinText) ?? selectedNutrition?.protein ?? 0,
-                    carbs: Int(carbsText) ?? selectedNutrition?.carbs ?? 0,
-                    fat: Int(fatText) ?? selectedNutrition?.fat ?? 0,
-                    water: Int(waterText) ?? selectedNutrition?.water ?? 0
-                )
-                caloriesText = ""
-                proteinText = ""
-                carbsText = ""
-                fatText = ""
-                waterText = ""
-            }
-            .buttonStyle(PrimaryButtonStyle())
         }
         .cardStyle()
     }

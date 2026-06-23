@@ -19,9 +19,15 @@ struct ActiveWorkoutView: View {
                     header(active: active)
 
                     exercisesList(active: active)
+
+                    Button {
+                        showingFinishConfirm = true
+                    } label: {
+                        Text("Finish Workout")
+                    }
+                    .buttonStyle(GhostButtonStyle())
                 }
                 .padding(16)
-                .padding(.bottom, 92)
                 .frame(maxWidth: 448)
                 .frame(maxWidth: .infinity)
             } else {
@@ -76,28 +82,17 @@ struct ActiveWorkoutView: View {
         }
         .safeAreaInset(edge: .bottom) {
             if let active = store.appData.activeWorkout {
-                VStack(spacing: 10) {
-                    if active.restEndsAt != nil {
-                        FloatingRestBar(
-                            active: active,
-                            accent: accent,
-                            timerSound: store.appData.timerSound,
-                            onAddTime: { store.extendRest(by: 15) },
-                            onSkip: { store.stopRest() }
-                        )
-                    }
-
-                    Button {
-                        showingFinishConfirm = true
-                    } label: {
-                        Text("Finish Workout")
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
+                if active.restEndsAt != nil {
+                    FloatingRestBar(
+                        active: active,
+                        accent: accent,
+                        timerSound: store.appData.timerSound,
+                        onAddTime: { store.extendRest(by: 15) },
+                        onSkip: { store.stopRest() }
+                    )
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-                .background(.ultraThinMaterial)
             }
         }
     }

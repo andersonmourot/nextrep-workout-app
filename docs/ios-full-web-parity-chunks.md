@@ -9,6 +9,17 @@ finish summary, rest notifications, profile history, nutrition/max tracking,
 people search, settings, and admin basics. The chunks below focus on closing
 behavioral, visual, and edge-case gaps.
 
+## Current status
+
+As of the latest native parity pass, the major feature chunks below have been
+implemented in `ios/NextRepStarter`: shared domain/store behavior, app shell,
+theme mode/accent behavior, Dashboard, Programs list/detail/history/editor,
+Active Workout, Day Review, Exercise Library/Detail, Timer/native sound
+selection, People/social sharing, Profile/Progress, Nutrition, Max Tracker,
+auth recovery/password UX, Settings/legal, Admin Users, Admin Catalog program
+and exercise management, and data-integrity cleanup. The remaining work is
+primarily final regression, device-specific QA, and App Store/TestFlight polish.
+
 ## Chunk 0: shared domain engine and store parity
 
 **Web references**

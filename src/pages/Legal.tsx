@@ -221,7 +221,7 @@ function B({ children }: { children: React.ReactNode }) {
 export function Legal({ doc }: { doc: LegalDoc }) {
   const navigate = useNavigate()
   return (
-    <div className="animate-fade-in space-y-4">
+    <div className="container-app animate-fade-in space-y-4 py-6">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"

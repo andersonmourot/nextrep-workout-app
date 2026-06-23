@@ -38,15 +38,18 @@ struct ProgramEditorView: View {
                 }
                 basics
                 daysEditor
-                actions
             }
             .padding(16)
+            .padding(.bottom, 92)
             .frame(maxWidth: 448)
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(draft.name.isEmpty ? "New Program" : draft.name)
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .safeAreaInset(edge: .bottom) {
+            saveBar
+        }
         .onChange(of: focusedExerciseKey) { oldValue, newValue in
             if newValue == nil, let oldValue {
                 commitExerciseQuery(for: oldValue)
@@ -662,7 +665,7 @@ struct ProgramEditorView: View {
         selectedWeek = 1
     }
 
-    private var actions: some View {
+    private var saveBar: some View {
         VStack(spacing: 10) {
             Button {
                 Task { await saveProgram() }
@@ -682,6 +685,10 @@ struct ProgramEditorView: View {
                 .buttonStyle(GhostButtonStyle())
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
     }
 
     private var canSave: Bool {

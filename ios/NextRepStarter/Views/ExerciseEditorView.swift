@@ -36,15 +36,22 @@ struct ExerciseEditorView: View {
                 basics
                 photos
                 coaching
-                actions
             }
             .padding(16)
+            .padding(.bottom, 92)
             .frame(maxWidth: 448)
             .frame(maxWidth: .infinity)
         }
         .navigationTitle(draft.name.isEmpty ? "New Exercise" : draft.name)
         .navigationBarTitleDisplayMode(.inline)
         .screenBackground()
+        .safeAreaInset(edge: .bottom) {
+            actions
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
+        }
         .alert(store.isCustomExercise(draft) ? "Delete Exercise?" : "Restore Default?", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button(store.isCustomExercise(draft) ? "Delete" : "Restore", role: .destructive) {

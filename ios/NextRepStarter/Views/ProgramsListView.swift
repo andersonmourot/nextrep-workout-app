@@ -389,7 +389,12 @@ private struct ProgramListRow: View {
             NavigationLink {
                 ProgramDetailView(program: program)
             } label: {
-                ProgramCard(program: program, isActive: isActive, isCustom: isCustom, isFavorite: isFavorite)
+                ProgramCard(
+                    program: program,
+                    isActive: isActive && !isManaging,
+                    isCustom: isCustom && !isManaging,
+                    isFavorite: isFavorite && !isManaging
+                )
             }
             .buttonStyle(.plain)
 

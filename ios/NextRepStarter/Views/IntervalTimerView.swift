@@ -103,25 +103,29 @@ struct IntervalTimerView: View {
             }
         }
         .sheet(isPresented: $showingSoundPicker) {
-            NavigationStack {
-                soundCard
-                    .padding(16)
-                    .frame(maxWidth: 448)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .accentColor(Color(hex: store.appData.themeColor))
-                    .tint(Color(hex: store.appData.themeColor))
-                    .screenBackground()
-                    .navigationTitle("Completion Sound")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") {
-                                showingSoundPicker = false
-                            }
-                            .tint(Theme.accentLight)
-                        }
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Completion Sound")
+                        .font(.headline)
+                        .foregroundStyle(Theme.text)
+
+                    Spacer()
+
+                    Button("Done") {
+                        showingSoundPicker = false
                     }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(hex: store.appData.themeColor))
+                }
+
+                soundCard
             }
+            .padding(16)
+            .frame(maxWidth: 448)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .accentColor(Color(hex: store.appData.themeColor))
+            .tint(Color(hex: store.appData.themeColor))
+            .screenBackground()
         }
         .screenBackground()
         .onAppear {

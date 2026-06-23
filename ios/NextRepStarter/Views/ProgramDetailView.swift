@@ -15,7 +15,6 @@ struct ProgramDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 heroCard
-                managementActions
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -78,9 +77,9 @@ struct ProgramDetailView: View {
             }
         }
         .toolbar {
-            if store.isCustomProgram(program) {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 13) {
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 13) {
+                    if store.isCustomProgram(program) {
                         NavigationLink {
                             ProgramEditorView(program: program)
                         } label: {
@@ -96,8 +95,25 @@ struct ProgramDetailView: View {
                             Image(systemName: "square.and.arrow.up")
                         }
                     }
-                    .tint(Theme.accentLight)
+
+                    Button {
+                        _ = store.duplicateProgram(program)
+                        shareMessage = "Program duplicated"
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+
+                    Button(role: .destructive) {
+                        if store.isCustomProgram(program) {
+                            showingDeleteConfirm = true
+                        } else {
+                            showingHideConfirm = true
+                        }
+                    } label: {
+                        Image(systemName: store.isCustomProgram(program) ? "trash" : "eye.slash")
+                    }
                 }
+                .tint(Theme.accentLight)
             }
         }
         .screenBackground()
@@ -295,34 +311,6 @@ struct ProgramDetailView: View {
         }
         .font(.caption.weight(.bold))
         .foregroundStyle(Theme.accentLight)
-    }
-
-    private var managementActions: some View {
-        HStack(spacing: 10) {
-            Button {
-                _ = store.duplicateProgram(program)
-                shareMessage = "Program duplicated"
-            } label: {
-                Label("Duplicate", systemImage: "doc.on.doc")
-            }
-            .buttonStyle(GhostButtonStyle())
-
-            if store.isCustomProgram(program) {
-                Button(role: .destructive) {
-                    showingDeleteConfirm = true
-                } label: {
-                    Label("Delete", systemImage: "trash")
-                }
-                .buttonStyle(GhostButtonStyle())
-            } else {
-                Button(role: .destructive) {
-                    showingHideConfirm = true
-                } label: {
-                    Label("Hide", systemImage: "eye.slash")
-                }
-                .buttonStyle(GhostButtonStyle())
-            }
-        }
     }
 
     private func exerciseName(for planned: PlannedExercise) -> String {

@@ -19,15 +19,9 @@ struct ActiveWorkoutView: View {
                     header(active: active)
 
                     exercisesList(active: active)
-
-                    Button {
-                        showingFinishConfirm = true
-                    } label: {
-                        Text("Finish Workout")
-                    }
-                    .buttonStyle(GhostButtonStyle())
                 }
                 .padding(16)
+                .padding(.bottom, 92)
                 .frame(maxWidth: 448)
                 .frame(maxWidth: .infinity)
             } else {
@@ -81,16 +75,29 @@ struct ActiveWorkoutView: View {
             Text("This will save completed sets to workout history and clear the active session.")
         }
         .safeAreaInset(edge: .bottom) {
-            if let active = store.appData.activeWorkout, active.restEndsAt != nil {
-                FloatingRestBar(
-                    active: active,
-                    accent: accent,
-                    timerSound: store.appData.timerSound,
-                    onAddTime: { store.extendRest(by: 15) },
-                    onSkip: { store.stopRest() }
-                )
+            if let active = store.appData.activeWorkout {
+                VStack(spacing: 10) {
+                    if active.restEndsAt != nil {
+                        FloatingRestBar(
+                            active: active,
+                            accent: accent,
+                            timerSound: store.appData.timerSound,
+                            onAddTime: { store.extendRest(by: 15) },
+                            onSkip: { store.stopRest() }
+                        )
+                    }
+
+                    Button {
+                        showingFinishConfirm = true
+                    } label: {
+                        Text("Finish Workout")
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
+                }
                 .padding(.horizontal, 16)
+                .padding(.top, 10)
                 .padding(.bottom, 8)
+                .background(.ultraThinMaterial)
             }
         }
     }
@@ -762,7 +769,7 @@ private struct WorkoutSetRow: View {
             } label: {
                 Image(systemName: set.completed ? "checkmark.circle.fill" : "circle")
                     .font(.title3.weight(.semibold))
-                    .frame(width: 34, height: 34)
+                    .frame(width: 44, height: 34)
             }
             .foregroundStyle(set.completed ? accent : Theme.textDim)
         }
@@ -789,7 +796,9 @@ private struct WorkoutSetHeader: View {
             Text("Reps")
                 .frame(maxWidth: .infinity)
             Text("Done")
-                .frame(width: 34, alignment: .center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 44, alignment: .center)
         }
         .font(.caption2.weight(.semibold))
         .textCase(.uppercase)

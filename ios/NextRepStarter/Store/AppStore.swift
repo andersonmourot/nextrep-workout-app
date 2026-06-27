@@ -768,7 +768,7 @@ final class AppStore {
         if clean.isEmpty {
             appData.exerciseNotes.removeValue(forKey: exerciseId)
         } else {
-            appData.exerciseNotes[exerciseId] = clean
+            appData.exerciseNotes[exerciseId] = note
         }
         scheduleSync()
     }
@@ -778,7 +778,7 @@ final class AppStore {
         if clean.isEmpty {
             appData.exerciseSubheaders.removeValue(forKey: exerciseId)
         } else {
-            appData.exerciseSubheaders[exerciseId] = clean
+            appData.exerciseSubheaders[exerciseId] = cue
         }
         scheduleSync()
     }

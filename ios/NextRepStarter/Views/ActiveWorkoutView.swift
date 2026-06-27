@@ -49,6 +49,14 @@ struct ActiveWorkoutView: View {
                 }
                 .tint(Theme.textDim)
             }
+
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    dismissKeyboard()
+                }
+                .font(.subheadline.weight(.semibold))
+            }
         }
         .screenBackground()
         .navigationDestination(isPresented: summaryIsPresented) {

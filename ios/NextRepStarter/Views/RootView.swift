@@ -9,6 +9,7 @@ struct RootView: View {
                 NavigationStack {
                     AuthView()
                 }
+                .keyboardDismissToolbar()
             } else {
                 AppShellView()
             }
@@ -19,6 +20,7 @@ struct RootView: View {
         .accentColor(Color(hex: store.appData.themeColor))
         .tint(Color(hex: store.appData.themeColor))
         .preferredColorScheme(preferredColorScheme)
+        .scrollDismissesKeyboard(.interactively)
         .overlay {
             if store.isLoading {
                 ZStack {
@@ -45,6 +47,10 @@ struct RootView: View {
     }
 }
 
+func dismissKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+}
+
 struct AppShellView: View {
     @Environment(AppStore.self) private var store
 
@@ -54,6 +60,7 @@ struct AppShellView: View {
                 NavigationStack {
                     DashboardView()
                 }
+                .keyboardDismissToolbar()
                 .tabItem {
                     Label("Home", systemImage: "house")
                 }
@@ -61,6 +68,7 @@ struct AppShellView: View {
                 NavigationStack {
                     ProgramsListView()
                 }
+                .keyboardDismissToolbar()
                 .tabItem {
                     Label("Programs", systemImage: "square.grid.2x2")
                 }
@@ -68,6 +76,7 @@ struct AppShellView: View {
                 NavigationStack {
                     IntervalTimerView()
                 }
+                .keyboardDismissToolbar()
                 .tabItem {
                     Label("Timer", systemImage: "timer")
                 }
@@ -75,6 +84,7 @@ struct AppShellView: View {
                 NavigationStack {
                     PeopleSearchView()
                 }
+                .keyboardDismissToolbar()
                 .tabItem {
                     Label("Search", systemImage: "magnifyingglass")
                 }
@@ -82,6 +92,7 @@ struct AppShellView: View {
                 NavigationStack {
                     WorkoutHistoryView()
                 }
+                .keyboardDismissToolbar()
                 .tabItem {
                     Label("Profile", systemImage: "person")
                 }
@@ -108,6 +119,7 @@ struct AppShellView: View {
                         week: activeContext.week
                     )
                 }
+                .keyboardDismissToolbar()
             } else {
                 EmptyView()
             }
@@ -139,6 +151,23 @@ struct AppShellView: View {
         }
 
         return (program, day, active.week ?? 1)
+    }
+}
+
+private extension View {
+    func keyboardDismissToolbar() -> some View {
+        toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button {
+                    dismissKeyboard()
+                } label: {
+                    Image(systemName: "checkmark")
+                }
+                .font(.headline.weight(.semibold))
+                .accessibilityLabel("Dismiss keyboard")
+            }
+        }
     }
 }
 

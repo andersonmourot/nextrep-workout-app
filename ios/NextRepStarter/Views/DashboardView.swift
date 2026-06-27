@@ -82,6 +82,8 @@ struct DashboardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let day {
+                    exercisePreview(for: day)
+
                     Button {
                         store.startWorkout(program: program, day: day, week: run.week)
                         store.presentWorkout()
@@ -120,6 +122,39 @@ struct DashboardView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(.white.opacity(0.06), lineWidth: 1)
+        }
+    }
+
+    private func exercisePreview(for day: ProgramDay) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Exercises")
+                .font(.caption.weight(.semibold))
+                .textCase(.uppercase)
+                .tracking(1.1)
+                .foregroundStyle(Theme.textFaint)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 8)], alignment: .leading, spacing: 8) {
+                ForEach(Array(day.exercises.prefix(4).enumerated()), id: \.offset) { _, planned in
+                    Text(exerciseName(for: planned))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(Theme.surface2.opacity(0.85))
+                        .clipShape(Capsule())
+                }
+
+                if day.exercises.count > 4 {
+                    Text("+\(day.exercises.count - 4) more")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 7)
+                        .background(Theme.surface2.opacity(0.85))
+                        .clipShape(Capsule())
+                }
+            }
         }
     }
 
@@ -222,6 +257,13 @@ struct DashboardView: View {
         }
 
         return domainResolveProgramDay(program, dayIndex: run.dayIndex, week: run.week)
+    }
+
+    private func exerciseName(for planned: PlannedExercise) -> String {
+        if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return name
+        }
+        return store.allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
     }
 
     private func isActiveWorkout(program: Program, day: ProgramDay, week: Int) -> Bool {

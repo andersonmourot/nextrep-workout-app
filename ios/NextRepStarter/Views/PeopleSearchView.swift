@@ -14,8 +14,8 @@ struct PeopleSearchView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                followingSection
                 searchField
+                followingSection
 
                 if let error = store.authError {
                     Text(error)

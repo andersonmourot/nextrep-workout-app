@@ -49,6 +49,17 @@ struct ActiveWorkoutView: View {
                 }
                 .tint(Theme.textDim)
             }
+
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button {
+                    dismissKeyboard()
+                } label: {
+                    Image(systemName: "checkmark")
+                }
+                .font(.headline.weight(.semibold))
+                .accessibilityLabel("Dismiss keyboard")
+            }
         }
         .screenBackground()
         .navigationDestination(isPresented: summaryIsPresented) {
@@ -491,6 +502,9 @@ private struct WorkoutExerciseCard: View {
                     Text("Exercise notes")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textDim)
+
+                    TextField("Cue shown under exercise name", text: $cueText, axis: .vertical)
+                        .workoutInputStyle()
 
                     TextField("Private notes", text: $noteText, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)

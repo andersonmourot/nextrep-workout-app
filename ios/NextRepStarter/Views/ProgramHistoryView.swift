@@ -208,7 +208,7 @@ struct CompletedProgramArchiveDetailView: View {
             } else {
                 ForEach(Array(log.exercises.enumerated()), id: \.offset) { _, exercise in
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(exerciseName(for: exercise.exerciseId))
+                        Text(exerciseName(for: exercise))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(Theme.text)
 
@@ -242,7 +242,11 @@ struct CompletedProgramArchiveDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private func exerciseName(for exerciseId: String) -> String {
+    private func exerciseName(for exercise: LoggedExercise) -> String {
+        if let name = exercise.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        let exerciseId = exercise.exerciseId
         let plannedNames = entry.program.days
             .flatMap { $0.exercises }
             .reduce(into: [String: String]()) { map, planned in

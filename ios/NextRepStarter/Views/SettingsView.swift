@@ -7,9 +7,15 @@ struct SettingsView: View {
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var passwordMessage: String?
+    @State private var accountDeletionMessage: String?
     @State private var showingResetConfirm = false
     @State private var showingLogoutConfirm = false
+    @State private var showingDeleteAccountConfirm = false
     @State private var showingPasswordFields = false
+    @State private var isDeletingAccount = false
+    @State private var appearanceExpanded = true
+    @State private var accountExpanded = false
+    @State private var disclosuresExpanded = false
     @State private var currentPasswordVisible = false
     @State private var newPasswordVisible = false
     @State private var confirmPasswordVisible = false
@@ -20,16 +26,14 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
-                displayNameSection
                 adminSection
-                appearanceSection
-                activeProgramSection
-                accountSection
-                resetSection
-                legalSection
+                appearanceDisclosure
+                accountDisclosure
+                disclosuresDisclosure
                 footer
             }
-            .padding(16)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .frame(maxWidth: 448)
             .frame(maxWidth: .infinity)
         }
@@ -55,35 +59,29 @@ struct SettingsView: View {
         } message: {
             Text("You can log back in with your account email and password.")
         }
+        .alert("Delete Account?", isPresented: $showingDeleteAccountConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Account", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+        } message: {
+            Text("This permanently deletes your account and synced NextRep data. This cannot be undone.")
+        }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Settings")
-                .font(.system(size: 34, weight: .bold, design: .default))
+                .font(.system(size: 32, weight: .bold, design: .default))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.text)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("Manage account, display, program, and data options.")
+            Text("Manage account, display, and disclosure options.")
                 .font(.subheadline)
                 .foregroundStyle(Theme.textDim)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var displayNameSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Display Name")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
-
-            settingsField("Your name", text: $displayName)
-
-            Button("Save Name") {
-                store.setDisplayName(displayName.trimmingCharacters(in: .whitespacesAndNewlines))
-            }
-            .buttonStyle(GhostButtonStyle())
-        }
-        .cardStyle()
     }
 
     @ViewBuilder
@@ -112,113 +110,118 @@ struct SettingsView: View {
         }
     }
 
-    private var appearanceSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Appearance")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
+    private var appearanceDisclosure: some View {
+        DisclosureGroup(isExpanded: $appearanceExpanded) {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Display Name")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Theme color")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Theme.textDim)
+                    settingsField("Your name", text: $displayName)
 
-                HStack(spacing: 10) {
-                    ForEach(themeColors, id: \.self) { color in
-                        Button {
-                            store.setThemeColor(color)
-                        } label: {
-                            Circle()
-                                .fill(Color(hex: color))
-                                .frame(width: 32, height: 32)
-                                .overlay {
-                                    if store.appData.themeColor.lowercased() == color.lowercased() {
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
+                    Button("Save Name") {
+                        store.setDisplayName(displayName.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+                    .buttonStyle(GhostButtonStyle())
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Theme Color")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
+
+                    HStack(spacing: 10) {
+                        ForEach(themeColors, id: \.self) { color in
+                            Button {
+                                store.setThemeColor(color)
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: color))
+                                    .frame(width: 32, height: 32)
+                                    .overlay {
+                                        if store.appData.themeColor.lowercased() == color.lowercased() {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption.weight(.bold))
+                                                .foregroundStyle(.white)
+                                        }
                                     }
-                                }
-                                .overlay {
-                                    Circle()
-                                        .stroke(.white.opacity(store.appData.themeColor.lowercased() == color.lowercased() ? 0.9 : 0), lineWidth: 2)
-                                }
+                                    .overlay {
+                                        Circle()
+                                            .stroke(.white.opacity(store.appData.themeColor.lowercased() == color.lowercased() ? 0.9 : 0), lineWidth: 2)
+                                    }
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
-            }
 
-            Picker("Theme", selection: Binding(
-                get: { store.appData.themeMode },
-                set: { store.setThemeMode($0) }
-            )) {
-                Text("Dark").tag("dark")
-                Text("Light").tag("light")
-                Text("System").tag("system")
-            }
-            .pickerStyle(.segmented)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Theme")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
 
-            Picker("Weight Unit", selection: Binding(
-                get: { store.appData.unit },
-                set: { store.setUnit($0) }
-            )) {
-                Text("lb").tag("lb")
-                Text("kg").tag("kg")
+                    Picker("Theme", selection: Binding(
+                        get: { store.appData.themeMode == "light" ? "light" : "dark" },
+                        set: { store.setThemeMode($0) }
+                    )) {
+                        Text("Dark").tag("dark")
+                        Text("Light").tag("light")
+                    }
+                    .pickerStyle(.segmented)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Weight Unit")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textDim)
+
+                    Picker("Weight Unit", selection: Binding(
+                        get: { store.appData.unit },
+                        set: { store.setUnit($0) }
+                    )) {
+                        Text("lb").tag("lb")
+                        Text("kg").tag("kg")
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
-            .pickerStyle(.segmented)
+            .padding(.top, 12)
+        } label: {
+            settingsDisclosureLabel("Appearance", systemImage: "paintpalette")
         }
         .cardStyle()
     }
 
-    private var activeProgramSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Active Program")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
-
-            if let program = activeProgram {
-                Text(program.name)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.text)
-                Text("\(program.daysPerWeek) days / week · \(program.durationWeeks) weeks")
-                    .font(.caption)
-                    .foregroundStyle(Theme.textDim)
-
-                HStack(spacing: 10) {
-                    NavigationLink {
-                        ProgramDetailView(program: program)
-                    } label: {
-                        Text("View")
-                    }
-                    .buttonStyle(GhostButtonStyle())
-
-                    Button("Clear") {
-                        store.clearActiveProgram()
-                    }
-                    .buttonStyle(GhostButtonStyle())
-                }
-            } else {
-                Text("No active program selected.")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textDim)
-
-                NavigationLink {
-                    ProgramsListView()
-                } label: {
-                    Text("Browse Programs")
-                }
-                .buttonStyle(PrimaryButtonStyle())
+    private var accountDisclosure: some View {
+        DisclosureGroup(isExpanded: $accountExpanded) {
+            VStack(alignment: .leading, spacing: 12) {
+                accountSection
+                resetSection
             }
+            .padding(.top, 12)
+        } label: {
+            settingsDisclosureLabel("Account", systemImage: "person.crop.circle")
+        }
+        .cardStyle()
+    }
+
+    private var disclosuresDisclosure: some View {
+        DisclosureGroup(isExpanded: $disclosuresExpanded) {
+            VStack(spacing: 8) {
+                legalLink("Privacy Policy", doc: .privacy)
+                legalLink("Terms of Service", doc: .terms)
+                legalLink("Health & Fitness Disclaimer", doc: .disclaimer)
+            }
+            .padding(.top, 12)
+        } label: {
+            settingsDisclosureLabel("Disclosures", systemImage: "doc.text")
         }
         .cardStyle()
     }
 
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Account")
-                .font(.headline)
-                .foregroundStyle(Theme.text)
-
             if let user = store.user {
                 Text(user.name)
                     .font(.subheadline.weight(.semibold))
@@ -261,6 +264,12 @@ struct SettingsView: View {
                     .foregroundStyle(passwordMessage.contains("updated") ? Theme.accentLight : .red.opacity(0.9))
             }
 
+            if let accountDeletionMessage {
+                Text(accountDeletionMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red.opacity(0.9))
+            }
+
             Button(showingPasswordFields ? "Update Password" : "Change Password") {
                 if showingPasswordFields {
                     Task { await changePassword() }
@@ -286,8 +295,28 @@ struct SettingsView: View {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
             .buttonStyle(GhostButtonStyle())
+
+            Divider().overlay(.white.opacity(0.08))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Delete Account")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red.opacity(0.9))
+                Text("Permanently delete your account and synced app data from NextRep.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(role: .destructive) {
+                accountDeletionMessage = nil
+                showingDeleteAccountConfirm = true
+            } label: {
+                Label(isDeletingAccount ? "Deleting..." : "Delete Account", systemImage: "trash")
+            }
+            .buttonStyle(GhostButtonStyle())
+            .disabled(isDeletingAccount)
         }
-        .cardStyle()
     }
 
     private var resetSection: some View {
@@ -307,16 +336,6 @@ struct SettingsView: View {
             }
             .buttonStyle(GhostButtonStyle())
         }
-        .cardStyle()
-    }
-
-    private var legalSection: some View {
-        VStack(spacing: 8) {
-            legalLink("Privacy Policy", doc: .privacy)
-            legalLink("Terms of Service", doc: .terms)
-            legalLink("Health & Fitness Disclaimer", doc: .disclaimer)
-        }
-        .cardStyle()
     }
 
     private var footer: some View {
@@ -325,13 +344,6 @@ struct SettingsView: View {
             .foregroundStyle(Theme.textFaint)
             .frame(maxWidth: .infinity)
             .padding(.bottom, 8)
-    }
-
-    private var activeProgram: Program? {
-        guard let activeProgramId = store.appData.activeProgramId else {
-            return nil
-        }
-        return store.allPrograms.first { $0.id == activeProgramId }
     }
 
     private func legalLink(_ title: String, doc: LegalDocument) -> some View {
@@ -350,6 +362,21 @@ struct SettingsView: View {
             .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
+    }
+
+    private func settingsDisclosureLabel(_ title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(Theme.accentLight)
+                .frame(width: 24)
+
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(Theme.text)
+
+            Spacer()
+        }
+        .contentShape(Rectangle())
     }
 
     private func settingsField(_ placeholder: String, text: Binding<String>) -> some View {
@@ -403,6 +430,16 @@ struct SettingsView: View {
             passwordMessage = "Password updated."
         } else {
             passwordMessage = store.authError ?? "Could not change password."
+        }
+    }
+
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        accountDeletionMessage = nil
+        let ok = await store.deleteAccount()
+        isDeletingAccount = false
+        if !ok {
+            accountDeletionMessage = store.authError ?? "Could not delete account."
         }
     }
 
@@ -477,7 +514,7 @@ enum LegalDocument: String {
 
             4. Data retention
 
-            We retain your account and app data for as long as your account is active. You may request deletion of your account and associated data at any time (see "Your rights").
+            We retain your account and app data for as long as your account is active. You may request deletion of your account and associated data at any time (see "Your rights"). In the native iOS app, you can also initiate permanent account deletion directly from Settings > Account > Delete Account.
 
             5. Security
 

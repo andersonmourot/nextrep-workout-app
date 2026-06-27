@@ -59,7 +59,9 @@ function Privacy() {
       <H>4. Data retention</H>
       <P>
         We retain your account and app data for as long as your account is active. You may request
-        deletion of your account and associated data at any time (see "Your rights").
+        deletion of your account and associated data at any time (see "Your rights"). In the native
+        iOS app, you can also initiate permanent account deletion directly from Settings &gt; Account
+        &gt; Delete Account.
       </P>
       <H>5. Security</H>
       <P>

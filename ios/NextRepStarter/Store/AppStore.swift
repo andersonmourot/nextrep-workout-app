@@ -370,6 +370,23 @@ final class AppStore {
         }
     }
 
+    func deleteAccount() async -> Bool {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            try await apiClient.deleteAccount(token: token)
+            authError = nil
+            logout()
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
     func searchUsers(query: String) async -> [DiscoverUser] {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription
@@ -751,7 +768,7 @@ final class AppStore {
         if clean.isEmpty {
             appData.exerciseNotes.removeValue(forKey: exerciseId)
         } else {
-            appData.exerciseNotes[exerciseId] = clean
+            appData.exerciseNotes[exerciseId] = note
         }
         scheduleSync()
     }
@@ -761,7 +778,7 @@ final class AppStore {
         if clean.isEmpty {
             appData.exerciseSubheaders.removeValue(forKey: exerciseId)
         } else {
-            appData.exerciseSubheaders[exerciseId] = clean
+            appData.exerciseSubheaders[exerciseId] = cue
         }
         scheduleSync()
     }
@@ -1078,7 +1095,12 @@ final class AppStore {
                     SetLog(weight: set.weight, reps: set.reps, completed: true)
                 }
 
-            return LoggedExercise(exerciseId: planned.exerciseId, sets: loggedSets)
+            let plannedName = planned.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return LoggedExercise(
+                exerciseId: planned.exerciseId,
+                name: plannedName?.isEmpty == false ? plannedName : nil,
+                sets: loggedSets
+            )
         }
 
         let totalVolume = loggedExercises.reduce(0) { total, exercise in
@@ -1245,7 +1267,9 @@ final class AppStore {
 
         syncTask?.cancel()
         syncTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 600_000_000)
+            // Keep typing and rapid set edits responsive by batching backend
+            // writes a little longer than a normal tap interaction.
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else {
                 return
             }

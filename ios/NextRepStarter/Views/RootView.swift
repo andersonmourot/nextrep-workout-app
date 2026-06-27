@@ -19,6 +19,16 @@ struct RootView: View {
         .accentColor(Color(hex: store.appData.themeColor))
         .tint(Color(hex: store.appData.themeColor))
         .preferredColorScheme(preferredColorScheme)
+        .scrollDismissesKeyboard(.interactively)
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    dismissKeyboard()
+                }
+                .font(.subheadline.weight(.semibold))
+            }
+        }
         .overlay {
             if store.isLoading {
                 ZStack {
@@ -43,6 +53,10 @@ struct RootView: View {
             return nil
         }
     }
+}
+
+private func dismissKeyboard() {
+    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
 }
 
 struct AppShellView: View {

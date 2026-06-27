@@ -1262,7 +1262,9 @@ final class AppStore {
 
         syncTask?.cancel()
         syncTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 600_000_000)
+            // Keep typing and rapid set edits responsive by batching backend
+            // writes a little longer than a normal tap interaction.
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard !Task.isCancelled else {
                 return
             }

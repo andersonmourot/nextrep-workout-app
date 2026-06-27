@@ -191,6 +191,7 @@ struct ActiveWorkout: Codable, Equatable {
 
 struct LoggedExercise: Codable, Equatable {
     var exerciseId: String
+    var name: String?
     var sets: [SetLog]
 }
 

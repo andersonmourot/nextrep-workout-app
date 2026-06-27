@@ -134,6 +134,7 @@ struct DayLogEditorView: View {
         let loggedExercises = day.exercises.enumerated().map { index, planned in
             LoggedExercise(
                 exerciseId: exerciseIds.indices.contains(index) ? exerciseIds[index] : planned.exerciseId,
+                name: loggedExerciseName(index: index, planned: planned),
                 sets: (sets.indices.contains(index) ? sets[index] : []).filter(\.completed)
             )
         }
@@ -192,6 +193,14 @@ struct DayLogEditorView: View {
                 )
             )
         }
+    }
+
+    private func loggedExerciseName(index: Int, planned: PlannedExercise) -> String? {
+        let name = exerciseDisplayName(dayIndex: index, planned: planned).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name != planned.exerciseId else {
+            return nil
+        }
+        return name
     }
 
     private func exerciseName(for planned: PlannedExercise) -> String {

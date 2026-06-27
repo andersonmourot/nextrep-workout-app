@@ -1095,7 +1095,12 @@ final class AppStore {
                     SetLog(weight: set.weight, reps: set.reps, completed: true)
                 }
 
-            return LoggedExercise(exerciseId: planned.exerciseId, sets: loggedSets)
+            let plannedName = planned.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return LoggedExercise(
+                exerciseId: planned.exerciseId,
+                name: plannedName?.isEmpty == false ? plannedName : nil,
+                sets: loggedSets
+            )
         }
 
         let totalVolume = loggedExercises.reduce(0) { total, exercise in

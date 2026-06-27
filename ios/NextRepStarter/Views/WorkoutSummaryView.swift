@@ -18,7 +18,7 @@ struct WorkoutSummaryView: View {
 
                     ForEach(Array(nonEmptyExercises.enumerated()), id: \.offset) { _, exercise in
                         SummaryExerciseRow(
-                            name: exerciseName(for: exercise.exerciseId),
+                            name: exerciseName(for: exercise),
                             setCount: exercise.sets.count,
                             volume: exerciseVolume(exercise),
                             unit: unit
@@ -88,7 +88,11 @@ struct WorkoutSummaryView: View {
         }
     }
 
-    private func exerciseName(for exerciseId: String) -> String {
+    private func exerciseName(for exercise: LoggedExercise) -> String {
+        if let name = exercise.name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            return name
+        }
+        let exerciseId = exercise.exerciseId
         let allExercises = store.catalog.exercises + store.appData.customExercises
         return allExercises.first(where: { $0.id == exerciseId })?.name ?? exerciseId
     }

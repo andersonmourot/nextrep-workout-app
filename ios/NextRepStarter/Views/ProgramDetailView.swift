@@ -12,6 +12,12 @@ struct ProgramDetailView: View {
     let program: Program
 
     var body: some View {
+        let days = resolvedDays
+        let slotLogs = logsByDayIndex
+        let setCounts = loggedSetCounts(from: slotLogs)
+        let names = exerciseNamesById
+        let summaries = loggedSummaries(from: slotLogs)
+
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 heroCard
@@ -25,25 +31,27 @@ struct ProgramDetailView: View {
                         weekPager
                     }
 
-                    if resolvedDays.isEmpty {
+                    if days.isEmpty {
                         Text("No days have been added to this program yet.")
                             .font(.subheadline)
                             .foregroundStyle(Theme.textDim)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .cardStyle()
                     } else {
-                        ForEach(Array(resolvedDays.enumerated()), id: \.element.id) { index, day in
+                        ForEach(Array(days.enumerated()), id: \.element.id) { index, day in
                             ProgramDayCard(
                                 program: program,
                                 day: day,
                                 dayNumber: index + 1,
                                 selectedWeek: currentWeek,
                                 isUpNext: isUpNext(dayIndex: index),
-                                log: slotLog(dayIndex: index),
-                                loggedSetCount: slotLog(dayIndex: index).map(completedSetCount) ?? 0,
-                                exerciseName: exerciseName,
-                                loggedSummary: { planned, log in
-                                    loggedSummary(for: planned, in: log)
+                                log: slotLogs[index],
+                                loggedSetCount: setCounts[index] ?? 0,
+                                exerciseName: { planned in
+                                    exerciseName(for: planned, lookup: names)
+                                },
+                                loggedSummary: { planned, _ in
+                                    summaries[dayExerciseSummaryKey(dayIndex: index, exerciseId: planned.exerciseId)]
                                 },
                                 onView: {
                                     selectedDayIndex = index
@@ -285,6 +293,46 @@ struct ProgramDetailView: View {
         )
     }
 
+    private var logsByDayIndex: [Int: WorkoutLog] {
+        var output: [Int: WorkoutLog] = [:]
+        for index in program.days.indices {
+            if let log = slotLog(dayIndex: index) {
+                output[index] = log
+            }
+        }
+        return output
+    }
+
+    private func loggedSetCounts(from logsByDayIndex: [Int: WorkoutLog]) -> [Int: Int] {
+        var output: [Int: Int] = [:]
+        for (index, log) in logsByDayIndex {
+            output[index] = completedSetCount(log)
+        }
+        return output
+    }
+
+    private var exerciseNamesById: [String: String] {
+        var names: [String: String] = [:]
+        for exercise in store.catalog.exercises {
+            names[exercise.id] = exercise.name
+        }
+        for exercise in store.appData.customExercises {
+            names[exercise.id] = exercise.name
+        }
+        return names
+    }
+
+    private func loggedSummaries(from logsByDayIndex: [Int: WorkoutLog]) -> [String: String] {
+        var output: [String: String] = [:]
+        for (dayIndex, log) in logsByDayIndex {
+            for exercise in log.exercises where !exercise.sets.isEmpty {
+                output[dayExerciseSummaryKey(dayIndex: dayIndex, exerciseId: exercise.exerciseId)] =
+                    exercise.sets.map { "\(formatDetailWeight($0.weight))x\($0.reps)" }.joined(separator: " · ")
+            }
+        }
+        return output
+    }
+
     private var completedDayCount: Int {
         run.completedSlots
     }
@@ -313,13 +361,15 @@ struct ProgramDetailView: View {
         .foregroundStyle(Theme.accentLight)
     }
 
-    private func exerciseName(for planned: PlannedExercise) -> String {
+    private func exerciseName(for planned: PlannedExercise, lookup: [String: String]? = nil) -> String {
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
 
-        let allExercises = store.catalog.exercises + store.appData.customExercises
-        return allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+        if let name = lookup?[planned.exerciseId] {
+            return name
+        }
+        return exerciseNamesById[planned.exerciseId] ?? planned.exerciseId
     }
 
     private func slotIndex(dayIndex: Int) -> Int {
@@ -344,6 +394,10 @@ struct ProgramDetailView: View {
         }
 
         return logged.sets.map { "\(formatDetailWeight($0.weight))x\($0.reps)" }.joined(separator: " · ")
+    }
+
+    private func dayExerciseSummaryKey(dayIndex: Int, exerciseId: String) -> String {
+        "\(dayIndex)-\(exerciseId)"
     }
 
     private func startDay(dayId: String, week: Int, force: Bool = false) {

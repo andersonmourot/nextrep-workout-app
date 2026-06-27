@@ -52,10 +52,13 @@ struct ActiveWorkoutView: View {
 
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") {
+                Button {
                     dismissKeyboard()
+                } label: {
+                    Image(systemName: "checkmark")
                 }
-                .font(.subheadline.weight(.semibold))
+                .font(.headline.weight(.semibold))
+                .accessibilityLabel("Dismiss keyboard")
             }
         }
         .screenBackground()

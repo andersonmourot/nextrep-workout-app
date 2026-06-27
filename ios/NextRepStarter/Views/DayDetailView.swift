@@ -72,7 +72,7 @@ struct DayDetailView: View {
             }
 
             Button {
-                store.startWorkout(program: program, day: day)
+                store.startWorkout(program: program, day: day, week: week)
                 store.presentWorkout()
             } label: {
                 Text(loggedSetCount > 0 ? "Repeat Workout" : "Start Workout")

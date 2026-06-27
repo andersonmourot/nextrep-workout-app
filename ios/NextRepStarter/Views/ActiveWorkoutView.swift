@@ -492,6 +492,9 @@ private struct WorkoutExerciseCard: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.textDim)
 
+                    TextField("Cue shown under exercise name", text: $cueText, axis: .vertical)
+                        .workoutInputStyle()
+
                     TextField("Private notes", text: $noteText, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
                         .workoutInputStyle()

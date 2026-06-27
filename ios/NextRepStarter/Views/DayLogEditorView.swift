@@ -9,6 +9,9 @@ struct DayLogEditorView: View {
     let existingLog: WorkoutLog?
 
     @State private var sets: [[SetLog]]
+    @State private var exerciseIds: [String]
+    @State private var exerciseNames: [String?]
+    @State private var exerciseQueries: [Int: String] = [:]
     @State private var savedMessage: String?
 
     init(program: Program, day: ProgramDay, week: Int, existingLog: WorkoutLog?) {
@@ -17,6 +20,8 @@ struct DayLogEditorView: View {
         self.week = week
         self.existingLog = existingLog
         _sets = State(initialValue: Self.initialSets(day: day, existingLog: existingLog))
+        _exerciseIds = State(initialValue: Self.initialExerciseIds(day: day, existingLog: existingLog))
+        _exerciseNames = State(initialValue: day.exercises.map(\.name))
     }
 
     var body: some View {
@@ -78,7 +83,7 @@ struct DayLogEditorView: View {
             ForEach(Array(day.exercises.enumerated()), id: \.offset) { exerciseIndex, planned in
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(exerciseName(for: planned))
+                        Text(exerciseDisplayName(dayIndex: exerciseIndex, planned: planned))
                             .font(.headline)
                             .foregroundStyle(Theme.text)
 
@@ -86,6 +91,8 @@ struct DayLogEditorView: View {
                             .font(.caption)
                             .foregroundStyle(Theme.textDim)
                     }
+
+                    exercisePicker(dayIndex: exerciseIndex, planned: planned)
 
                     ForEach(Array((sets.indices.contains(exerciseIndex) ? sets[exerciseIndex] : []).enumerated()), id: \.offset) { setIndex, set in
                         DaySetLogRow(
@@ -123,9 +130,10 @@ struct DayLogEditorView: View {
     }
 
     private func save() {
+        ensureLoggedCustomExercisesExist()
         let loggedExercises = day.exercises.enumerated().map { index, planned in
             LoggedExercise(
-                exerciseId: planned.exerciseId,
+                exerciseId: exerciseIds.indices.contains(index) ? exerciseIds[index] : planned.exerciseId,
                 sets: (sets.indices.contains(index) ? sets[index] : []).filter(\.completed)
             )
         }
@@ -154,11 +162,128 @@ struct DayLogEditorView: View {
         savedMessage = "Workout log saved"
     }
 
+    private func ensureLoggedCustomExercisesExist() {
+        for index in exerciseIds.indices {
+            let id = exerciseIds[index]
+            guard id.hasPrefix("custom-log-"),
+                  let maybeName = exerciseNames[safe: index],
+                  let name = maybeName,
+                  !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !store.allExercises.contains(where: { $0.id == id }) else {
+                continue
+            }
+
+            store.saveCustomExercise(
+                Exercise(
+                    id: id,
+                    name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    primaryMuscle: "Full Body",
+                    secondaryMuscles: [],
+                    equipment: "Bodyweight",
+                    difficulty: "Beginner",
+                    instructions: [],
+                    tips: [],
+                    photos: nil,
+                    shared: false,
+                    ownerName: nil,
+                    ownerId: nil,
+                    collaborative: false,
+                    version: Int(Date().timeIntervalSince1970 * 1000)
+                )
+            )
+        }
+    }
+
     private func exerciseName(for planned: PlannedExercise) -> String {
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
         return store.allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+    }
+
+    private func exerciseDisplayName(dayIndex: Int, planned: PlannedExercise) -> String {
+        if let customName = exerciseNames[safe: dayIndex], let customName, !customName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return customName
+        }
+        let id = exerciseIds.indices.contains(dayIndex) ? exerciseIds[dayIndex] : planned.exerciseId
+        return store.allExercises.first(where: { $0.id == id })?.name ?? exerciseName(for: planned)
+    }
+
+    private func exercisePicker(dayIndex: Int, planned: PlannedExercise) -> some View {
+        let query = exerciseQueries[dayIndex] ?? exerciseDisplayName(dayIndex: dayIndex, planned: planned)
+        let matches = exerciseQueries[dayIndex] == nil ? [] : Array(filteredExercises(query: query).prefix(5))
+
+        return VStack(alignment: .leading, spacing: 8) {
+            TextField("Change exercise for this logged day", text: Binding(
+                get: { exerciseQueries[dayIndex] ?? exerciseDisplayName(dayIndex: dayIndex, planned: planned) },
+                set: { newValue in
+                    exerciseQueries[dayIndex] = newValue
+                    if let exact = store.allExercises.first(where: { $0.name.localizedCaseInsensitiveCompare(newValue) == .orderedSame }) {
+                        setExercise(dayIndex: dayIndex, id: exact.id, name: nil)
+                    } else {
+                        setExercise(dayIndex: dayIndex, id: "custom-log-\(day.id)-\(dayIndex)", name: newValue)
+                    }
+                }
+            ))
+            .foregroundStyle(Theme.text)
+            .tint(Theme.accentLight)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.inputBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(.white.opacity(0.08), lineWidth: 1)
+            }
+
+            if !matches.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(matches) { exercise in
+                        Button {
+                            setExercise(dayIndex: dayIndex, id: exercise.id, name: nil)
+                            exerciseQueries[dayIndex] = exercise.name
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(exercise.name)
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Theme.text)
+                                    Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
+                                        .font(.caption2)
+                                        .foregroundStyle(Theme.textDim)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .background(Theme.surface2)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+
+            Text("This changes the exercise for this saved day only. The program template stays unchanged.")
+                .font(.caption2)
+                .foregroundStyle(Theme.textFaint)
+        }
+    }
+
+    private func setExercise(dayIndex: Int, id: String, name: String?) {
+        guard exerciseIds.indices.contains(dayIndex), exerciseNames.indices.contains(dayIndex) else { return }
+        exerciseIds[dayIndex] = id
+        exerciseNames[dayIndex] = name
+    }
+
+    private func filteredExercises(query: String) -> [Exercise] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        return store.allExercises.filter { exercise in
+            exercise.name.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.primaryMuscle.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.equipment.localizedCaseInsensitiveContains(trimmed)
+        }
     }
 
     private static func initialSets(day: ProgramDay, existingLog: WorkoutLog?) -> [[SetLog]] {
@@ -174,6 +299,12 @@ struct DayLogEditorView: View {
             return (0..<planned.sets).map { _ in
                 SetLog(weight: 0, reps: parseReps(planned.reps), completed: false)
             }
+        }
+    }
+
+    private static func initialExerciseIds(day: ProgramDay, existingLog: WorkoutLog?) -> [String] {
+        day.exercises.enumerated().map { index, planned in
+            existingLog?.exercises[safe: index]?.exerciseId ?? planned.exerciseId
         }
     }
 

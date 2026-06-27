@@ -370,6 +370,23 @@ final class AppStore {
         }
     }
 
+    func deleteAccount() async -> Bool {
+        guard let token = sessionToken else {
+            authError = APIError.missingToken.localizedDescription
+            return false
+        }
+
+        do {
+            try await apiClient.deleteAccount(token: token)
+            authError = nil
+            logout()
+            return true
+        } catch {
+            authError = error.localizedDescription
+            return false
+        }
+    }
+
     func searchUsers(query: String) async -> [DiscoverUser] {
         guard let token = sessionToken else {
             authError = APIError.missingToken.localizedDescription

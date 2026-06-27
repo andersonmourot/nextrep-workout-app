@@ -7,9 +7,12 @@ struct SettingsView: View {
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var passwordMessage: String?
+    @State private var accountDeletionMessage: String?
     @State private var showingResetConfirm = false
     @State private var showingLogoutConfirm = false
+    @State private var showingDeleteAccountConfirm = false
     @State private var showingPasswordFields = false
+    @State private var isDeletingAccount = false
     @State private var currentPasswordVisible = false
     @State private var newPasswordVisible = false
     @State private var confirmPasswordVisible = false
@@ -54,6 +57,14 @@ struct SettingsView: View {
             }
         } message: {
             Text("You can log back in with your account email and password.")
+        }
+        .alert("Delete Account?", isPresented: $showingDeleteAccountConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Account", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+        } message: {
+            Text("This permanently deletes your account and synced NextRep data. This cannot be undone.")
         }
     }
 
@@ -261,6 +272,12 @@ struct SettingsView: View {
                     .foregroundStyle(passwordMessage.contains("updated") ? Theme.accentLight : .red.opacity(0.9))
             }
 
+            if let accountDeletionMessage {
+                Text(accountDeletionMessage)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red.opacity(0.9))
+            }
+
             Button(showingPasswordFields ? "Update Password" : "Change Password") {
                 if showingPasswordFields {
                     Task { await changePassword() }
@@ -286,6 +303,27 @@ struct SettingsView: View {
                 Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
             }
             .buttonStyle(GhostButtonStyle())
+
+            Divider().overlay(.white.opacity(0.08))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Delete Account")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.red.opacity(0.9))
+                Text("Permanently delete your account and synced app data from NextRep.")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(role: .destructive) {
+                accountDeletionMessage = nil
+                showingDeleteAccountConfirm = true
+            } label: {
+                Label(isDeletingAccount ? "Deleting..." : "Delete Account", systemImage: "trash")
+            }
+            .buttonStyle(GhostButtonStyle())
+            .disabled(isDeletingAccount)
         }
         .cardStyle()
     }
@@ -406,6 +444,16 @@ struct SettingsView: View {
         }
     }
 
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        accountDeletionMessage = nil
+        let ok = await store.deleteAccount()
+        isDeletingAccount = false
+        if !ok {
+            accountDeletionMessage = store.authError ?? "Could not delete account."
+        }
+    }
+
     private func resetPasswordFields() {
         currentPassword = ""
         newPassword = ""
@@ -477,7 +525,7 @@ enum LegalDocument: String {
 
             4. Data retention
 
-            We retain your account and app data for as long as your account is active. You may request deletion of your account and associated data at any time (see "Your rights").
+            We retain your account and app data for as long as your account is active. You may request deletion of your account and associated data at any time (see "Your rights"). In the native iOS app, you can also initiate permanent account deletion directly from Settings > Account > Delete Account.
 
             5. Security
 

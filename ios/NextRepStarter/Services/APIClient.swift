@@ -148,6 +148,14 @@ final class APIClient {
         )
     }
 
+    func deleteAccount(token: String) async throws {
+        let _: APIMessageResponse = try await request(
+            "/api/account",
+            method: "DELETE",
+            token: token
+        )
+    }
+
     func searchUsers(token: String, query: String) async throws -> [DiscoverUser] {
         let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
         return try await request("/api/users/search?q=\(encoded)", token: token)

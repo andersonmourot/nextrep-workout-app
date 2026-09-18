@@ -161,8 +161,13 @@ export function apiGetData<T = Record<string, unknown>>(token: string): Promise<
 export function apiPutData(
   token: string,
   data: Record<string, unknown>,
-): Promise<ApiResult<{ ok: boolean }>> {
-  return request('/api/data', { method: 'PUT', body: JSON.stringify({ data }) }, token)
+  opts: { keepalive?: boolean } = {},
+): Promise<ApiResult<{ ok: boolean; serverUpdatedAt?: number }>> {
+  return request(
+    '/api/data',
+    { method: 'PUT', body: JSON.stringify({ data }), keepalive: opts.keepalive },
+    token,
+  )
 }
 
 // ---- Social: search / follow / shared programs ----

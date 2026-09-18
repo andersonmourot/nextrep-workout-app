@@ -3,7 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2, Dumbbell } from 'lucide-react'
 import { useAuth } from '../auth'
 import { PasswordField } from '../components/PasswordField'
-import { PasswordHints } from '../components/PasswordHints'
+import { PasswordHints, PASSWORD_MIN_LENGTH } from '../components/PasswordHints'
 import { apiResetPassword } from '../api'
 
 export function ResetPassword() {
@@ -23,8 +23,8 @@ export function ResetPassword() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`)
       return
     }
     if (password !== confirm) {
@@ -79,7 +79,7 @@ export function ResetPassword() {
               <PasswordField
                 value={password}
                 onChange={setPassword}
-                placeholder="At least 6 characters"
+                placeholder="At least 10 characters"
                 autoComplete="new-password"
               />
               <PasswordHints value={password} />

@@ -76,6 +76,20 @@ export const DEFAULT_INTERVAL_SETTINGS: IntervalSettings = {
 const DEFAULTS = {
   name: 'Athlete',
   unit: 'lb' as Unit,
+  // Local edit clock (ms epoch), stamped on every change. Combined with
+  // `dirty`, it marks whether local state has edits the server hasn't seen.
+  // Local-only: persisted in the per-user cache but never uploaded.
+  updatedAt: 0,
+  // True while local edits haven't been confirmed by the server. Survives
+  // page unload, so the next session knows to push rather than pull.
+  dirty: false,
+  // The serverUpdatedAt stamp of the last blob the server confirmed holding
+  // (from a GET or a successful PUT). If the server's stamp is newer than
+  // this, another writer updated it and we pull; otherwise local edits win.
+  lastSyncedServerTs: 0,
+  // Written by the server on every PUT (authoritative write clock) and stored
+  // inside the blob, so it round-trips through GET. Never set client-side.
+  serverUpdatedAt: 0,
   themeColor: DEFAULT_THEME_COLOR,
   themeMode: DEFAULT_THEME_MODE as ThemeMode,
   activeProgramId: null as string | null,
@@ -138,6 +152,10 @@ const perUserStorage = createJSONStorage(() => ({
 interface AppState {
   name: string
   unit: Unit
+  updatedAt: number
+  dirty: boolean
+  lastSyncedServerTs: number
+  serverUpdatedAt: number
   themeColor: string
   themeMode: ThemeMode
   activeProgramId: string | null
@@ -693,6 +711,10 @@ export const useStore = create<AppState>()(
         setCustomExercises([])
         setExerciseOverrides({})
         set({
+          updatedAt: 0,
+          dirty: false,
+          lastSyncedServerTs: 0,
+          serverUpdatedAt: 0,
           activeProgramId: null,
           programAnchors: {},
           logs: [],
@@ -725,11 +747,16 @@ export const useStore = create<AppState>()(
   ),
 )
 
-/** The persisted slice of state that syncs to the server (no actions). */
-function snapshot(s: AppState): typeof DEFAULTS {
+/** The uploaded slice of state — excludes local-only sync metadata, which
+ *  must never travel between devices. `serverUpdatedAt` does round-trip: the
+ *  server owns the field and re-stamps it on every write. */
+type SyncedData = Omit<typeof DEFAULTS, 'updatedAt' | 'dirty' | 'lastSyncedServerTs'>
+
+function snapshot(s: AppState): SyncedData {
   return {
     name: s.name,
     unit: s.unit,
+    serverUpdatedAt: s.serverUpdatedAt,
     themeColor: s.themeColor,
     themeMode: s.themeMode,
     activeProgramId: s.activeProgramId,
@@ -777,16 +804,78 @@ function purgeExpiredTrash(next: typeof DEFAULTS): typeof DEFAULTS {
 let applyingRemote = false
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 
-/** Debounced push of the current state to the backend (when logged in). */
-useStore.subscribe((state) => {
+// Pushes are serialized: two in-flight PUTs could arrive out of order and the
+// older blob would win, so each push waits for the previous one to settle.
+let pushQueue: Promise<unknown> = Promise.resolve()
+
+function enqueuePush(token: string, opts: { keepalive?: boolean } = {}) {
+  // The snapshot is taken when the queued push actually runs (not when it's
+  // scheduled), so a backed-up push always sends the newest state.
+  pushQueue = pushQueue
+    .then(async () => {
+      const sentStamp = useStore.getState().updatedAt
+      const res = await apiPutData(token, snapshot(useStore.getState()), opts)
+      if (res.ok && typeof res.data?.serverUpdatedAt === 'number') {
+        // Record the server's authoritative stamp for the blob it now holds,
+        // and clear `dirty` unless edits arrived while the push was in flight.
+        applyingRemote = true
+        try {
+          const patch: Partial<AppState> = {
+            lastSyncedServerTs: res.data.serverUpdatedAt,
+            serverUpdatedAt: res.data.serverUpdatedAt,
+          }
+          if (useStore.getState().updatedAt === sentStamp) patch.dirty = false
+          useStore.setState(patch)
+        } finally {
+          applyingRemote = false
+        }
+      }
+    })
+    .catch(() => {})
+}
+
+/**
+ * On every local change: stamp `updatedAt` + `dirty` (persisted immediately,
+ * so a page unload can't lose track of unsynced work), then debounce the push.
+ * Stamping happens at edit time — not push time — so even an upload that never
+ * fired still marks local data as dirty for the next session.
+ */
+useStore.subscribe(() => {
   if (applyingRemote) return
   const token = getToken()
   if (!token) return
+  applyingRemote = true
+  try {
+    useStore.setState({ updatedAt: Date.now(), dirty: true })
+  } finally {
+    applyingRemote = false
+  }
   if (syncTimer) clearTimeout(syncTimer)
   syncTimer = setTimeout(() => {
-    void apiPutData(token, snapshot(state))
+    syncTimer = undefined
+    enqueuePush(token)
   }, 600)
 })
+
+/** Best-effort flush of a pending sync when the page is hidden or closed. */
+function flushSync() {
+  if (!syncTimer) return // nothing pending
+  clearTimeout(syncTimer)
+  syncTimer = undefined
+  const token = getToken()
+  if (!token) return
+  const payload = JSON.stringify({ data: snapshot(useStore.getState()) })
+  // keepalive lets the request outlive the page, but browsers cap it (~64KB);
+  // larger blobs (e.g. with photos) fall back to a normal fetch best-effort.
+  enqueuePush(token, { keepalive: payload.length < 60_000 })
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSync()
+  })
+  window.addEventListener('pagehide', flushSync)
+}
 
 function applyState(raw: typeof DEFAULTS): void {
   const next = purgeExpiredTrash(raw)
@@ -825,7 +914,34 @@ export async function syncFromServer(): Promise<void> {
   if (!token) return
   const res = await apiGetData<Partial<typeof DEFAULTS>>(token)
   if (res.ok && res.data) {
-    applyState({ ...DEFAULTS, ...res.data })
+    // Server-clock last-write-wins. `serverUpdatedAt` is stamped by the server
+    // on every write, so ordering never depends on device clocks. Local `dirty`
+    // edits (made but never confirmed by the server, e.g. tab closed inside the
+    // push debounce) always push up rather than being overwritten — even when
+    // the server reports a newer stamp, since that write is usually our own
+    // in-flight push whose response never arrived.
+    const serverTs =
+      typeof res.data.serverUpdatedAt === 'number' ? res.data.serverUpdatedAt : 0
+    const s = useStore.getState()
+    if (s.dirty) {
+      enqueuePush(token)
+    } else if (serverTs === 0 || serverTs > (s.lastSyncedServerTs || 0)) {
+      // Apply the server's blob: either it's newer than the last version it
+      // confirmed for us (another writer updated it) or it's a legacy
+      // unstamped blob we treat as authoritative. Strip sync metadata that
+      // older clients may have left inside the blob.
+      const blob = { ...res.data }
+      delete blob.updatedAt
+      delete blob.dirty
+      delete blob.lastSyncedServerTs
+      applyState({ ...DEFAULTS, ...blob })
+      applyingRemote = true
+      try {
+        useStore.setState({ lastSyncedServerTs: serverTs, dirty: false })
+      } finally {
+        applyingRemote = false
+      }
+    }
   }
   await refreshSharedPrograms()
   await refreshSharedExercises()

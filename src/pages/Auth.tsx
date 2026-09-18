@@ -75,7 +75,7 @@ export function Auth({ mode }: { mode: 'login' | 'signup' }) {
             <PasswordField
               value={password}
               onChange={setPassword}
-              placeholder={isSignup ? 'At least 6 characters' : 'Your password'}
+              placeholder={isSignup ? 'At least 10 characters' : 'Your password'}
               autoComplete={isSignup ? 'new-password' : 'current-password'}
             />
             <PasswordHints value={password} />

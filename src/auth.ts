@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { apiLogin, apiMe, apiSignup, type SessionUser } from './api'
 import { useStore, loadCurrentUserData, syncFromServer, clearStore } from './store'
+import { PASSWORD_MIN_LENGTH } from './components/PasswordHints'
 
 interface AuthResult {
   ok: boolean
@@ -32,8 +33,8 @@ export const useAuth = create<AuthState>()(
         const cleanEmail = email.trim().toLowerCase()
         if (!cleanName) return { ok: false, error: 'Enter your name.' }
         if (!EMAIL_RE.test(cleanEmail)) return { ok: false, error: 'Enter a valid email address.' }
-        if (password.length < 6)
-          return { ok: false, error: 'Password must be at least 6 characters.' }
+        if (password.length < PASSWORD_MIN_LENGTH)
+          return { ok: false, error: `Password must be at least ${PASSWORD_MIN_LENGTH} characters.` }
 
         const res = await apiSignup(cleanName, cleanEmail, password)
         if (!res.ok || !res.data) return { ok: false, error: res.error ?? 'Sign up failed.' }

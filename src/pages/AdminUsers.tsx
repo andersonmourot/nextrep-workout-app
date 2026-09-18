@@ -4,6 +4,7 @@ import { ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react'
 import { getToken, useAuth } from '../auth'
 import { apiAdminResetPassword, apiAdminUsers, type AdminUser } from '../api'
 import { PasswordField } from '../components/PasswordField'
+import { PASSWORD_MIN_LENGTH } from '../components/PasswordHints'
 import { formatDateLong, formatDateTime } from '../lib/utils'
 
 function UserCard({ u }: { u: AdminUser }) {
@@ -14,8 +15,8 @@ function UserCard({ u }: { u: AdminUser }) {
 
   async function submit() {
     setMsg(null)
-    if (password.length < 6) {
-      setMsg({ ok: false, text: 'Password must be at least 6 characters.' })
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setMsg({ ok: false, text: `Password must be at least ${PASSWORD_MIN_LENGTH} characters.` })
       return
     }
     const token = getToken()

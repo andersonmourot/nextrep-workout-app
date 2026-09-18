@@ -1,7 +1,7 @@
 import { Check, Circle } from 'lucide-react'
 import { cn } from '../lib/utils'
 
-export const PASSWORD_MIN_LENGTH = 6
+export const PASSWORD_MIN_LENGTH = 10
 
 interface Rule {
   label: string

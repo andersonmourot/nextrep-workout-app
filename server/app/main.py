@@ -189,10 +189,15 @@ app.add_middleware(
 
 
 # ---- Schemas ----
+# Minimum password length for NEW passwords. Login itself stays permissive so
+# accounts created before the bump (shorter passwords) can still sign in.
+PASSWORD_MIN_LENGTH = 10
+
+
 class SignupBody(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     email: EmailStr
-    password: str = Field(min_length=6, max_length=200)
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=200)
 
 
 class LoginBody(BaseModel):
@@ -202,7 +207,7 @@ class LoginBody(BaseModel):
 
 class ChangePasswordBody(BaseModel):
     current_password: str = Field(min_length=1, max_length=200)
-    new_password: str = Field(min_length=6, max_length=200)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=200)
 
 
 class ForgotPasswordBody(BaseModel):
@@ -211,11 +216,11 @@ class ForgotPasswordBody(BaseModel):
 
 class ResetPasswordBody(BaseModel):
     token: str = Field(min_length=1, max_length=500)
-    new_password: str = Field(min_length=6, max_length=200)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=200)
 
 
 class AdminResetPasswordBody(BaseModel):
-    new_password: str = Field(min_length=6, max_length=200)
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH, max_length=200)
 
 
 class PublicUser(BaseModel):
@@ -637,12 +642,43 @@ def signup(body: SignupBody, db: Session = Depends(get_db)):
     return AuthResponse(token=create_token(user.id), user=_public(user))
 
 
+# ---- Login throttling ----
+# Per-email failure counter: more than LOGIN_MAX_ATTEMPTS failures inside
+# LOGIN_WINDOW slows brute force and credential stuffing. Failed attempts count
+# for real AND unknown emails alike, so the 429 response can't be used to tell
+# whether an account exists. In-memory is fine at one instance (Fly runs a
+# single machine); a restart just resets the counters.
+LOGIN_MAX_ATTEMPTS = 10
+LOGIN_WINDOW = timedelta(minutes=15)
+_login_failures: dict[str, list[datetime]] = {}
+
+
+def _login_locked(email: str) -> bool:
+    now = datetime.now(timezone.utc)
+    attempts = [t for t in _login_failures.get(email, []) if now - t < LOGIN_WINDOW]
+    if attempts:
+        _login_failures[email] = attempts
+    else:
+        _login_failures.pop(email, None)
+    return len(attempts) >= LOGIN_MAX_ATTEMPTS
+
+
+def _record_login_failure(email: str) -> None:
+    _login_failures.setdefault(email, []).append(datetime.now(timezone.utc))
+
+
 @app.post("/auth/login", response_model=AuthResponse)
 def login(body: LoginBody, db: Session = Depends(get_db)):
     email = body.email.lower().strip()
+    if _login_locked(email):
+        raise HTTPException(
+            status_code=429, detail="Too many attempts. Try again in a few minutes."
+        )
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(body.password, user.password_hash):
+        _record_login_failure(email)
         raise HTTPException(status_code=401, detail="Incorrect email or password.")
+    _login_failures.pop(email, None)
     user.last_login = datetime.now(timezone.utc)
     db.add(user)
     db.commit()
@@ -812,13 +848,26 @@ def get_data(user: User = Depends(current_user)):
         return {}
 
 
+# Cap the per-user data blob: the whole app state lives in one JSON column and
+# nothing client-side bounds it, so a runaway (or malicious) client could grow
+# the DB without limit. Generous headroom over real-world blobs w/ photos.
+MAX_DATA_BYTES = 5 * 1024 * 1024
+
+
 @app.put("/api/data")
 def put_data(
     body: DataBody,
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ):
-    user.data = json.dumps(body.data)
+    # Stamp the blob with the server's authoritative write time so clients can
+    # order local vs remote state without trusting device clocks. It lives
+    # inside the blob (round-trips through GET) and is echoed back here.
+    body.data["serverUpdatedAt"] = _now_ms()
+    serialized = json.dumps(body.data)
+    if len(serialized) > MAX_DATA_BYTES:
+        raise HTTPException(status_code=413, detail="Data is too large to save.")
+    user.data = serialized
     # Keep the searchable account name in sync with the in-app display name so a
     # rename shows up in search and on the user's shared programs/exercises.
     # Skip the client's default placeholder ("Athlete") so legacy blobs that
@@ -836,7 +885,7 @@ def put_data(
             )
     db.add(user)
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "serverUpdatedAt": body.data["serverUpdatedAt"]}
 
 
 # ---- Social: search / follow / shared programs ----

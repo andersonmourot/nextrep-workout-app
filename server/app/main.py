@@ -711,6 +711,54 @@ def me(user: User = Depends(current_user)):
     return _public(user)
 
 
+@app.delete("/api/account")
+def delete_account(
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
+    """Permanently delete the signed-in account and account-owned data.
+
+    This endpoint is intentionally self-service for App Store account deletion
+    compliance. It removes the user row, follow edges, shared-content
+    memberships, and canonical shared programs/exercises owned by the user.
+    Other users' local app-data blobs may still contain duplicated copies they
+    independently saved, but those copies no longer receive owner updates.
+    """
+    user_id = user.id
+
+    owned_program_ids = [
+        row.id for row in db.query(SharedProgram.id).filter(SharedProgram.owner_id == user_id).all()
+    ]
+    owned_exercise_ids = [
+        row.id for row in db.query(SharedExercise.id).filter(SharedExercise.owner_id == user_id).all()
+    ]
+
+    db.query(Follow).filter(Follow.follower_id == user_id).delete(synchronize_session=False)
+    db.query(Follow).filter(Follow.following_id == user_id).delete(synchronize_session=False)
+
+    db.query(ProgramMember).filter(ProgramMember.user_id == user_id).delete(synchronize_session=False)
+    if owned_program_ids:
+        db.query(ProgramMember).filter(ProgramMember.program_id.in_(owned_program_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(SharedProgram).filter(SharedProgram.id.in_(owned_program_ids)).delete(
+            synchronize_session=False
+        )
+
+    db.query(ExerciseMember).filter(ExerciseMember.user_id == user_id).delete(synchronize_session=False)
+    if owned_exercise_ids:
+        db.query(ExerciseMember).filter(ExerciseMember.exercise_id.in_(owned_exercise_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(SharedExercise).filter(SharedExercise.id.in_(owned_exercise_ids)).delete(
+            synchronize_session=False
+        )
+
+    db.delete(user)
+    db.commit()
+    return {"ok": True}
+
+
 @app.get("/api/admin/users", response_model=list[AdminUser])
 def admin_users(
     user: User = Depends(current_user),

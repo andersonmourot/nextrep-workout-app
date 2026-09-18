@@ -59,7 +59,9 @@ function Privacy() {
       <H>4. Data retention</H>
       <P>
         We retain your account and app data for as long as your account is active. You may request
-        deletion of your account and associated data at any time (see "Your rights").
+        deletion of your account and associated data at any time (see "Your rights"). In the native
+        iOS app, you can also initiate permanent account deletion directly from Settings &gt; Account
+        &gt; Delete Account.
       </P>
       <H>5. Security</H>
       <P>
@@ -221,7 +223,7 @@ function B({ children }: { children: React.ReactNode }) {
 export function Legal({ doc }: { doc: LegalDoc }) {
   const navigate = useNavigate()
   return (
-    <div className="animate-fade-in space-y-4">
+    <div className="container-app animate-fade-in space-y-4 py-6">
       <button
         onClick={() => navigate(-1)}
         className="inline-flex items-center gap-1 text-sm text-zinc-400 hover:text-zinc-200"

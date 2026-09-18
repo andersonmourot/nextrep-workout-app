@@ -58,6 +58,10 @@ export default function App() {
       <Route path="/signup" element={<Auth mode="signup" />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/privacy" element={<Legal doc="privacy" />} />
+      <Route path="/legal/privacy" element={<Legal doc="privacy" />} />
+      <Route path="/legal/terms" element={<Legal doc="terms" />} />
+      <Route path="/legal/disclaimer" element={<Legal doc="disclaimer" />} />
       <Route element={<RequireAuth />}>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
@@ -86,9 +90,6 @@ export default function App() {
           <Route path="/admin/catalog/programs/edit" element={<ProgramEditor catalogMode />} />
           <Route path="/timer" element={<Timer />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/legal/privacy" element={<Legal doc="privacy" />} />
-          <Route path="/legal/terms" element={<Legal doc="terms" />} />
-          <Route path="/legal/disclaimer" element={<Legal doc="disclaimer" />} />
           <Route path="*" element={<Dashboard />} />
         </Route>
       </Route>

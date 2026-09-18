@@ -11,6 +11,7 @@ secure signup/login (PBKDF2-hashed passwords + JWT) and per-user data sync.
 | POST   | `/auth/signup` | no   | Create account → `{ token, user }`       |
 | POST   | `/auth/login`  | no   | Log in → `{ token, user }`               |
 | GET    | `/me`          | yes  | Current account                          |
+| DELETE | `/api/account` | yes  | Permanently delete current account       |
 | GET    | `/api/data`    | yes  | Fetch the user's app data (JSON blob)    |
 | PUT    | `/api/data`    | yes  | Replace the user's app data              |
 

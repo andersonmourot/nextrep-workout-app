@@ -12,7 +12,7 @@ A polished, mobile-first workout app for serious training. Browse training progr
 - **Guided workout player** — work through each exercise set-by-set, log weight & reps with quick steppers, mark sets complete, and get an automatic rest-timer countdown (with skip / +15s). Finish to a workout summary.
 - **Exercise library** — 30+ exercises with primary/secondary muscles, equipment, difficulty, step-by-step instructions, coaching cues, and recommended tempo. Searchable and filterable by muscle group.
 - **Progress tracking** — body-weight log with a trend chart, workout history, streaks, and total training volume.
-- **Local-first** — all data persists in the browser via `localStorage` (no account or backend required), so it deploys as a static site.
+- **Account sync** — logged-in users sync data through the FastAPI backend, with per-user browser storage as the fast local cache.
 
 ## Tech stack
 
@@ -22,6 +22,7 @@ A polished, mobile-first workout app for serious training. Browse training progr
 - [React Router](https://reactrouter.com/) for routing
 - [Zustand](https://zustand-demo.pmnd.rs/) (with `persist`) for state
 - [lucide-react](https://lucide.dev/) icons
+- [FastAPI](https://fastapi.tiangolo.com/) backend in `server/` for auth, sync, catalog, and social sharing
 
 ## Getting started
 
@@ -48,8 +49,23 @@ src/
   lib/utils.ts   # formatting + progress helpers
   store.ts       # zustand store (persisted)
   types.ts       # shared types
+server/          # FastAPI backend and SQLite-backed sync/social API
+docs/            # Native iOS handoff and SwiftUI screen specs
+ios/             # Source-only SwiftUI starter scaffold
 ```
+
+## Native iOS migration
+
+The native iOS rewrite should be a SwiftUI client that reuses the existing
+FastAPI backend, not a WebView wrapper. Start here:
+
+- `docs/ios-swiftui-handoff.md` — API, data model, gotchas, and phase plan
+- `docs/ios-swiftui-screens.md` — screen-by-screen SwiftUI spec
+- `ios/NextRepStarter/` — source-only Phase 0 SwiftUI scaffold for login,
+  Keychain token storage, `/api/catalog`, `/api/data`, and a read-only Programs tab
 
 ## Notes
 
-This is a frontend-only project. Workout logs and body-weight entries live in your browser's local storage; clearing site data (or using the in-app **Settings → Reset All Data**) will remove them.
+When logged in, app data syncs through the backend's whole-blob `GET /api/data`
+and `PUT /api/data` endpoints. Browser storage is still used as a local cache;
+clearing site data removes the local cache but not the backend copy.

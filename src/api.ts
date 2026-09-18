@@ -88,6 +88,10 @@ export function apiAdminUsers(token: string): Promise<ApiResult<AdminUser[]>> {
   return request('/api/admin/users', {}, token)
 }
 
+export function apiDeleteAccount(token: string): Promise<ApiResult<{ ok: boolean }>> {
+  return request('/api/account', { method: 'DELETE' }, token)
+}
+
 export function apiChangePassword(
   token: string,
   currentPassword: string,

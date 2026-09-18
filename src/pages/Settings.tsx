@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { useProgram, useStore } from '../store'
 import { getToken, useAuth } from '../auth'
-import { apiChangePassword } from '../api'
+import { apiChangePassword, apiDeleteAccount } from '../api'
 import { cn } from '../lib/utils'
 import { usePwaInstall } from '../lib/usePwaInstall'
 import { THEME_COLORS, type ThemeMode } from '../lib/theme'
@@ -37,7 +37,22 @@ export function Settings() {
   const account = useAuth((s) => s.user)
   const [confirmReset, setConfirmReset] = useState(false)
   const [confirmLogout, setConfirmLogout] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
   const program = useProgram(activeProgramId ?? undefined)
+
+  async function deleteAccount() {
+    const token = getToken()
+    if (!token) return
+    setDeleting(true)
+    setDeleteError(null)
+    const res = await apiDeleteAccount(token)
+    setDeleting(false)
+    if (!res.ok) return setDeleteError(res.error ?? 'Could not delete account.')
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -261,6 +276,40 @@ export function Settings() {
             Reset All Data
           </button>
         )}
+
+        <div className="mt-5 border-t border-white/5 pt-5">
+          <h2 className="heading text-lg font-bold text-red-300">Delete Account</h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Permanently deletes your account, programs, and workout data from the server.
+            This can't be undone.
+          </p>
+          {deleteError && <p className="mt-2 text-sm text-red-400">{deleteError}</p>}
+          {confirmDelete ? (
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => void deleteAccount()}
+                disabled={deleting}
+                className="btn flex-1 bg-red-500/90 text-white hover:bg-red-500 disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" /> {deleting ? 'Deleting…' : 'Delete Forever'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="btn-ghost flex-1"
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="btn mt-3 w-full border border-red-500/40 text-red-300 hover:bg-red-500/10"
+            >
+              Delete Account
+            </button>
+          )}
+        </div>
       </section>
 
       <section className="card p-2">

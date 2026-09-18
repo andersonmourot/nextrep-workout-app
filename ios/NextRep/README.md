@@ -1,12 +1,16 @@
-# NextRepStarter iOS scaffold
+# NextRep iOS app
 
 This folder is the native SwiftUI rebuild of the existing NextRep/SMELLIS web
 app.
 
-It is intentionally source-only. Create a new **iOS App** target in Xcode
-(`File > New > Project > iOS > App`, SwiftUI, Swift), then copy the files in
-this folder into that target. The code targets iOS 17+ and uses SwiftUI,
-Observation, URLSession, and Keychain Services.
+Open `NextRep.xcodeproj` in Xcode and run the `NextRep` scheme. The code
+targets iOS 17+ and uses SwiftUI, Observation, URLSession, and Keychain
+Services. To build from the command line:
+
+```sh
+xcodebuild -project ios/NextRep/NextRep.xcodeproj -scheme NextRep \
+  -destination 'platform=iOS Simulator,name=iPhone 16' build
+```
 
 ## What this starter includes
 
@@ -84,13 +88,12 @@ trash retention and custom exercise placeholder relinking.
 
 ## Suggested next steps
 
-1. Create the Xcode project and copy these files into the app target.
-2. Build in the iOS Simulator and fix any target membership/signing issues.
-3. Verify login against the production backend.
-4. Run a full regression pass across auth, dashboard, programs/editor, active
+1. Build in the iOS Simulator and fix any target membership/signing issues.
+2. Verify login against the production backend.
+3. Run a full regression pass across auth, dashboard, programs/editor, active
    workout, profile/history, nutrition, max tracker, people/shared content,
    settings, and admin catalog.
-5. Continue App Store/TestFlight polish, device testing, and any final UX
+4. Continue App Store/TestFlight polish, device testing, and any final UX
    refinements discovered during regression.
 
 See `docs/ios-testflight-prep.md` for the TestFlight runbook. See

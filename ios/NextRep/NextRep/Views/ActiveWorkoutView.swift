@@ -944,7 +944,7 @@ private struct FloatingRestBar: View {
     }
 
     private func signalIfNeeded(remaining: Int) {
-        guard [3, 2, 1].contains(remaining), !signaledSeconds.contains(remaining) else {
+        guard [3, 2].contains(remaining), !signaledSeconds.contains(remaining) else {
             return
         }
         signaledSeconds.insert(remaining)

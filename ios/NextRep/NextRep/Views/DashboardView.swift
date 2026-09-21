@@ -267,7 +267,7 @@ struct DashboardView: View {
     }
 
     private func isActiveWorkout(program: Program, day: ProgramDay, week: Int) -> Bool {
-        guard let activeWorkout = store.appData.activeWorkout else {
+        guard let activeWorkout = store.activeWorkout else {
             return false
         }
 

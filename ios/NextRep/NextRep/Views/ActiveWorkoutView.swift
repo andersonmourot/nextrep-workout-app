@@ -8,13 +8,15 @@ struct ActiveWorkoutView: View {
     @State private var showingFinishConfirm = false
     @State private var finishedLog: WorkoutLog?
     @State private var hasPreparedWorkout = false
+    @State private var namesById: [String: String] = [:]
+    @State private var hintsById: [String: String] = [:]
     let program: Program
     let day: ProgramDay
     var week: Int = 1
 
     var body: some View {
         ScrollView {
-            if let active = store.appData.activeWorkout {
+            if let active = store.activeWorkout {
                 VStack(alignment: .leading, spacing: 20) {
                     header(active: active)
 
@@ -79,12 +81,16 @@ struct ActiveWorkoutView: View {
             }
         }
         .task {
+            rebuildLookups()
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 60_000_000_000)
                 guard !Task.isCancelled else { return }
                 store.finishStaleWorkoutIfNeeded()
             }
         }
+        .onChange(of: store.appData.logs.count) { rebuildLookups() }
+        .onChange(of: store.appData.customExercises.count) { rebuildLookups() }
+        .onChange(of: store.appData.unit) { rebuildLookups() }
         .alert("Finish Workout?", isPresented: $showingFinishConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Finish", role: .destructive) {
@@ -99,7 +105,7 @@ struct ActiveWorkoutView: View {
             Text("This will save completed sets to workout history and clear the active session.")
         }
         .safeAreaInset(edge: .bottom) {
-            if let active = store.appData.activeWorkout {
+            if let active = store.activeWorkout {
                 if active.restEndsAt != nil {
                     FloatingRestBar(
                         active: active,
@@ -194,8 +200,8 @@ struct ActiveWorkoutView: View {
     }
 
     private func exercisesList(active: ActiveWorkout) -> some View {
-        let namesById = exerciseNameLookup
-        let previousHintsById = previousHintLookup
+        let namesById = self.namesById
+        let previousHintsById = self.hintsById
 
         return VStack(alignment: .leading, spacing: 14) {
             ForEach(Array(domainSupersetGroups(day.exercises).enumerated()), id: \.offset) { _, group in
@@ -275,27 +281,25 @@ struct ActiveWorkoutView: View {
         .cardStyle()
     }
 
-    private var exerciseNameLookup: [String: String] {
-        var lookup: [String: String] = [:]
+    private func rebuildLookups() {
+        var names: [String: String] = [:]
         for exercise in store.catalog.exercises {
-            lookup[exercise.id] = exercise.name
+            names[exercise.id] = exercise.name
         }
         for exercise in store.appData.customExercises {
-            lookup[exercise.id] = exercise.name
+            names[exercise.id] = exercise.name
         }
-        return lookup
-    }
+        namesById = names
 
-    private var previousHintLookup: [String: String] {
-        var lookup: [String: String] = [:]
+        var hints: [String: String] = [:]
         for log in store.appData.logs.sorted(by: { $0.date > $1.date }) {
-            for exercise in log.exercises where lookup[exercise.exerciseId] == nil {
+            for exercise in log.exercises where hints[exercise.exerciseId] == nil {
                 if let set = exercise.sets.last {
-                    lookup[exercise.exerciseId] = "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
+                    hints[exercise.exerciseId] = "Previous: \(formatWeight(set.weight)) \(store.appData.unit) x \(set.reps)"
                 }
             }
         }
-        return lookup
+        hintsById = hints
     }
 
     private func exerciseName(for planned: PlannedExercise, lookup: [String: String]? = nil) -> String {
@@ -306,7 +310,7 @@ struct ActiveWorkoutView: View {
         if let name = lookup?[planned.exerciseId] {
             return name
         }
-        return exerciseNameLookup[planned.exerciseId] ?? planned.exerciseId
+        return namesById[planned.exerciseId] ?? planned.exerciseId
     }
 
     private func restSecondsAfterSet(exerciseIndex: Int, planned: PlannedExercise) -> Int {

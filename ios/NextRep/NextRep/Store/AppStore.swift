@@ -11,6 +11,10 @@ enum SharedProgramAddMode {
 final class AppStore {
     var user: SessionUser?
     var appData = AppData()
+    /// The live workout session, tracked separately from `appData` so that
+    /// per-set edits only invalidate workout views instead of every view that
+    /// observes `appData`. Merged back into `appData` at the sync boundary.
+    var activeWorkout: ActiveWorkout?
     var catalog = Catalog()
     var isLoading = false
     var authError: String?
@@ -38,12 +42,15 @@ final class AppStore {
         self.restNotifier = restNotifier ?? RestTimerNotifier()
     }
 
-    var allPrograms: [Program] {
+    private(set) var allPrograms: [Program] = []
+
+    private func recomputeAllPrograms() {
+        recomputeAllExercises()
         let hidden = Set(appData.hiddenProgramIds)
         let trashed = Set(appData.trashedPrograms.map(\.program.id))
         let customIds = Set(appData.customPrograms.map(\.id))
 
-        return (catalog.programs + appData.customPrograms)
+        allPrograms = (catalog.programs + appData.customPrograms)
             .filter { !hidden.contains($0.id) && !trashed.contains($0.id) }
             .sorted { lhs, rhs in
                 let lhsCustom = customIds.contains(lhs.id)
@@ -62,14 +69,16 @@ final class AppStore {
             }
     }
 
-    var allExercises: [Exercise] {
+    private(set) var allExercises: [Exercise] = []
+
+    private func recomputeAllExercises() {
         let hidden = Set(appData.hiddenExerciseIds)
         let trashed = Set(appData.trashedExercises.map(\.exercise.id))
         let overriddenCatalog = catalog.exercises.map { exercise in
             appData.exerciseOverrides[exercise.id] ?? exercise
         }
 
-        return (overriddenCatalog + appData.customExercises)
+        allExercises = (overriddenCatalog + appData.customExercises)
             .filter { !hidden.contains($0.id) && !trashed.contains($0.id) }
             .sorted { lhs, rhs in
                 lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
@@ -170,7 +179,9 @@ final class AppStore {
         sessionToken = nil
         user = nil
         appData = AppData()
+        activeWorkout = nil
         catalog = Catalog()
+        recomputeAllPrograms()
     }
 
     func reload() async {
@@ -329,8 +340,8 @@ final class AppStore {
         }
 
         appData.programAnchors[id] = ISO8601DateFormatter().string(from: Date())
-        if appData.activeWorkout?.programId == id {
-            appData.activeWorkout = nil
+        if activeWorkout?.programId == id {
+            activeWorkout = nil
         }
         scheduleSync()
     }
@@ -340,7 +351,7 @@ final class AppStore {
             return
         }
 
-        if workoutPresentationProgramId == nil, let active = appData.activeWorkout {
+        if workoutPresentationProgramId == nil, let active = activeWorkout {
             setWorkoutPresentationContext(
                 programId: active.programId,
                 dayId: active.dayId,
@@ -368,6 +379,7 @@ final class AppStore {
             themeColor: preservedThemeColor,
             themeMode: preservedThemeMode
         )
+        activeWorkout = nil
         scheduleSync()
     }
 
@@ -977,7 +989,7 @@ final class AppStore {
     func startWorkout(program: Program, day: ProgramDay, week: Int = 1) {
         finishStaleWorkoutIfNeeded()
 
-        if let active = appData.activeWorkout,
+        if let active = activeWorkout,
            active.programId == program.id,
            active.dayId == day.id,
            (active.week ?? 1) == week {
@@ -1000,7 +1012,7 @@ final class AppStore {
 
         appData.activeProgramId = program.id
         setWorkoutPresentationContext(programId: program.id, dayId: day.id, week: week)
-        appData.activeWorkout = ActiveWorkout(
+        activeWorkout = ActiveWorkout(
             programId: program.id,
             dayId: day.id,
             week: week,
@@ -1025,7 +1037,7 @@ final class AppStore {
     }
 
     func updateSet(exerciseIndex: Int, setIndex: Int, weight: Double? = nil, reps: Int? = nil) {
-        guard var active = appData.activeWorkout,
+        guard var active = activeWorkout,
               active.sets.indices.contains(exerciseIndex),
               active.sets[exerciseIndex].indices.contains(setIndex) else {
             return
@@ -1040,7 +1052,7 @@ final class AppStore {
         }
 
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
-        appData.activeWorkout = active
+        activeWorkout = active
         scheduleSync()
     }
 
@@ -1051,7 +1063,7 @@ final class AppStore {
         restSec: Int,
         exerciseName: String? = nil
     ) {
-        guard var active = appData.activeWorkout,
+        guard var active = activeWorkout,
               active.sets.indices.contains(exerciseIndex),
               active.sets[exerciseIndex].indices.contains(setIndex) else {
             return
@@ -1067,38 +1079,38 @@ final class AppStore {
             restNotifier.cancelRestComplete()
         }
 
-        appData.activeWorkout = active
+        activeWorkout = active
         scheduleSync()
     }
 
     func startRest(seconds: Int, exerciseName: String? = nil) {
-        guard seconds > 0, var active = appData.activeWorkout else {
+        guard seconds > 0, var active = activeWorkout else {
             return
         }
 
         active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(seconds * 1000)
         active.restTotal = seconds
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
-        appData.activeWorkout = active
+        activeWorkout = active
         scheduleRestNotification(seconds: seconds, exerciseName: exerciseName)
         scheduleSync()
     }
 
     func stopRest() {
-        guard var active = appData.activeWorkout else {
+        guard var active = activeWorkout else {
             return
         }
 
         active.restEndsAt = nil
         active.restTotal = 0
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
-        appData.activeWorkout = active
+        activeWorkout = active
         restNotifier.cancelRestComplete()
         scheduleSync()
     }
 
     func extendRest(by seconds: Int) {
-        guard seconds > 0, var active = appData.activeWorkout else {
+        guard seconds > 0, var active = activeWorkout else {
             return
         }
 
@@ -1107,12 +1119,12 @@ final class AppStore {
         active.restEndsAt = max(currentEnd, now) + Double(seconds * 1000)
         active.restTotal += seconds
         active.lastActivityAt = now
-        appData.activeWorkout = active
+        activeWorkout = active
         scheduleSync()
     }
 
     func endWorkout() {
-        appData.activeWorkout = nil
+        activeWorkout = nil
         isWorkoutPresented = false
         restNotifier.cancelRestComplete()
         scheduleSync()
@@ -1123,7 +1135,7 @@ final class AppStore {
     /// saved log, or nil when the workout is still fresh (or absent).
     @discardableResult
     func finishStaleWorkoutIfNeeded(now: Date = Date()) -> WorkoutLog? {
-        guard let active = appData.activeWorkout else {
+        guard let active = activeWorkout else {
             return nil
         }
 
@@ -1151,7 +1163,7 @@ final class AppStore {
 
     @discardableResult
     func finishWorkout(program: Program, day: ProgramDay, endedAt: Date = Date()) -> WorkoutLog? {
-        guard let active = appData.activeWorkout else {
+        guard let active = activeWorkout else {
             return nil
         }
 
@@ -1194,7 +1206,7 @@ final class AppStore {
         )
 
         appData.activeProgramId = program.id
-        appData.activeWorkout = nil
+        activeWorkout = nil
         addWorkoutLog(log, program: program)
         restNotifier.cancelRestComplete()
         scheduleSync()
@@ -1218,7 +1230,9 @@ final class AppStore {
         }
 
         do {
-            try await apiClient.putData(appData, token: token)
+            var outgoing = appData
+            outgoing.activeWorkout = activeWorkout
+            try await apiClient.putData(outgoing, token: token)
         } catch {
             authError = error.localizedDescription
         }
@@ -1248,10 +1262,14 @@ final class AppStore {
 
     private func loadInitialData(token: String) async throws {
         catalog = try await apiClient.catalog()
-        appData = try await apiClient.appData(token: token)
+        var fetched = try await apiClient.appData(token: token)
+        activeWorkout = fetched.activeWorkout
+        fetched.activeWorkout = nil
+        appData = fetched
         purgeExpiredTrash()
         finishStaleWorkoutIfNeeded()
         await refreshSharedContent(token: token)
+        recomputeAllPrograms()
         UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
     }
 
@@ -1298,11 +1316,11 @@ final class AppStore {
     }
 
     private func touchActiveWorkout() {
-        guard var active = appData.activeWorkout else {
+        guard var active = activeWorkout else {
             return
         }
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
-        appData.activeWorkout = active
+        activeWorkout = active
     }
 
     private func recordRecentWeights(programId: String, log: WorkoutLog) {
@@ -1314,7 +1332,7 @@ final class AppStore {
     }
 
     private func reconcileActiveWorkout(day: ProgramDay) {
-        guard var active = appData.activeWorkout else {
+        guard var active = activeWorkout else {
             return
         }
 
@@ -1342,11 +1360,12 @@ final class AppStore {
             return rows
         }
         active.exerciseIds = day.exercises.map(\.exerciseId)
-        appData.activeWorkout = active
+        activeWorkout = active
         scheduleSync()
     }
 
     private func scheduleSync() {
+        recomputeAllPrograms()
         guard sessionToken != nil else {
             return
         }
@@ -1355,7 +1374,7 @@ final class AppStore {
         syncTask = Task { [weak self] in
             // Keep typing and rapid set edits responsive by batching backend
             // writes a little longer than a normal tap interaction.
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
             guard !Task.isCancelled else {
                 return
             }
@@ -1466,11 +1485,11 @@ final class AppStore {
             return updated
         }
 
-        guard !idMap.isEmpty, var active = appData.activeWorkout, let ids = active.exerciseIds else {
+        guard !idMap.isEmpty, var active = activeWorkout, let ids = active.exerciseIds else {
             return
         }
         active.exerciseIds = ids.map { idMap[$0] ?? $0 }
-        appData.activeWorkout = active
+        activeWorkout = active
     }
 
     private func makeSharedProgramSelfContained(

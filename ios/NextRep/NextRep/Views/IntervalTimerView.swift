@@ -34,8 +34,6 @@ func playNextRepTimerSound(_ id: String) {
 
 struct IntervalTimerView: View {
     @Environment(AppStore.self) private var store
-    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
-    private let stopwatchTicker = Timer.publish(every: 0.01, on: .main, in: .common).autoconnect()
 
     @State private var topMode = "timer"
     @State private var timerInput = ""
@@ -45,6 +43,7 @@ struct IntervalTimerView: View {
     @State private var timerDone = false
     @State private var stopwatchCentiseconds = 0
     @State private var stopwatchRunning = false
+    @State private var stopwatchStartedAt: Date?
     @State private var mode = "TABATA"
     @State private var workSeconds = 20
     @State private var restSeconds = 10
@@ -142,12 +141,13 @@ struct IntervalTimerView: View {
         .onChange(of: topMode) { _, newMode in
             store.setTimerMode(newMode)
         }
-        .onReceive(ticker) { _ in
-            tickCountdown()
-            tickInterval()
-        }
-        .onReceive(stopwatchTicker) { _ in
-            tickStopwatch()
+        .task(id: timerRunning || isRunning) {
+            guard timerRunning || isRunning else { return }
+            while !Task.isCancelled && (timerRunning || isRunning) {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                tickCountdown()
+                tickInterval()
+            }
         }
     }
 
@@ -300,13 +300,30 @@ struct IntervalTimerView: View {
 
     private var stopwatchCard: some View {
         VStack(spacing: 22) {
-            Text(stopwatchText)
-                .font(.system(size: 58, weight: .bold, design: .default).monospacedDigit())
-                .foregroundStyle(Theme.text)
+            Group {
+                if stopwatchRunning {
+                    TimelineView(.animation(minimumInterval: 0.03)) { context in
+                        Text(stopwatchText(now: context.date))
+                            .font(.system(size: 58, weight: .bold, design: .default).monospacedDigit())
+                            .foregroundStyle(Theme.text)
+                    }
+                } else {
+                    Text(stopwatchText(now: .now))
+                        .font(.system(size: 58, weight: .bold, design: .default).monospacedDigit())
+                        .foregroundStyle(Theme.text)
+                }
+            }
 
             HStack(spacing: 10) {
                 Button {
-                    stopwatchRunning.toggle()
+                    if stopwatchRunning {
+                        stopwatchCentiseconds = currentStopwatchCentiseconds(now: Date())
+                        stopwatchStartedAt = nil
+                        stopwatchRunning = false
+                    } else {
+                        stopwatchStartedAt = Date()
+                        stopwatchRunning = true
+                    }
                 } label: {
                     Text(stopwatchRunning ? "Pause" : stopwatchCentiseconds == 0 ? "Start" : "Resume")
                 }
@@ -314,6 +331,7 @@ struct IntervalTimerView: View {
 
                 Button {
                     stopwatchRunning = false
+                    stopwatchStartedAt = nil
                     stopwatchCentiseconds = 0
                 } label: {
                     Text("Reset")
@@ -473,11 +491,6 @@ struct IntervalTimerView: View {
         }
     }
 
-    private func tickStopwatch() {
-        guard topMode == "stopwatch", stopwatchRunning else { return }
-        stopwatchCentiseconds += 1
-    }
-
     private func tickInterval() {
         guard topMode == "interval" else { return }
         guard isRunning, !isComplete else {
@@ -566,11 +579,19 @@ struct IntervalTimerView: View {
         timerInput = formatIntervalClock(seconds)
     }
 
-    private var stopwatchText: String {
-        let totalSeconds = stopwatchCentiseconds / 100
+    private func currentStopwatchCentiseconds(now: Date) -> Int {
+        guard let startedAt = stopwatchStartedAt else {
+            return stopwatchCentiseconds
+        }
+        return stopwatchCentiseconds + max(0, Int(now.timeIntervalSince(startedAt) * 100))
+    }
+
+    private func stopwatchText(now: Date) -> String {
+        let centiseconds = currentStopwatchCentiseconds(now: now)
+        let totalSeconds = centiseconds / 100
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
-        let hundredths = stopwatchCentiseconds % 100
+        let hundredths = centiseconds % 100
         return String(format: "%d:%02d.%02d", minutes, seconds, hundredths)
     }
 

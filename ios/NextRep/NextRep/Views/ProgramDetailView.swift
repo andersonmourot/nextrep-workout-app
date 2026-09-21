@@ -443,7 +443,7 @@ struct ProgramDetailView: View {
         }
 
         return store.appData.logs.contains { $0.programId == activeProgramId } ||
-            store.appData.activeWorkout?.programId == activeProgramId
+            store.activeWorkout?.programId == activeProgramId
     }
 
     private func latestLog(for day: ProgramDay) -> WorkoutLog? {

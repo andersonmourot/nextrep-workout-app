@@ -128,14 +128,18 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 store.finishStaleWorkoutIfNeeded()
+            } else if phase == .background {
+                Task {
+                    await store.syncNow()
+                }
             }
         }
     }
 
     private var activeContext: (program: Program, day: ProgramDay, week: Int)? {
-        let programId = store.appData.activeWorkout?.programId ?? store.workoutPresentationProgramId
-        let dayId = store.appData.activeWorkout?.dayId ?? store.workoutPresentationDayId
-        let week = store.appData.activeWorkout?.week ?? store.workoutPresentationWeek ?? 1
+        let programId = store.activeWorkout?.programId ?? store.workoutPresentationProgramId
+        let dayId = store.activeWorkout?.dayId ?? store.workoutPresentationDayId
+        let week = store.activeWorkout?.week ?? store.workoutPresentationWeek ?? 1
 
         guard let programId,
               let dayId,
@@ -149,7 +153,7 @@ struct AppShellView: View {
     }
 
     private var activeWorkoutContext: (program: Program, day: ProgramDay, week: Int)? {
-        guard let active = store.appData.activeWorkout,
+        guard let active = store.activeWorkout,
               let program = store.allPrograms.first(where: { $0.id == active.programId }),
               let dayIndex = program.days.firstIndex(where: { $0.id == active.dayId }),
               let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: active.week ?? 1) else {

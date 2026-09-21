@@ -201,6 +201,24 @@ func domainPreviousWeekWeights(
     return output
 }
 
+/// Most recently logged per-set weights for each exercise in a program, keyed
+/// by exerciseId. Used as a fallback when the same-day-last-week slot lookup
+/// misses (skipped weeks, deleted logs, edited days).
+func domainMostRecentWeights(
+    program: Program,
+    logs: [WorkoutLog],
+    since: String? = nil
+) -> [String: [Double]] {
+    var output: [String: [Double]] = [:]
+    let chrono = domainProgramLogsChrono(program: program, logs: logs, since: since)
+    for log in chrono.reversed() {
+        for exercise in log.exercises where !exercise.sets.isEmpty && output[exercise.exerciseId] == nil {
+            output[exercise.exerciseId] = exercise.sets.map(\.weight)
+        }
+    }
+    return output
+}
+
 func domainSupersetGroups(_ exercises: [PlannedExercise]) -> [SupersetGroup] {
     var groups: [SupersetGroup] = []
     var index = 0

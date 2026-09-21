@@ -348,10 +348,20 @@ private struct DaySetLogRow: View {
             }
 
             HStack(spacing: 10) {
-                dayNumberField("Weight", value: set.weight == 0 ? "" : formatDayLogWeight(set.weight), unit: unit, keyboard: .decimalPad) {
+                DayLogNumberField(
+                    title: "Weight",
+                    value: set.weight == 0 ? "" : formatDayLogWeight(set.weight),
+                    unit: unit,
+                    keyboard: .decimalPad
+                ) {
                     onWeight(Double($0.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0)
                 }
-                dayNumberField("Reps", value: set.reps == 0 ? "" : "\(set.reps)", unit: "", keyboard: .numberPad) {
+                DayLogNumberField(
+                    title: "Reps",
+                    value: set.reps == 0 ? "" : "\(set.reps)",
+                    unit: "",
+                    keyboard: .numberPad
+                ) {
                     onReps(Int($0.filter(\.isNumber)) ?? 0)
                 }
             }
@@ -365,20 +375,48 @@ private struct DaySetLogRow: View {
         }
     }
 
-    private func dayNumberField(_ title: String, value: String, unit: String, keyboard: UIKeyboardType, onChange: @escaping (String) -> Void) -> some View {
+}
+
+private struct DayLogNumberField: View {
+    let title: String
+    let value: String
+    let unit: String
+    let keyboard: UIKeyboardType
+    let onChange: (String) -> Void
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
         VStack(spacing: 6) {
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.textFaint)
-            TextField(title, text: Binding(get: { value }, set: onChange))
+            TextField(title, text: $text)
                 .keyboardType(keyboard)
+                .focused($isFocused)
                 .multilineTextAlignment(.center)
                 .font(.headline.monospacedDigit())
                 .foregroundStyle(Theme.text)
                 .padding(.vertical, 8)
                 .background(Theme.inputBg)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .onAppear {
+                    text = value
+                }
+                .onChange(of: value) { _, newValue in
+                    if !isFocused {
+                        text = newValue
+                    }
+                }
+                .onChange(of: text) { _, newValue in
+                    onChange(newValue)
+                }
+                .onChange(of: isFocused) { _, focused in
+                    if !focused {
+                        text = value
+                    }
+                }
             if !unit.isEmpty {
                 Text(unit)
                     .font(.caption2)

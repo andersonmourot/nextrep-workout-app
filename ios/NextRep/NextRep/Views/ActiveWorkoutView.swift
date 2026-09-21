@@ -78,6 +78,13 @@ struct ActiveWorkoutView: View {
                 }
             }
         }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                guard !Task.isCancelled else { return }
+                store.finishStaleWorkoutIfNeeded()
+            }
+        }
         .alert("Finish Workout?", isPresented: $showingFinishConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Finish", role: .destructive) {
@@ -99,7 +106,7 @@ struct ActiveWorkoutView: View {
                         accent: accent,
                         timerSound: store.appData.timerSound,
                         onAddTime: { store.extendRest(by: 15) },
-                        onSkip: { store.stopRest() }
+                        onDone: { store.stopRest() }
                     )
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
@@ -815,13 +822,13 @@ private struct WorkoutNumberField: View {
     let unit: String
     let keyboard: UIKeyboardType
     let onChange: (String) -> Void
+    @State private var text = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        TextField(title, text: Binding(
-                get: { value },
-                set: { onChange($0) }
-            ))
+        TextField(title, text: $text)
             .keyboardType(keyboard)
+            .focused($isFocused)
             .multilineTextAlignment(.center)
             .font(.subheadline.monospacedDigit().weight(.semibold))
             .foregroundStyle(Theme.text)
@@ -830,6 +837,22 @@ private struct WorkoutNumberField: View {
             .background(Theme.inputBg)
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .frame(maxWidth: .infinity)
+            .onAppear {
+                text = value
+            }
+            .onChange(of: value) { _, newValue in
+                if !isFocused {
+                    text = newValue
+                }
+            }
+            .onChange(of: text) { _, newValue in
+                onChange(newValue)
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    text = value
+                }
+            }
     }
 }
 
@@ -854,7 +877,7 @@ private struct FloatingRestBar: View {
     let accent: Color
     let timerSound: String
     let onAddTime: () -> Void
-    let onSkip: () -> Void
+    let onDone: () -> Void
     @State private var signaledSeconds: Set<Int> = []
 
     var body: some View {
@@ -885,7 +908,7 @@ private struct FloatingRestBar: View {
                         .background(Theme.surface2)
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                    Button("Skip", action: onSkip)
+                    Button("Done", action: onDone)
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
@@ -935,7 +958,7 @@ private struct FloatingRestBar: View {
         if remaining == 0 {
             playNextRepTimerSound(timerSound)
         } else {
-            AudioServicesPlaySystemSound(1104)
+            TimerTonePlayer.shared.playTick()
         }
     }
 }

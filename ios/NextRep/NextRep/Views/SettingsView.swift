@@ -414,8 +414,8 @@ struct SettingsView: View {
     }
 
     private func changePassword() async {
-        guard newPassword.count >= 6 else {
-            passwordMessage = "New password must be at least 6 characters."
+        guard newPassword.count >= 10 else {
+            passwordMessage = "New password must be at least 10 characters."
             return
         }
         guard newPassword == confirmPassword else {
@@ -777,8 +777,8 @@ struct AdminUsersView: View {
 
     private func resetPassword(for user: AdminUser) async {
         let password = resetPasswords[user.id] ?? ""
-        guard password.count >= 6 else {
-            message = "Password must be at least 6 characters."
+        guard password.count >= 10 else {
+            message = "Password must be at least 10 characters."
             return
         }
 

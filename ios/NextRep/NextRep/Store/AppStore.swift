@@ -26,6 +26,7 @@ final class AppStore {
     private var hasAttemptedRestore = false
     @ObservationIgnored private var syncTask: Task<Void, Never>?
     private static let trashTTLMilliseconds: Double = 7 * 24 * 60 * 60 * 1000
+    static let staleWorkoutTimeout: Double = 2 * 60 * 60 * 1000
 
     init(
         apiClient: APIClient? = nil,
@@ -310,7 +311,23 @@ final class AppStore {
         scheduleSync()
     }
 
-    func resetProgramProgress(id: String) {
+    /// Restarts a program at Week 1 Day 1 by moving its progress anchor to now.
+    /// Past logs stay in history. With `keepWeights`, the most recently logged
+    /// weight per exercise is preserved and used to pre-fill the fresh run;
+    /// otherwise the next run starts with empty weight boxes.
+    func resetProgramProgress(id: String, keepWeights: Bool = false) {
+        if keepWeights {
+            var memory = appData.programWeightMemory[id] ?? [:]
+            for log in appData.logs where log.programId == id {
+                for exercise in log.exercises where !exercise.sets.isEmpty && memory[exercise.exerciseId] == nil {
+                    memory[exercise.exerciseId] = exercise.sets.map(\.weight)
+                }
+            }
+            appData.programWeightMemory[id] = memory
+        } else {
+            appData.programWeightMemory[id] = nil
+        }
+
         appData.programAnchors[id] = ISO8601DateFormatter().string(from: Date())
         if appData.activeWorkout?.programId == id {
             appData.activeWorkout = nil
@@ -319,6 +336,10 @@ final class AppStore {
     }
 
     func presentWorkout() {
+        guard finishStaleWorkoutIfNeeded() == nil else {
+            return
+        }
+
         if workoutPresentationProgramId == nil, let active = appData.activeWorkout {
             setWorkoutPresentationContext(
                 programId: active.programId,
@@ -770,6 +791,7 @@ final class AppStore {
         } else {
             appData.exerciseNotes[exerciseId] = note
         }
+        touchActiveWorkout()
         scheduleSync()
     }
 
@@ -780,6 +802,7 @@ final class AppStore {
         } else {
             appData.exerciseSubheaders[exerciseId] = cue
         }
+        touchActiveWorkout()
         scheduleSync()
     }
 
@@ -952,6 +975,8 @@ final class AppStore {
     }
 
     func startWorkout(program: Program, day: ProgramDay, week: Int = 1) {
+        finishStaleWorkoutIfNeeded()
+
         if let active = appData.activeWorkout,
            active.programId == program.id,
            active.dayId == day.id,
@@ -963,12 +988,15 @@ final class AppStore {
 
         let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) ?? 0
         let globalIndex = (max(1, week) - 1) * max(1, program.days.count) + dayIndex
+        let anchor = appData.programAnchors[program.id]
         let previousWeights = domainPreviousWeekWeights(
             program: program,
             logs: appData.logs,
-            since: appData.programAnchors[program.id],
+            since: anchor,
             globalIndex: globalIndex
         )
+        let rememberedWeights = appData.programWeightMemory[program.id] ?? [:]
+        let recentWeights = domainMostRecentWeights(program: program, logs: appData.logs, since: anchor)
 
         appData.activeProgramId = program.id
         setWorkoutPresentationContext(programId: program.id, dayId: day.id, week: week)
@@ -978,7 +1006,10 @@ final class AppStore {
             week: week,
             startedAt: Date().timeIntervalSince1970 * 1000,
             sets: day.exercises.map { planned in
-                let weights = previousWeights[planned.exerciseId] ?? []
+                let weights = previousWeights[planned.exerciseId]
+                    ?? rememberedWeights[planned.exerciseId]
+                    ?? recentWeights[planned.exerciseId]
+                    ?? []
                 return (0..<planned.sets).map { setIndex in
                     let fallbackWeight = weights.last ?? 0
                     let weight = weights.indices.contains(setIndex) ? weights[setIndex] : fallbackWeight
@@ -987,7 +1018,8 @@ final class AppStore {
             },
             exerciseIds: day.exercises.map(\.exerciseId),
             restEndsAt: nil,
-            restTotal: 0
+            restTotal: 0,
+            lastActivityAt: Date().timeIntervalSince1970 * 1000
         )
         scheduleSync()
     }
@@ -1007,6 +1039,7 @@ final class AppStore {
             active.sets[exerciseIndex][setIndex].reps = max(0, reps)
         }
 
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         appData.activeWorkout = active
         scheduleSync()
     }
@@ -1025,6 +1058,7 @@ final class AppStore {
         }
 
         active.sets[exerciseIndex][setIndex].completed = completed
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         if completed && restSec > 0 {
             active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(restSec * 1000)
             active.restTotal = restSec
@@ -1044,6 +1078,7 @@ final class AppStore {
 
         active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(seconds * 1000)
         active.restTotal = seconds
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         appData.activeWorkout = active
         scheduleRestNotification(seconds: seconds, exerciseName: exerciseName)
         scheduleSync()
@@ -1056,6 +1091,7 @@ final class AppStore {
 
         active.restEndsAt = nil
         active.restTotal = 0
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         appData.activeWorkout = active
         restNotifier.cancelRestComplete()
         scheduleSync()
@@ -1070,6 +1106,7 @@ final class AppStore {
         let currentEnd = active.restEndsAt ?? now
         active.restEndsAt = max(currentEnd, now) + Double(seconds * 1000)
         active.restTotal += seconds
+        active.lastActivityAt = now
         appData.activeWorkout = active
         scheduleSync()
     }
@@ -1081,8 +1118,39 @@ final class AppStore {
         scheduleSync()
     }
 
+    /// Ends a live workout that hasn't been interacted with for
+    /// `staleWorkoutTimeout`, saving whatever sets were completed. Returns the
+    /// saved log, or nil when the workout is still fresh (or absent).
     @discardableResult
-    func finishWorkout(program: Program, day: ProgramDay) -> WorkoutLog? {
+    func finishStaleWorkoutIfNeeded(now: Date = Date()) -> WorkoutLog? {
+        guard let active = appData.activeWorkout else {
+            return nil
+        }
+
+        let lastActivity = active.lastActivityAt ?? active.startedAt
+        guard now.timeIntervalSince1970 * 1000 - lastActivity >= Self.staleWorkoutTimeout else {
+            return nil
+        }
+
+        guard let program = allPrograms.first(where: { $0.id == active.programId }),
+              let dayIndex = program.days.firstIndex(where: { $0.id == active.dayId }),
+              let day = domainResolveProgramDay(program, dayIndex: dayIndex, week: active.week ?? 1) else {
+            endWorkout()
+            return nil
+        }
+
+        isWorkoutPresented = false
+        let log = finishWorkout(
+            program: program,
+            day: day,
+            endedAt: Date(timeIntervalSince1970: lastActivity / 1000)
+        )
+        Task { await syncNow() }
+        return log
+    }
+
+    @discardableResult
+    func finishWorkout(program: Program, day: ProgramDay, endedAt: Date = Date()) -> WorkoutLog? {
         guard let active = appData.activeWorkout else {
             return nil
         }
@@ -1110,7 +1178,7 @@ final class AppStore {
         }
 
         let startedAt = Date(timeIntervalSince1970: active.startedAt / 1000)
-        let durationSec = max(0, Int(Date().timeIntervalSince(startedAt)))
+        let durationSec = max(0, Int(endedAt.timeIntervalSince(startedAt)))
         let log = WorkoutLog(
             id: UUID().uuidString,
             date: ISO8601DateFormatter().string(from: Date()),
@@ -1182,6 +1250,7 @@ final class AppStore {
         catalog = try await apiClient.catalog()
         appData = try await apiClient.appData(token: token)
         purgeExpiredTrash()
+        finishStaleWorkoutIfNeeded()
         await refreshSharedContent(token: token)
         UserDefaults.standard.set(appData.themeColor, forKey: Theme.accentStorageKey)
     }
@@ -1189,6 +1258,7 @@ final class AppStore {
     private func addWorkoutLog(_ log: WorkoutLog, program: Program) {
         appData.logs.removeAll { $0.id == log.id }
         appData.logs.insert(log, at: 0)
+        recordRecentWeights(programId: program.id, log: log)
 
         let anchor = appData.programAnchors[program.id]
         let run = domainProgramRun(program: program, logs: appData.logs, since: anchor)
@@ -1225,6 +1295,22 @@ final class AppStore {
             logs: runLogs
         )
         appData.completedPrograms.insert(completed, at: 0)
+    }
+
+    private func touchActiveWorkout() {
+        guard var active = appData.activeWorkout else {
+            return
+        }
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
+        appData.activeWorkout = active
+    }
+
+    private func recordRecentWeights(programId: String, log: WorkoutLog) {
+        var memory = appData.programWeightMemory[programId] ?? [:]
+        for exercise in log.exercises where !exercise.sets.isEmpty {
+            memory[exercise.exerciseId] = exercise.sets.map(\.weight)
+        }
+        appData.programWeightMemory[programId] = memory
     }
 
     private func reconcileActiveWorkout(day: ProgramDay) {

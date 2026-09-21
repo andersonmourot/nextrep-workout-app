@@ -187,6 +187,7 @@ struct ActiveWorkout: Codable, Equatable {
     var exerciseIds: [String]?
     var restEndsAt: Double?
     var restTotal: Int
+    var lastActivityAt: Double?
 }
 
 struct LoggedExercise: Codable, Equatable {
@@ -315,6 +316,7 @@ struct AppData: Codable, Equatable {
     var themeMode: String
     var activeProgramId: String?
     var programAnchors: [String: String]
+    var programWeightMemory: [String: [String: [Double]]]
     var logs: [WorkoutLog]
     var bodyWeight: [BodyWeightEntry]
     var customPrograms: [Program]
@@ -347,6 +349,7 @@ struct AppData: Codable, Equatable {
         themeMode: String = "dark",
         activeProgramId: String? = nil,
         programAnchors: [String: String] = [:],
+        programWeightMemory: [String: [String: [Double]]] = [:],
         logs: [WorkoutLog] = [],
         bodyWeight: [BodyWeightEntry] = [],
         customPrograms: [Program] = [],
@@ -378,6 +381,7 @@ struct AppData: Codable, Equatable {
         self.themeMode = themeMode
         self.activeProgramId = activeProgramId
         self.programAnchors = programAnchors
+        self.programWeightMemory = programWeightMemory
         self.logs = logs
         self.bodyWeight = bodyWeight
         self.customPrograms = customPrograms
@@ -414,6 +418,7 @@ struct AppData: Codable, Equatable {
         themeMode = try typed.decodeIfPresent(String.self, forKey: .themeMode) ?? "dark"
         activeProgramId = try typed.decodeIfPresent(String.self, forKey: .activeProgramId)
         programAnchors = try typed.decodeIfPresent([String: String].self, forKey: .programAnchors) ?? [:]
+        programWeightMemory = try typed.decodeIfPresent([String: [String: [Double]]].self, forKey: .programWeightMemory) ?? [:]
         logs = try typed.decodeIfPresent([WorkoutLog].self, forKey: .logs) ?? []
         bodyWeight = try typed.decodeIfPresent([BodyWeightEntry].self, forKey: .bodyWeight) ?? []
         customPrograms = try typed.decodeIfPresent([Program].self, forKey: .customPrograms) ?? []
@@ -458,6 +463,7 @@ struct AppData: Codable, Equatable {
         try container.encode(themeMode, forKey: DynamicCodingKey(CodingKeys.themeMode.rawValue))
         try container.encodeIfPresent(activeProgramId, forKey: DynamicCodingKey(CodingKeys.activeProgramId.rawValue))
         try container.encode(programAnchors, forKey: DynamicCodingKey(CodingKeys.programAnchors.rawValue))
+        try container.encode(programWeightMemory, forKey: DynamicCodingKey(CodingKeys.programWeightMemory.rawValue))
         try container.encode(logs, forKey: DynamicCodingKey(CodingKeys.logs.rawValue))
         try container.encode(bodyWeight, forKey: DynamicCodingKey(CodingKeys.bodyWeight.rawValue))
         try container.encode(customPrograms, forKey: DynamicCodingKey(CodingKeys.customPrograms.rawValue))
@@ -490,6 +496,7 @@ struct AppData: Codable, Equatable {
         case themeMode
         case activeProgramId
         case programAnchors
+        case programWeightMemory
         case logs
         case bodyWeight
         case customPrograms

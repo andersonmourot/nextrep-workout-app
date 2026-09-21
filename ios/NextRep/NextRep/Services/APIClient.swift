@@ -22,7 +22,28 @@ struct APIMessageResponse: Codable, Equatable {
 }
 
 struct APIErrorPayload: Codable, Equatable {
-    var detail: String?
+    var detail: JSONValue?
+
+    /// Human-readable message. FastAPI returns `detail` as a plain string for
+    /// HTTPExceptions but as an array of `{loc, msg, type}` objects for 422
+    /// validation failures — flatten both into something displayable.
+    var message: String? {
+        switch detail {
+        case .string(let value):
+            return value
+        case .array(let items):
+            let messages = items.compactMap { item -> String? in
+                guard case .object(let object) = item,
+                      case .string(let msg)? = object["msg"] else {
+                    return nil
+                }
+                return msg
+            }
+            return messages.isEmpty ? nil : messages.joined(separator: " ")
+        default:
+            return nil
+        }
+    }
 }
 
 struct DataPutRequest: Encodable {
@@ -301,7 +322,7 @@ final class APIClient {
 
         guard (200..<300).contains(http.statusCode) else {
             let payload = try? JSONDecoder.backend.decode(APIErrorPayload.self, from: data)
-            let message = payload?.detail ?? "Request failed (\(http.statusCode))."
+            let message = payload?.message ?? "Request failed (\(http.statusCode))."
             throw APIError.requestFailed(statusCode: http.statusCode, message: message)
         }
 

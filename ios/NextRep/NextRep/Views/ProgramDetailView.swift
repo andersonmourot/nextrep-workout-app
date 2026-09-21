@@ -6,6 +6,7 @@ struct ProgramDetailView: View {
     @State private var shareMessage: String?
     @State private var showingDeleteConfirm = false
     @State private var showingHideConfirm = false
+    @State private var showingResetProgramDialog = false
     @State private var selectedWeek: Int?
     @State private var pendingStart: (dayId: String, week: Int)?
     @State private var selectedDayIndex: Int?
@@ -134,6 +135,19 @@ struct ProgramDetailView: View {
         } message: {
             Text("This moves the custom program to Trash. You can restore it from the Programs screen.")
         }
+        .confirmationDialog("Reset \(program.name)?", isPresented: $showingResetProgramDialog, titleVisibility: .visible) {
+            Button("Reset & Keep Recent Weights") {
+                store.resetProgramProgress(id: program.id, keepWeights: true)
+                shareMessage = "Program reset — recent weights kept"
+            }
+            Button("Reset & Clear Weights", role: .destructive) {
+                store.resetProgramProgress(id: program.id, keepWeights: false)
+                shareMessage = "Program reset"
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll go back to Week 1 Day 1. Past workouts stay in your history. Choose whether weight boxes pre-fill with your most recent weights or start empty.")
+        }
         .alert("Hide Program?", isPresented: $showingHideConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Hide", role: .destructive) {
@@ -243,6 +257,15 @@ struct ProgramDetailView: View {
             .buttonStyle(PrimaryButtonStyle())
             .disabled(store.appData.activeProgramId == program.id)
             .opacity(store.appData.activeProgramId == program.id ? 0.65 : 1)
+
+            if store.appData.activeProgramId == program.id && run.completedSlots > 0 {
+                Button(role: .destructive) {
+                    showingResetProgramDialog = true
+                } label: {
+                    Label("Reset Program Progress", systemImage: "arrow.counterclockwise")
+                }
+                .buttonStyle(GhostButtonStyle())
+            }
         }
         .padding(18)
         .background {

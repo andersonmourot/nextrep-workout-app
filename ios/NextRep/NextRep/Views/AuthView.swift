@@ -44,7 +44,7 @@ struct AuthView: View {
                         .fieldStyle()
 
                     PasswordVisibilityField(
-                        placeholder: isSignup ? "At least 6 characters" : "Password",
+                        placeholder: isSignup ? "At least 10 characters" : "Password",
                         text: $password,
                         isVisible: $passwordVisible,
                         textContentType: isSignup ? .newPassword : .password
@@ -169,7 +169,7 @@ struct PasswordHintsView: View {
     var body: some View {
         if showWhenEmpty || !password.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                passwordHint("At least 6 characters", isMet: password.count >= 6)
+                passwordHint("At least 10 characters", isMet: password.count >= 10)
                 passwordHint("Contains a letter", isMet: password.rangeOfCharacter(from: .letters) != nil)
                 passwordHint("Contains a number", isMet: password.rangeOfCharacter(from: .decimalDigits) != nil)
             }

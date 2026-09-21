@@ -1,5 +1,4 @@
 import AudioToolbox
-import AVFoundation
 import Combine
 import SwiftUI
 
@@ -24,20 +23,13 @@ func nextRepTimerSound(for id: String) -> NextRepTimerSound {
 
 func playNextRepTimerSound(_ id: String) {
     let sound = nextRepTimerSound(for: id)
-    configureNextRepAudioSession()
-    if let systemSoundId = sound.systemSoundId {
-        AudioServicesPlaySystemSound(systemSoundId)
-    }
     if sound.vibrates || sound.systemSoundId == nil {
         AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
     }
-}
-
-private func configureNextRepAudioSession() {
-    #if os(iOS)
-    try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-    try? AVAudioSession.sharedInstance().setActive(true, options: [])
-    #endif
+    guard !sound.vibrates else {
+        return
+    }
+    TimerTonePlayer.shared.play(soundId: sound.id)
 }
 
 struct IntervalTimerView: View {

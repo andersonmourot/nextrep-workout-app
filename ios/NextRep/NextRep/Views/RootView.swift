@@ -53,6 +53,7 @@ func dismissKeyboard() {
 
 struct AppShellView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -122,6 +123,11 @@ struct AppShellView: View {
                 .keyboardDismissToolbar()
             } else {
                 EmptyView()
+            }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                store.finishStaleWorkoutIfNeeded()
             }
         }
     }

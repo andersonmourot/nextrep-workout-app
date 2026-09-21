@@ -1871,8 +1871,12 @@ private func formatDate(_ value: String) -> String {
 }
 
 private func formatDuration(_ seconds: Int) -> String {
-    let minutes = seconds / 60
+    let hours = seconds / 3600
+    let minutes = (seconds % 3600) / 60
     let remainder = seconds % 60
+    if hours > 0 {
+        return "\(hours)h \(minutes)m"
+    }
     return "\(minutes)m \(remainder)s"
 }
 

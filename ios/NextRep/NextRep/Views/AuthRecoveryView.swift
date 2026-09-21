@@ -174,14 +174,14 @@ struct ResetPasswordView: View {
 
     private var canSubmit: Bool {
         !token.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-            password.count >= 6 &&
+            password.count >= 10 &&
             password == confirmPassword
     }
 
     private func submit() async {
         localError = nil
-        guard password.count >= 6 else {
-            localError = "Password must be at least 6 characters."
+        guard password.count >= 10 else {
+            localError = "Password must be at least 10 characters."
             return
         }
         guard password == confirmPassword else {

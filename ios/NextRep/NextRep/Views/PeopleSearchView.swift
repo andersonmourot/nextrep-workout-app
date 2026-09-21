@@ -15,7 +15,10 @@ struct PeopleSearchView: View {
             VStack(alignment: .leading, spacing: 18) {
                 header
                 searchField
-                followingSection
+
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    followingSection
+                }
 
                 if let error = store.authError {
                     Text(error)
@@ -45,6 +48,10 @@ struct PeopleSearchView: View {
                             .buttonStyle(.plain)
                         }
                     }
+                }
+
+                if !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    followingSection
                 }
             }
             .padding(16)

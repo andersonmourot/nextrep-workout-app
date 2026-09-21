@@ -8,9 +8,17 @@ struct DayDetailView: View {
     var week: Int = 1
 
     var body: some View {
+        // Computed once per render — `latestLog` sorts the log history and
+        // `exercise(for:)` linear-searched the catalog once per card.
+        let latestLog = computeLatestLog()
+        let exercisesById = Dictionary(
+            store.allExercises.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                hero
+                hero(latestLog: latestLog)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Exercise Plan")
@@ -28,8 +36,8 @@ struct DayDetailView: View {
                             DayExerciseCard(
                                 index: index + 1,
                                 planned: planned,
-                                exercise: exercise(for: planned),
-                                fallbackName: exerciseName(for: planned),
+                                exercise: exercisesById[planned.exerciseId],
+                                fallbackName: exerciseName(for: planned, lookup: exercisesById),
                                 exerciseId: planned.exerciseId
                             )
                         }
@@ -45,7 +53,7 @@ struct DayDetailView: View {
         .screenBackground()
     }
 
-    private var hero: some View {
+    private func hero(latestLog: WorkoutLog?) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Day \(dayNumber) · \(program.name)")
@@ -68,14 +76,14 @@ struct DayDetailView: View {
             HStack(spacing: 10) {
                 DayMetricTile(value: "\(day.exercises.count)", label: "Exercises", accent: accent)
                 DayMetricTile(value: "\(plannedSetCount)", label: "Sets", accent: accent)
-                DayMetricTile(value: "\(loggedSetCount)", label: "Logged", accent: accent)
+                DayMetricTile(value: "\(loggedSetCount(latestLog: latestLog))", label: "Logged", accent: accent)
             }
 
             Button {
                 store.startWorkout(program: program, day: day, week: week)
                 store.presentWorkout()
             } label: {
-                Text(loggedSetCount > 0 ? "Repeat Workout" : "Start Workout")
+                Text(loggedSetCount(latestLog: latestLog) > 0 ? "Repeat Workout" : "Start Workout")
             }
             .buttonStyle(PrimaryButtonStyle())
 
@@ -111,13 +119,13 @@ struct DayDetailView: View {
         }
     }
 
-    private var loggedSetCount: Int {
+    private func loggedSetCount(latestLog: WorkoutLog?) -> Int {
         latestLog?.exercises.reduce(0) { total, exercise in
             total + exercise.sets.count
         } ?? 0
     }
 
-    private var latestLog: WorkoutLog? {
+    private func computeLatestLog() -> WorkoutLog? {
         let slots = domainProgramLogSlots(program: program, logs: store.appData.logs, since: store.appData.programAnchors[program.id])
         let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) ?? max(0, dayNumber - 1)
         let slotIndex = (week - 1) * max(1, program.days.count) + dayIndex
@@ -125,16 +133,12 @@ struct DayDetailView: View {
         return slots[slotIndex]
     }
 
-    private func exercise(for planned: PlannedExercise) -> Exercise? {
-        store.allExercises.first(where: { $0.id == planned.exerciseId })
-    }
-
-    private func exerciseName(for planned: PlannedExercise) -> String {
+    private func exerciseName(for planned: PlannedExercise, lookup: [String: Exercise]) -> String {
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
 
-        return exercise(for: planned)?.name ?? planned.exerciseId
+        return lookup[planned.exerciseId]?.name ?? planned.exerciseId
     }
 }
 

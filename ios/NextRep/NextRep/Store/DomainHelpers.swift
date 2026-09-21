@@ -104,9 +104,17 @@ func domainProgramLogSlots(program: Program, logs: [WorkoutLog], since: String? 
 }
 
 func domainProgramRun(program: Program, logs: [WorkoutLog], since: String? = nil) -> ProgramRun {
+    domainProgramRun(
+        program: program,
+        slots: domainProgramLogSlots(program: program, logs: logs, since: since)
+    )
+}
+
+/// Same as above but takes precomputed slots — callers that need both the
+/// slots and the run avoid sorting the log history twice.
+func domainProgramRun(program: Program, slots: [WorkoutLog?]) -> ProgramRun {
     let daysLength = max(1, program.days.count)
     let totalSlots = max(1, program.durationWeeks) * daysLength
-    let slots = domainProgramLogSlots(program: program, logs: logs, since: since)
     let completed = min(totalSlots, slots.prefix(totalSlots).filter { $0 != nil }.count)
 
     if completed >= totalSlots {

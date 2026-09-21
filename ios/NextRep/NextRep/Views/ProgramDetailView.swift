@@ -10,18 +10,28 @@ struct ProgramDetailView: View {
     @State private var selectedWeek: Int?
     @State private var pendingStart: (dayId: String, week: Int)?
     @State private var selectedDayIndex: Int?
+    @State private var namesById: [String: String] = [:]
     let program: Program
 
     var body: some View {
-        let days = resolvedDays
-        let slotLogs = logsByDayIndex
+        // Heavy derivations run once per render instead of per day card —
+        // each of these used to re-sort the entire log history on access.
+        let slots = domainProgramLogSlots(
+            program: program,
+            logs: store.appData.logs,
+            since: store.appData.programAnchors[program.id]
+        )
+        let run = domainProgramRun(program: program, slots: slots)
+        let week = currentWeek(run: run)
+        let days = resolvedDays(week: week)
+        let slotLogs = logsByDayIndex(slots: slots, week: week)
         let setCounts = loggedSetCounts(from: slotLogs)
-        let names = exerciseNamesById
+        let names = namesById
         let summaries = loggedSummaries(from: slotLogs)
 
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                heroCard
+                heroCard(run: run)
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -29,7 +39,7 @@ struct ProgramDetailView: View {
                             .font(.headline)
                             .foregroundStyle(Theme.text)
                         Spacer()
-                        weekPager
+                        weekPager(week: week)
                     }
 
                     if days.isEmpty {
@@ -44,8 +54,8 @@ struct ProgramDetailView: View {
                                 program: program,
                                 day: day,
                                 dayNumber: index + 1,
-                                selectedWeek: currentWeek,
-                                isUpNext: isUpNext(dayIndex: index),
+                                selectedWeek: week,
+                                isUpNext: isUpNext(dayIndex: index, run: run, week: week),
                                 log: slotLogs[index],
                                 loggedSetCount: setCounts[index] ?? 0,
                                 exerciseName: { planned in
@@ -58,7 +68,7 @@ struct ProgramDetailView: View {
                                     selectedDayIndex = index
                                 },
                                 onStart: {
-                                    startDay(dayId: program.days[index].id, week: currentWeek)
+                                    startDay(dayId: program.days[index].id, week: week)
                                 }
                             )
                         }
@@ -76,12 +86,12 @@ struct ProgramDetailView: View {
             set: { if !$0 { selectedDayIndex = nil } }
         )) {
             if let selectedDayIndex,
-               resolvedDays.indices.contains(selectedDayIndex) {
+               days.indices.contains(selectedDayIndex) {
                 DayDetailView(
                     program: program,
-                    day: resolvedDays[selectedDayIndex],
+                    day: days[selectedDayIndex],
                     dayNumber: selectedDayIndex + 1,
-                    week: currentWeek
+                    week: week
                 )
             }
         }
@@ -126,6 +136,11 @@ struct ProgramDetailView: View {
             }
         }
         .screenBackground()
+        .task {
+            rebuildNames()
+        }
+        .onChange(of: store.catalog.exercises) { rebuildNames() }
+        .onChange(of: store.appData.customExercises) { rebuildNames() }
         .alert("Delete Program?", isPresented: $showingDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
@@ -190,7 +205,7 @@ struct ProgramDetailView: View {
         }
     }
 
-    private var heroCard: some View {
+    private func heroCard(run: ProgramRun) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -234,12 +249,12 @@ struct ProgramDetailView: View {
                 MetricTile(label: "Weeks", value: "\(program.durationWeeks)", accent: accent)
                 MetricTile(label: "Days/wk", value: "\(program.daysPerWeek)", accent: accent)
                 MetricTile(label: "Days", value: "\(program.days.count)", accent: accent)
-                MetricTile(label: "Done", value: "\(completedDayCount)", accent: accent)
+                MetricTile(label: "Done", value: "\(run.completedSlots)", accent: accent)
             }
 
             MetricProgressBar(
                 label: "Program progress",
-                value: Double(completedDayCount),
+                value: Double(run.completedSlots),
                 target: Double(max(1, program.days.count * max(1, program.durationWeeks))),
                 suffix: "",
                 color: accent
@@ -290,36 +305,21 @@ struct ProgramDetailView: View {
         store.appData.favoriteProgramIds.contains(program.id)
     }
 
-    private var run: ProgramRun {
-        domainProgramRun(
-            program: program,
-            logs: store.appData.logs,
-            since: store.appData.programAnchors[program.id]
-        )
-    }
-
-    private var currentWeek: Int {
+    private func currentWeek(run: ProgramRun) -> Int {
         min(max(1, selectedWeek ?? run.week), max(1, program.durationWeeks))
     }
 
-    private var resolvedDays: [ProgramDay] {
+    private func resolvedDays(week: Int) -> [ProgramDay] {
         program.days.indices.compactMap { index in
-            domainResolveProgramDay(program, dayIndex: index, week: currentWeek)
+            domainResolveProgramDay(program, dayIndex: index, week: week)
         }
     }
 
-    private var slots: [WorkoutLog?] {
-        domainProgramLogSlots(
-            program: program,
-            logs: store.appData.logs,
-            since: store.appData.programAnchors[program.id]
-        )
-    }
-
-    private var logsByDayIndex: [Int: WorkoutLog] {
+    private func logsByDayIndex(slots: [WorkoutLog?], week: Int) -> [Int: WorkoutLog] {
         var output: [Int: WorkoutLog] = [:]
         for index in program.days.indices {
-            if let log = slotLog(dayIndex: index) {
+            let slotIndex = (week - 1) * max(1, program.days.count) + index
+            if slots.indices.contains(slotIndex), let log = slots[slotIndex] {
                 output[index] = log
             }
         }
@@ -334,7 +334,7 @@ struct ProgramDetailView: View {
         return output
     }
 
-    private var exerciseNamesById: [String: String] {
+    private func rebuildNames() {
         var names: [String: String] = [:]
         for exercise in store.catalog.exercises {
             names[exercise.id] = exercise.name
@@ -342,7 +342,7 @@ struct ProgramDetailView: View {
         for exercise in store.appData.customExercises {
             names[exercise.id] = exercise.name
         }
-        return names
+        namesById = names
     }
 
     private func loggedSummaries(from logsByDayIndex: [Int: WorkoutLog]) -> [String: String] {
@@ -356,29 +356,25 @@ struct ProgramDetailView: View {
         return output
     }
 
-    private var completedDayCount: Int {
-        run.completedSlots
-    }
-
-    private var weekPager: some View {
+    private func weekPager(week: Int) -> some View {
         HStack(spacing: 6) {
             Button {
-                selectedWeek = max(1, currentWeek - 1)
+                selectedWeek = max(1, week - 1)
             } label: {
                 Image(systemName: "chevron.left")
             }
-            .disabled(currentWeek <= 1)
+            .disabled(week <= 1)
 
-            Text("Week \(currentWeek)/\(max(1, program.durationWeeks))")
+            Text("Week \(week)/\(max(1, program.durationWeeks))")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.textDim)
 
             Button {
-                selectedWeek = min(max(1, program.durationWeeks), currentWeek + 1)
+                selectedWeek = min(max(1, program.durationWeeks), week + 1)
             } label: {
                 Image(systemName: "chevron.right")
             }
-            .disabled(currentWeek >= max(1, program.durationWeeks))
+            .disabled(week >= max(1, program.durationWeeks))
         }
         .font(.caption.weight(.bold))
         .foregroundStyle(Theme.accentLight)
@@ -389,34 +385,11 @@ struct ProgramDetailView: View {
             return name
         }
 
-        if let name = lookup?[planned.exerciseId] {
-            return name
-        }
-        return exerciseNamesById[planned.exerciseId] ?? planned.exerciseId
+        return (lookup ?? namesById)[planned.exerciseId] ?? planned.exerciseId
     }
 
-    private func slotIndex(dayIndex: Int) -> Int {
-        (currentWeek - 1) * max(1, program.days.count) + dayIndex
-    }
-
-    private func slotLog(dayIndex: Int) -> WorkoutLog? {
-        let index = slotIndex(dayIndex: dayIndex)
-        guard slots.indices.contains(index) else { return nil }
-        return slots[index]
-    }
-
-    private func isUpNext(dayIndex: Int) -> Bool {
-        !run.isComplete && run.week == currentWeek && run.dayIndex == dayIndex
-    }
-
-    private func loggedSummary(for planned: PlannedExercise, in log: WorkoutLog?) -> String? {
-        guard let log,
-              let logged = log.exercises.first(where: { $0.exerciseId == planned.exerciseId }),
-              !logged.sets.isEmpty else {
-            return nil
-        }
-
-        return logged.sets.map { "\(formatDetailWeight($0.weight))x\($0.reps)" }.joined(separator: " · ")
+    private func isUpNext(dayIndex: Int, run: ProgramRun, week: Int) -> Bool {
+        !run.isComplete && run.week == week && run.dayIndex == dayIndex
     }
 
     private func dayExerciseSummaryKey(dayIndex: Int, exerciseId: String) -> String {
@@ -444,13 +417,6 @@ struct ProgramDetailView: View {
 
         return store.appData.logs.contains { $0.programId == activeProgramId } ||
             store.activeWorkout?.programId == activeProgramId
-    }
-
-    private func latestLog(for day: ProgramDay) -> WorkoutLog? {
-        store.appData.logs
-            .filter { $0.programId == program.id && $0.dayId == day.id }
-            .sorted { programDetailLogDate($0) > programDetailLogDate($1) }
-            .first
     }
 
     private func completedSetCount(_ log: WorkoutLog) -> Int {

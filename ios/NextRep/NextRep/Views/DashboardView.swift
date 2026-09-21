@@ -51,7 +51,11 @@ struct DashboardView: View {
             logs: store.appData.logs,
             since: store.appData.programAnchors[program.id]
         )
-        let day = nextDay(for: program)
+        let day = nextDay(for: program, run: run)
+        let namesById = Dictionary(
+            store.allExercises.map { ($0.id, $0.name) },
+            uniquingKeysWith: { first, _ in first }
+        )
         let accent = Color(hex: program.accent)
 
         return ZStack {
@@ -82,7 +86,7 @@ struct DashboardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let day {
-                    exercisePreview(for: day)
+                    exercisePreview(for: day, namesById: namesById)
 
                     Button {
                         store.startWorkout(program: program, day: day, week: run.week)
@@ -125,7 +129,7 @@ struct DashboardView: View {
         }
     }
 
-    private func exercisePreview(for day: ProgramDay) -> some View {
+    private func exercisePreview(for day: ProgramDay, namesById: [String: String]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Exercises")
                 .font(.caption.weight(.semibold))
@@ -135,7 +139,7 @@ struct DashboardView: View {
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 132), spacing: 8)], alignment: .leading, spacing: 8) {
                 ForEach(Array(day.exercises.prefix(4).enumerated()), id: \.offset) { _, planned in
-                    Text(exerciseName(for: planned))
+                    Text(exerciseName(for: planned, namesById: namesById))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(Theme.text)
                         .lineLimit(1)
@@ -246,12 +250,7 @@ struct DashboardView: View {
         domainComputeStreak(logs: store.appData.logs)
     }
 
-    private func nextDay(for program: Program) -> ProgramDay? {
-        let run = domainProgramRun(
-            program: program,
-            logs: store.appData.logs,
-            since: store.appData.programAnchors[program.id]
-        )
+    private func nextDay(for program: Program, run: ProgramRun) -> ProgramDay? {
         guard !run.isComplete else {
             return nil
         }
@@ -259,11 +258,11 @@ struct DashboardView: View {
         return domainResolveProgramDay(program, dayIndex: run.dayIndex, week: run.week)
     }
 
-    private func exerciseName(for planned: PlannedExercise) -> String {
+    private func exerciseName(for planned: PlannedExercise, namesById: [String: String]) -> String {
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
-        return store.allExercises.first(where: { $0.id == planned.exerciseId })?.name ?? planned.exerciseId
+        return namesById[planned.exerciseId] ?? planned.exerciseId
     }
 
     private func isActiveWorkout(program: Program, day: ProgramDay, week: Int) -> Bool {

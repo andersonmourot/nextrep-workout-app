@@ -317,6 +317,9 @@ struct AppData: Codable, Equatable {
     var activeProgramId: String?
     var programAnchors: [String: String]
     var programWeightMemory: [String: [String: [Double]]]
+    /// Per-program, per-exercise last-used sets (weight + reps). Supersedes
+    /// `programWeightMemory`, which is still written for older builds.
+    var programSetMemory: [String: [String: [SetLog]]]
     var logs: [WorkoutLog]
     var bodyWeight: [BodyWeightEntry]
     var customPrograms: [Program]
@@ -350,6 +353,7 @@ struct AppData: Codable, Equatable {
         activeProgramId: String? = nil,
         programAnchors: [String: String] = [:],
         programWeightMemory: [String: [String: [Double]]] = [:],
+        programSetMemory: [String: [String: [SetLog]]] = [:],
         logs: [WorkoutLog] = [],
         bodyWeight: [BodyWeightEntry] = [],
         customPrograms: [Program] = [],
@@ -382,6 +386,7 @@ struct AppData: Codable, Equatable {
         self.activeProgramId = activeProgramId
         self.programAnchors = programAnchors
         self.programWeightMemory = programWeightMemory
+        self.programSetMemory = programSetMemory
         self.logs = logs
         self.bodyWeight = bodyWeight
         self.customPrograms = customPrograms
@@ -419,6 +424,15 @@ struct AppData: Codable, Equatable {
         activeProgramId = try typed.decodeIfPresent(String.self, forKey: .activeProgramId)
         programAnchors = try typed.decodeIfPresent([String: String].self, forKey: .programAnchors) ?? [:]
         programWeightMemory = try typed.decodeIfPresent([String: [String: [Double]]].self, forKey: .programWeightMemory) ?? [:]
+        if let sets = try typed.decodeIfPresent([String: [String: [SetLog]]].self, forKey: .programSetMemory) {
+            programSetMemory = sets
+        } else {
+            programSetMemory = programWeightMemory.mapValues { perExercise in
+                perExercise.mapValues { weights in
+                    weights.map { SetLog(weight: $0, reps: 0, completed: false) }
+                }
+            }
+        }
         logs = try typed.decodeIfPresent([WorkoutLog].self, forKey: .logs) ?? []
         bodyWeight = try typed.decodeIfPresent([BodyWeightEntry].self, forKey: .bodyWeight) ?? []
         customPrograms = try typed.decodeIfPresent([Program].self, forKey: .customPrograms) ?? []
@@ -464,6 +478,7 @@ struct AppData: Codable, Equatable {
         try container.encodeIfPresent(activeProgramId, forKey: DynamicCodingKey(CodingKeys.activeProgramId.rawValue))
         try container.encode(programAnchors, forKey: DynamicCodingKey(CodingKeys.programAnchors.rawValue))
         try container.encode(programWeightMemory, forKey: DynamicCodingKey(CodingKeys.programWeightMemory.rawValue))
+        try container.encode(programSetMemory, forKey: DynamicCodingKey(CodingKeys.programSetMemory.rawValue))
         try container.encode(logs, forKey: DynamicCodingKey(CodingKeys.logs.rawValue))
         try container.encode(bodyWeight, forKey: DynamicCodingKey(CodingKeys.bodyWeight.rawValue))
         try container.encode(customPrograms, forKey: DynamicCodingKey(CodingKeys.customPrograms.rawValue))
@@ -497,6 +512,7 @@ struct AppData: Codable, Equatable {
         case activeProgramId
         case programAnchors
         case programWeightMemory
+        case programSetMemory
         case logs
         case bodyWeight
         case customPrograms

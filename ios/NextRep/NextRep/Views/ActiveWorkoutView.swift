@@ -1,4 +1,3 @@
-import AudioToolbox
 import Foundation
 import SwiftUI
 
@@ -10,6 +9,7 @@ struct ActiveWorkoutView: View {
     @State private var hasPreparedWorkout = false
     @State private var namesById: [String: String] = [:]
     @State private var hintsById: [String: String] = [:]
+    @State private var swapTargetIndex: Int?
     let program: Program
     let day: ProgramDay
     var week: Int = 1
@@ -110,12 +110,31 @@ struct ActiveWorkoutView: View {
                     FloatingRestBar(
                         active: active,
                         accent: accent,
-                        timerSound: store.appData.timerSound,
-                        onAddTime: { store.extendRest(by: 15) },
+                        onAdjust: { store.adjustRest(by: $0) },
                         onDone: { store.stopRest() }
                     )
                     .padding(.horizontal, 16)
                     .padding(.bottom, 8)
+                }
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { swapTargetIndex != nil },
+            set: { if !$0 { swapTargetIndex = nil } }
+        )) {
+            if let index = swapTargetIndex {
+                ExerciseSwapSheet(
+                    accent: accent,
+                    currentName: store.activeWorkout.map {
+                        exerciseName(at: index, active: $0, lookup: namesById)
+                    } ?? ""
+                ) { newId in
+                    store.swapActiveExercise(
+                        exerciseIndex: index,
+                        newExerciseId: newId,
+                        fallbackIds: day.exercises.map(\.exerciseId)
+                    )
+                    swapTargetIndex = nil
                 }
             }
         }
@@ -212,10 +231,11 @@ struct ActiveWorkoutView: View {
                         plannedExercises: day.exercises,
                         activeSets: active.sets,
                         unit: store.appData.unit,
-                        exerciseName: { exerciseName(for: $0, lookup: namesById) },
-                        previousHint: { previousHintsById[$0.exerciseId] },
-                        cueText: cueBinding,
-                        noteText: noteBinding,
+                        exerciseName: { exerciseName(at: $0, active: active, lookup: namesById) },
+                        previousHint: { previousHintsById[resolvedExerciseId(at: $0, active: active)] },
+                        cueText: { cueBinding(for: resolvedExerciseId(at: $0, active: active)) },
+                        noteText: { noteBinding(for: resolvedExerciseId(at: $0, active: active)) },
+                        onSwap: { swapTargetIndex = $0 },
                         onWeightSet: { exerciseIndex, setIndex, weight in
                             store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
                         },
@@ -229,7 +249,7 @@ struct ActiveWorkoutView: View {
                                 setIndex: setIndex,
                                 completed: completed,
                                 restSec: restSecondsAfterSet(exerciseIndex: exerciseIndex, planned: planned),
-                                exerciseName: exerciseName(for: planned, lookup: namesById)
+                                exerciseName: exerciseName(at: exerciseIndex, active: active, lookup: namesById)
                             )
                         }
                     )
@@ -239,13 +259,13 @@ struct ActiveWorkoutView: View {
                     let startsRestAfterSet = restAfterSet > 0
                     WorkoutExerciseCard(
                         accent: accent,
-                        name: exerciseName(for: planned, lookup: namesById),
+                        name: exerciseName(at: exerciseIndex, active: active, lookup: namesById),
                         planned: planned,
                         unit: store.appData.unit,
-                        previousHint: previousHintsById[planned.exerciseId],
+                        previousHint: previousHintsById[resolvedExerciseId(at: exerciseIndex, active: active)],
                         startsRestAfterSet: startsRestAfterSet,
-                        cueText: cueBinding(for: planned.exerciseId),
-                        noteText: noteBinding(for: planned.exerciseId),
+                        cueText: cueBinding(for: resolvedExerciseId(at: exerciseIndex, active: active)),
+                        noteText: noteBinding(for: resolvedExerciseId(at: exerciseIndex, active: active)),
                         rows: active.sets.indices.contains(exerciseIndex) ? active.sets[exerciseIndex] : [],
                         onWeightSet: { setIndex, weight in
                             store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
@@ -259,9 +279,10 @@ struct ActiveWorkoutView: View {
                                 setIndex: setIndex,
                                 completed: completed,
                                 restSec: restAfterSet,
-                                exerciseName: exerciseName(for: planned, lookup: namesById)
+                                exerciseName: exerciseName(at: exerciseIndex, active: active, lookup: namesById)
                             )
-                        }
+                        },
+                        onSwap: { swapTargetIndex = exerciseIndex }
                     )
                 }
             }
@@ -302,15 +323,29 @@ struct ActiveWorkoutView: View {
         hintsById = hints
     }
 
-    private func exerciseName(for planned: PlannedExercise, lookup: [String: String]? = nil) -> String {
+    /// The exercise actually occupying a slot — honors session-only swaps
+    /// recorded in `active.exerciseIds` without touching the program template.
+    private func resolvedExerciseId(at index: Int, active: ActiveWorkout) -> String {
+        guard day.exercises.indices.contains(index) else { return "" }
+        let planned = day.exercises[index]
+        guard let ids = active.exerciseIds, ids.indices.contains(index), !ids[index].isEmpty else {
+            return planned.exerciseId
+        }
+        return ids[index]
+    }
+
+    private func exerciseName(at index: Int, active: ActiveWorkout, lookup: [String: String]? = nil) -> String {
+        guard day.exercises.indices.contains(index) else { return "" }
+        let planned = day.exercises[index]
+        let resolvedId = resolvedExerciseId(at: index, active: active)
+
+        if resolvedId != planned.exerciseId, let name = (lookup ?? namesById)[resolvedId] {
+            return name
+        }
         if let name = planned.name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return name
         }
-
-        if let name = lookup?[planned.exerciseId] {
-            return name
-        }
-        return namesById[planned.exerciseId] ?? planned.exerciseId
+        return (lookup ?? namesById)[resolvedId] ?? resolvedId
     }
 
     private func restSecondsAfterSet(exerciseIndex: Int, planned: PlannedExercise) -> Int {
@@ -356,86 +391,6 @@ struct ActiveWorkoutView: View {
     }
 }
 
-private struct RestTimerCard: View {
-    let active: ActiveWorkout
-    let accent: Color
-    let onStop: () -> Void
-    @State private var didSignalCompletion = false
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            let remaining = remainingSeconds(now: context.date)
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Label("Rest Timer", systemImage: "bell")
-                        .font(.headline)
-                        .foregroundStyle(Theme.text)
-
-                    Spacer()
-
-                    if active.restEndsAt != nil {
-                        Button("Stop") {
-                            onStop()
-                        }
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(accent)
-                    }
-                }
-
-                if active.restEndsAt == nil {
-                    Text("Mark a set Done to start the programmed rest timer.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textDim)
-                } else {
-                    Text(remaining > 0 ? formatClock(remaining) : "Rest complete")
-                        .font(.system(size: 30, weight: .bold, design: .default).monospacedDigit())
-                        .foregroundStyle(remaining > 0 ? Theme.text : accent)
-
-                    ProgressView(value: progress(remaining: remaining))
-                        .tint(accent)
-                }
-            }
-            .cardStyle()
-            .onAppear {
-                signalCompletionIfNeeded(remaining: remaining)
-            }
-            .onChange(of: active.restEndsAt) { _, _ in
-                didSignalCompletion = false
-            }
-            .onChange(of: remaining) { _, newValue in
-                signalCompletionIfNeeded(remaining: newValue)
-            }
-        }
-    }
-
-    private func remainingSeconds(now: Date) -> Int {
-        guard let restEndsAt = active.restEndsAt else {
-            return 0
-        }
-
-        let seconds = (restEndsAt / 1000) - now.timeIntervalSince1970
-        return max(0, Int(ceil(seconds)))
-    }
-
-    private func progress(remaining: Int) -> Double {
-        guard active.restTotal > 0 else {
-            return 0
-        }
-
-        return 1 - (Double(remaining) / Double(active.restTotal))
-    }
-
-    private func signalCompletionIfNeeded(remaining: Int) {
-        guard active.restEndsAt != nil, active.restTotal > 0, remaining == 0, !didSignalCompletion else {
-            return
-        }
-
-        didSignalCompletion = true
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate)
-    }
-}
-
 private struct WorkoutExerciseCard: View {
     let accent: Color
     let name: String
@@ -449,6 +404,7 @@ private struct WorkoutExerciseCard: View {
     let onWeightSet: (Int, Double) -> Void
     let onRepsSet: (Int, Int) -> Void
     let onToggleCompleted: (Int, Bool) -> Void
+    let onSwap: () -> Void
     @State private var showingNotes = false
 
     var body: some View {
@@ -494,6 +450,19 @@ private struct WorkoutExerciseCard: View {
                 }
 
                 Spacer()
+
+                Button {
+                    onSwap()
+                } label: {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textDim)
+                        .frame(width: 32, height: 32)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Swap exercise for today")
 
                 Button {
                     showingNotes.toggle()
@@ -556,10 +525,11 @@ private struct SupersetWorkoutCard: View {
     let plannedExercises: [PlannedExercise]
     let activeSets: [[SetLog]]
     let unit: String
-    let exerciseName: (PlannedExercise) -> String
-    let previousHint: (PlannedExercise) -> String?
-    let cueText: (String) -> Binding<String>
-    let noteText: (String) -> Binding<String>
+    let exerciseName: (Int) -> String
+    let previousHint: (Int) -> String?
+    let cueText: (Int) -> Binding<String>
+    let noteText: (Int) -> Binding<String>
+    let onSwap: (Int) -> Void
     let onWeightSet: (Int, Int, Double) -> Void
     let onRepsSet: (Int, Int, Int) -> Void
     let onToggleCompleted: (Int, Int, Bool) -> Void
@@ -639,7 +609,6 @@ private struct SupersetWorkoutCard: View {
     private var legend: some View {
         VStack(spacing: 8) {
             ForEach(Array(memberIndices.enumerated()), id: \.offset) { memberOffset, exerciseIndex in
-                let planned = plannedExercises[exerciseIndex]
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 10) {
                         Text("\(group.label)\(memberOffset + 1)")
@@ -650,24 +619,33 @@ private struct SupersetWorkoutCard: View {
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(exerciseName(planned))
+                            Text(exerciseName(exerciseIndex))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Theme.text)
 
-                            if let previousHint = previousHint(planned) {
+                            if let previousHint = previousHint(exerciseIndex) {
                                 Text(previousHint)
                                     .font(.caption)
                                     .foregroundStyle(accent)
                             }
 
-                            if !cueText(planned.exerciseId).wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                Text(cueText(planned.exerciseId).wrappedValue)
+                            if !cueText(exerciseIndex).wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                Text(cueText(exerciseIndex).wrappedValue)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(accent)
                             }
                         }
 
                         Spacer()
+
+                        Button {
+                            onSwap(exerciseIndex)
+                        } label: {
+                            Image(systemName: "arrow.left.arrow.right")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(Theme.textDim)
+                        .accessibilityLabel("Swap exercise for today")
 
                         Button {
                             showingNotesFor = showingNotesFor == exerciseIndex ? nil : exerciseIndex
@@ -679,9 +657,9 @@ private struct SupersetWorkoutCard: View {
                     }
 
                     if showingNotesFor == exerciseIndex {
-                        TextField("Cue", text: cueText(planned.exerciseId), axis: .vertical)
+                        TextField("Cue", text: cueText(exerciseIndex), axis: .vertical)
                             .workoutInputStyle()
-                        TextField("Private notes", text: noteText(planned.exerciseId), axis: .vertical)
+                        TextField("Private notes", text: noteText(exerciseIndex), axis: .vertical)
                             .lineLimit(2, reservesSpace: true)
                             .workoutInputStyle()
                     }
@@ -879,8 +857,7 @@ private extension View {
 private struct FloatingRestBar: View {
     let active: ActiveWorkout
     let accent: Color
-    let timerSound: String
-    let onAddTime: () -> Void
+    let onAdjust: (Int) -> Void
     let onDone: () -> Void
     @State private var signaledSeconds: Set<Int> = []
 
@@ -904,13 +881,25 @@ private struct FloatingRestBar: View {
 
                     Spacer()
 
-                    Button("+15s", action: onAddTime)
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Theme.text)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(Theme.surface2)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    Button("-5s") {
+                        onAdjust(-5)
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                    Button("+5s") {
+                        onAdjust(5)
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.text)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 9)
+                    .background(Theme.surface2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                     Button("Done", action: onDone)
                         .font(.caption.weight(.bold))
@@ -955,15 +944,11 @@ private struct FloatingRestBar: View {
     }
 
     private func signalIfNeeded(remaining: Int) {
-        guard [3, 2, 1, 0].contains(remaining), !signaledSeconds.contains(remaining) else {
+        guard [3, 2, 1].contains(remaining), !signaledSeconds.contains(remaining) else {
             return
         }
         signaledSeconds.insert(remaining)
-        if remaining == 0 {
-            playNextRepTimerSound(timerSound)
-        } else {
-            TimerTonePlayer.shared.playTick()
-        }
+        TimerTonePlayer.shared.playTick()
     }
 }
 private func formatClock(_ seconds: Int) -> String {
@@ -978,4 +963,79 @@ private func formatWeight(_ weight: Double) -> String {
     }
 
     return String(format: "%.1f", weight)
+}
+
+/// Picker for swapping the exercise in one slot of the active session.
+/// The choice only touches `activeWorkout.exerciseIds` — the program
+/// template and future days are never modified.
+private struct ExerciseSwapSheet: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let accent: Color
+    let currentName: String
+    let onSelect: (String) -> Void
+    @State private var query = ""
+
+    private var filtered: [Exercise] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return store.allExercises }
+        return store.allExercises.filter { exercise in
+            exercise.name.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.primaryMuscle.localizedCaseInsensitiveContains(trimmed) ||
+                exercise.equipment.localizedCaseInsensitiveContains(trimmed)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 8) {
+                    Text("Replacing \(currentName). This changes the exercise for today's workout only — the program template and other days stay unchanged.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.textDim)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+
+                    ForEach(filtered) { exercise in
+                        Button {
+                            onSelect(exercise.id)
+                            dismiss()
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(exercise.name)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(Theme.text)
+                                    Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
+                                        .font(.caption)
+                                        .foregroundStyle(Theme.textDim)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 11)
+                            .background(Theme.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .padding(.bottom, 24)
+            }
+            .screenBackground()
+            .searchable(text: $query, prompt: "Search exercises")
+            .navigationTitle("Swap Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                    .foregroundStyle(accent)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
 }

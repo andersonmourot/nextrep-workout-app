@@ -328,14 +328,16 @@ final class AppStore {
     /// otherwise the next run starts with empty weight boxes.
     func resetProgramProgress(id: String, keepWeights: Bool = false) {
         if keepWeights {
-            var memory = appData.programWeightMemory[id] ?? [:]
+            var memory = appData.programSetMemory[id] ?? [:]
             for log in appData.logs where log.programId == id {
                 for exercise in log.exercises where !exercise.sets.isEmpty && memory[exercise.exerciseId] == nil {
-                    memory[exercise.exerciseId] = exercise.sets.map(\.weight)
+                    memory[exercise.exerciseId] = exercise.sets
                 }
             }
-            appData.programWeightMemory[id] = memory
+            appData.programSetMemory[id] = memory
+            appData.programWeightMemory[id] = memory.mapValues { $0.map(\.weight) }
         } else {
+            appData.programSetMemory[id] = nil
             appData.programWeightMemory[id] = nil
         }
 
@@ -1001,14 +1003,14 @@ final class AppStore {
         let dayIndex = program.days.firstIndex(where: { $0.id == day.id }) ?? 0
         let globalIndex = (max(1, week) - 1) * max(1, program.days.count) + dayIndex
         let anchor = appData.programAnchors[program.id]
-        let previousWeights = domainPreviousWeekWeights(
+        let previousSets = domainPreviousWeekSets(
             program: program,
             logs: appData.logs,
             since: anchor,
             globalIndex: globalIndex
         )
-        let rememberedWeights = appData.programWeightMemory[program.id] ?? [:]
-        let recentWeights = domainMostRecentWeights(program: program, logs: appData.logs, since: anchor)
+        let rememberedSets = appData.programSetMemory[program.id] ?? [:]
+        let recentSets = domainMostRecentSets(program: program, logs: appData.logs, since: anchor)
 
         appData.activeProgramId = program.id
         setWorkoutPresentationContext(programId: program.id, dayId: day.id, week: week)
@@ -1018,14 +1020,14 @@ final class AppStore {
             week: week,
             startedAt: Date().timeIntervalSince1970 * 1000,
             sets: day.exercises.map { planned in
-                let weights = previousWeights[planned.exerciseId]
-                    ?? rememberedWeights[planned.exerciseId]
-                    ?? recentWeights[planned.exerciseId]
+                let previous = previousSets[planned.exerciseId]
+                    ?? rememberedSets[planned.exerciseId]
+                    ?? recentSets[planned.exerciseId]
                     ?? []
                 return (0..<planned.sets).map { setIndex in
-                    let fallbackWeight = weights.last ?? 0
-                    let weight = weights.indices.contains(setIndex) ? weights[setIndex] : fallbackWeight
-                    return SetLog(weight: weight, reps: Self.parseReps(planned.reps), completed: false)
+                    let prior = previous.indices.contains(setIndex) ? previous[setIndex] : previous.last
+                    let reps = (prior?.reps ?? 0) > 0 ? prior!.reps : Self.parseReps(planned.reps)
+                    return SetLog(weight: prior?.weight ?? 0, reps: reps, completed: false)
                 }
             },
             exerciseIds: day.exercises.map(\.exerciseId),
@@ -1109,16 +1111,45 @@ final class AppStore {
         scheduleSync()
     }
 
-    func extendRest(by seconds: Int) {
-        guard seconds > 0, var active = activeWorkout else {
+    /// Adjusts the running rest timer by `seconds` (positive or negative).
+    /// Reschedules the background completion notification to match.
+    func adjustRest(by seconds: Int) {
+        guard seconds != 0, var active = activeWorkout else {
             return
         }
 
         let now = Date().timeIntervalSince1970 * 1000
         let currentEnd = active.restEndsAt ?? now
-        active.restEndsAt = max(currentEnd, now) + Double(seconds * 1000)
-        active.restTotal += seconds
+        active.restEndsAt = max(now, currentEnd + Double(seconds * 1000))
+        active.restTotal = max(1, active.restTotal + seconds)
         active.lastActivityAt = now
+        activeWorkout = active
+
+        let remainingSeconds = Int(((active.restEndsAt ?? now) - now) / 1000)
+        if remainingSeconds > 0 {
+            scheduleRestNotification(seconds: remainingSeconds, exerciseName: nil)
+        } else {
+            restNotifier.cancelRestComplete()
+        }
+        scheduleSync()
+    }
+
+    /// Swaps the exercise at `exerciseIndex` for this session only — the
+    /// program template and other days are untouched. The workout log records
+    /// the exercise actually performed.
+    func swapActiveExercise(exerciseIndex: Int, newExerciseId: String, fallbackIds: [String]) {
+        guard var active = activeWorkout,
+              active.sets.indices.contains(exerciseIndex) else {
+            return
+        }
+
+        var ids = active.exerciseIds ?? fallbackIds
+        while ids.count < active.sets.count {
+            ids.append(fallbackIds.indices.contains(ids.count) ? fallbackIds[ids.count] : "")
+        }
+        ids[exerciseIndex] = newExerciseId
+        active.exerciseIds = ids
+        active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         activeWorkout = active
         scheduleSync()
     }
@@ -1175,10 +1206,16 @@ final class AppStore {
                     SetLog(weight: set.weight, reps: set.reps, completed: true)
                 }
 
+            // A session-only swap overrides the exercise recorded for the slot.
+            let swappedId = active.exerciseIds?.indices.contains(index) == true ? active.exerciseIds?[index] : nil
+            let effectiveId = swappedId?.isEmpty == false ? swappedId! : planned.exerciseId
             let plannedName = planned.name?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolvedName = effectiveId != planned.exerciseId
+                ? allExercises.first(where: { $0.id == effectiveId })?.name
+                : nil
             return LoggedExercise(
-                exerciseId: planned.exerciseId,
-                name: plannedName?.isEmpty == false ? plannedName : nil,
+                exerciseId: effectiveId,
+                name: resolvedName ?? (plannedName?.isEmpty == false ? plannedName : nil),
                 sets: loggedSets
             )
         }
@@ -1324,11 +1361,12 @@ final class AppStore {
     }
 
     private func recordRecentWeights(programId: String, log: WorkoutLog) {
-        var memory = appData.programWeightMemory[programId] ?? [:]
+        var memory = appData.programSetMemory[programId] ?? [:]
         for exercise in log.exercises where !exercise.sets.isEmpty {
-            memory[exercise.exerciseId] = exercise.sets.map(\.weight)
+            memory[exercise.exerciseId] = exercise.sets
         }
-        appData.programWeightMemory[programId] = memory
+        appData.programSetMemory[programId] = memory
+        appData.programWeightMemory[programId] = memory.mapValues { $0.map(\.weight) }
     }
 
     private func reconcileActiveWorkout(day: ProgramDay) {

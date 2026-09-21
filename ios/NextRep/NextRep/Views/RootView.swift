@@ -134,6 +134,27 @@ struct AppShellView: View {
                 }
             }
         }
+        .task(id: store.activeWorkout?.restEndsAt) {
+            await watchRestCompletion()
+        }
+    }
+
+    /// Plays the rest-complete tone at expiry even when the workout sheet
+    /// (and its FloatingRestBar) isn't on screen. While the app is
+    /// backgrounded, the scheduled local notification covers it instead.
+    private func watchRestCompletion() async {
+        guard let endsAt = store.activeWorkout?.restEndsAt else {
+            return
+        }
+        let endDate = Date(timeIntervalSince1970: endsAt / 1000)
+        while !Task.isCancelled, Date.now < endDate {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        guard !Task.isCancelled,
+              store.activeWorkout?.restEndsAt == endsAt else {
+            return
+        }
+        playNextRepTimerSound(store.appData.timerSound)
     }
 
     private var activeContext: (program: Program, day: ProgramDay, week: Int)? {

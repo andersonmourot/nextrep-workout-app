@@ -177,12 +177,12 @@ func domainTotalVolume(_ logs: [WorkoutLog]) -> Double {
     }
 }
 
-func domainPreviousWeekWeights(
+func domainPreviousWeekSets(
     program: Program,
     logs: [WorkoutLog],
     since: String? = nil,
     globalIndex: Int
-) -> [String: [Double]] {
+) -> [String: [SetLog]] {
     let daysLength = max(1, program.days.count)
     let previousIndex = globalIndex - daysLength
     guard previousIndex >= 0 else {
@@ -194,26 +194,26 @@ func domainPreviousWeekWeights(
         return [:]
     }
 
-    var output: [String: [Double]] = [:]
+    var output: [String: [SetLog]] = [:]
     for exercise in log.exercises {
-        output[exercise.exerciseId] = exercise.sets.map(\.weight)
+        output[exercise.exerciseId] = exercise.sets
     }
     return output
 }
 
-/// Most recently logged per-set weights for each exercise in a program, keyed
-/// by exerciseId. Used as a fallback when the same-day-last-week slot lookup
-/// misses (skipped weeks, deleted logs, edited days).
-func domainMostRecentWeights(
+/// Most recently logged per-set weight+reps for each exercise in a program,
+/// keyed by exerciseId. Used as a fallback when the same-day-last-week slot
+/// lookup misses (skipped weeks, deleted logs, edited days).
+func domainMostRecentSets(
     program: Program,
     logs: [WorkoutLog],
     since: String? = nil
-) -> [String: [Double]] {
-    var output: [String: [Double]] = [:]
+) -> [String: [SetLog]] {
+    var output: [String: [SetLog]] = [:]
     let chrono = domainProgramLogsChrono(program: program, logs: logs, since: since)
     for log in chrono.reversed() {
         for exercise in log.exercises where !exercise.sets.isEmpty && output[exercise.exerciseId] == nil {
-            output[exercise.exerciseId] = exercise.sets.map(\.weight)
+            output[exercise.exerciseId] = exercise.sets
         }
     }
     return output

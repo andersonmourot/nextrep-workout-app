@@ -97,7 +97,10 @@ export function programLogsChrono(
   return logs
     .filter((l) => l.programId === program.id && (!since || l.date >= since))
     .slice()
-    .reverse()
+    // Sort by stored date rather than blindly reversing — a log that lands
+    // out of order in storage (sync merge, edited date) must not corrupt
+    // slot placement. Matches the iOS domainProgramLogsChrono behavior.
+    .sort((a, b) => parseStoredDate(a.date).getTime() - parseStoredDate(b.date).getTime())
 }
 
 /**

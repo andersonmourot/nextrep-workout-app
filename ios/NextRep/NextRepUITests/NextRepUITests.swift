@@ -63,6 +63,98 @@ final class NextRepUITests: XCTestCase {
         }
     }
 
+    /// Logs in through the UI — used by tests that seed server-side state
+    /// via the API first and therefore can't use the signup flow.
+    private func logIn(_ app: XCUIApplication, email: String, password: String) {
+        app.buttons["Log in"].tap()
+        app.textFields["Email"].tap()
+        app.textFields["Email"].typeText(email)
+        let passwordField = app.secureTextFields["Password"]
+        if passwordField.exists {
+            fillViaPaste(passwordField, password, app: app)
+        } else {
+            fillViaPaste(app.textFields["Password"], password, app: app)
+        }
+        app.buttons["Log In"].tap()
+        expectElement(app.tabBars.firstMatch, 20, "Tab bar after login")
+        let notNow = app.buttons["Not Now"]
+        if notNow.waitForExistence(timeout: 5) {
+            notNow.tap()
+            Thread.sleep(forTimeInterval: 1)
+        }
+    }
+
+    // MARK: - API seeding
+
+    /// Signs up via the API (bypassing the UI) so server-side state can be
+    /// seeded before a UI login. Returns the auth token.
+    private func apiSignup(name: String, email: String, password: String) async throws -> String {
+        var req = URLRequest(url: URL(string: "\(apiBase)/auth/signup")!)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: [
+            "name": name, "email": email, "password": password,
+        ])
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200,
+              let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let token = json["token"] as? String else {
+            XCTFail("API signup failed: \(String(data: data, encoding: .utf8) ?? "no body")")
+            throw NSError(domain: "NextRepUITests", code: 1)
+        }
+        return token
+    }
+
+    private func apiPutData(token: String, data: [String: Any]) async throws {
+        var req = URLRequest(url: URL(string: "\(apiBase)/api/data")!)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue(token, forHTTPHeaderField: "X-Auth-Token")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["data": data])
+        let (body, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else {
+            XCTFail("PUT /api/data failed: \(String(data: body, encoding: .utf8) ?? "no body")")
+            throw NSError(domain: "NextRepUITests", code: 2)
+        }
+    }
+
+    /// A minimal AppData blob containing one custom program whose day has a
+    /// two-exercise superset plus a solo exercise. The built-in catalog has
+    /// no supersets, so this is the only way to UI-test superset flows.
+    /// Custom programs sort ahead of catalog entries at equal rank.
+    private func seededSupersetBlob() -> [String: Any] {
+        [
+            "name": "Superset Tester",
+            "unit": "lb",
+            "themeColor": "green",
+            "themeMode": "dark",
+            "customPrograms": [[
+                "id": "qa-superset-plan",
+                "name": "QA Superset Plan",
+                "category": "Bodybuilding",
+                "level": "Intermediate",
+                "coach": "QA",
+                "durationWeeks": 4,
+                "daysPerWeek": 3,
+                "accent": "#355e3b",
+                "summary": "Seeded program for superset UI tests.",
+                "description": "Seeded program for superset UI tests.",
+                "days": [[
+                    "id": "qa-superset-day",
+                    "name": "Superset Day",
+                    "focus": "Push",
+                    "exercises": [
+                        ["exerciseId": "barbell-bench-press", "sets": 3, "reps": "8",
+                         "restSec": 90, "groupId": "A"],
+                        ["exerciseId": "incline-dumbbell-press", "sets": 3, "reps": "10",
+                         "restSec": 90, "groupId": "A"],
+                        ["exerciseId": "cable-fly", "sets": 3, "reps": "12", "restSec": 60],
+                    ],
+                ]],
+            ]],
+        ]
+    }
+
     /// Taps a tab and confirms it actually became selected — a dismissing
     /// system sheet can silently eat the first tap.
     private func tapTab(_ app: XCUIApplication, _ name: String) {
@@ -281,5 +373,117 @@ final class NextRepUITests: XCTestCase {
         expectElement(app.staticTexts["Barbell Bench Press"], 10, "Day detail exercises")
         XCTAssertTrue(app.staticTexts["Incline Dumbbell Press"].exists)
         XCTAssertTrue(app.buttons["Start Workout"].exists)
+    }
+
+    @MainActor
+    func testSupersetMemberSwap() async throws {
+        // The built-in catalog has no superset days — seed a custom program
+        // via the API, then log in through the real UI.
+        let email = uniqueEmail()
+        let password = "testpassword123"
+        let token = try await apiSignup(name: "Superset Tester", email: email, password: password)
+        try await apiPutData(token: token, data: seededSupersetBlob())
+
+        let app = launchApp()
+        logIn(app, email: email, password: password)
+
+        tapTab(app, "Programs")
+        let card = programCard(app, named: "QA Superset Plan", id: "qa-superset-plan")
+        scrollRevealAndTap(card, in: app, "Seeded superset program")
+
+        let day = app.staticTexts["Superset Day"]
+        expectElement(day, 10, "Superset day card")
+        day.tap()
+        let start = app.buttons["Start Workout"]
+        expectElement(start, 10, "Start Workout button")
+        start.tap()
+        expectElement(app.navigationBars["Workout"], 10, "Workout screen")
+
+        // Superset card renders: header, both members, plus the solo exercise.
+        let supersetHeader = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'Superset'")).firstMatch
+        expectElement(supersetHeader, 10, "Superset header")
+        XCTAssertTrue(app.staticTexts["Barbell Bench Press"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Incline Dumbbell Press"].exists)
+        XCTAssertTrue(app.staticTexts["Cable Fly"].exists)
+
+        // Swap the FIRST superset member — other slots must be untouched.
+        let swapButtons = app.buttons.matching(identifier: "Swap exercise for today")
+        let memberSwap = swapButtons.element(boundBy: 0)
+        XCTAssertTrue(memberSwap.waitForExistence(timeout: 5))
+        memberSwap.tap()
+
+        let swapField = app.textFields["Exercise for today"]
+        expectElement(swapField, 5, "Swap field")
+        swapField.tap()
+        swapField.typeText("Landmine Press")
+        let useFreeText = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Use '")).firstMatch
+        expectElement(useFreeText, 5, "Use free-text button")
+        useFreeText.tap()
+
+        XCTAssertTrue(app.staticTexts["Landmine Press"].waitForExistence(timeout: 5),
+                      "Swapped member must show the free-text name")
+        // The covered DayDetailView subtree also renders these names —
+        // firstMatch can resolve to a non-hittable covered element, so check
+        // across all matches.
+        let inclineRows = app.staticTexts
+            .matching(NSPredicate(format: "label == 'Incline Dumbbell Press'")).allElementsBoundByIndex
+        XCTAssertTrue(inclineRows.contains(where: { $0.isHittable }),
+                      "Unswapped superset member must stay on screen")
+        let benchRows = app.staticTexts
+            .matching(NSPredicate(format: "label == 'Barbell Bench Press'")).allElementsBoundByIndex
+        XCTAssertTrue(benchRows.allSatisfy { !$0.isHittable },
+                      "Swapped-out member must not be reachable on the workout screen")
+
+        // The solo exercise sits below the fold — scroll the workout down.
+        let flyQuery = app.staticTexts
+            .matching(NSPredicate(format: "label == 'Cable Fly'"))
+        var flyVisible = false
+        for _ in 0..<8 {
+            if flyQuery.allElementsBoundByIndex.contains(where: { $0.isHittable }) {
+                flyVisible = true
+                break
+            }
+            app.swipeUp()
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        XCTAssertTrue(flyVisible, "Solo exercise must stay on screen")
+
+        // Superset rest semantics: no rest between members — the bar arms
+        // only after the LAST member's set. Scroll back up to reach the
+        // superset card's set rows.
+        let completeA1 = app.buttons["Complete superset A1"].firstMatch
+        for _ in 0..<8 where !completeA1.isHittable {
+            app.swipeDown()
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+        expectElement(completeA1, 5, "Superset set button")
+        XCTAssertTrue(completeA1.isHittable, "Superset set button not reachable")
+        completeA1.tap()
+        XCTAssertFalse(app.buttons["-5s"].waitForExistence(timeout: 3),
+                       "No rest bar between superset members")
+
+        let completeA2 = app.buttons["Complete superset A2"].firstMatch
+        expectElement(completeA2, 5, "Superset A2 button")
+        completeA2.tap()
+        expectElement(app.buttons["-5s"], 8, "Rest bar after last superset member")
+
+        // Finish — the swapped name lands in the saved log.
+        app.buttons["Done"].tap()
+        let finish = app.buttons["Finish Workout"]
+        tapWhenHittable(finish, app: app)
+        let confirm = app.alerts.buttons["Finish"]
+        expectElement(confirm, 5, "Finish confirm")
+        confirm.tap()
+
+        let summaryTitle = app.staticTexts
+            .matching(NSPredicate(format: "label CONTAINS[c] 'Workout Complete'"))
+            .firstMatch
+        expectElement(summaryTitle, 10, "Summary title")
+        XCTAssertTrue(app.staticTexts["Landmine Press"].waitForExistence(timeout: 5),
+                      "Log must record the swapped exercise name")
+        XCTAssertTrue(app.staticTexts["Incline Dumbbell Press"].exists,
+                      "Log must still contain the unswapped member")
+        app.buttons["Done"].tap()
     }
 }

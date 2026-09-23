@@ -46,6 +46,73 @@ def check(name, cond, detail=""):
     print(("PASS " if cond else "FAIL ") + name + (f"  [{detail}]" if detail and not cond else ""))
 
 
+def finish():
+    fails = [r for r in results if not r[1]]
+    print(f"\n{'='*50}\n{len(results)-len(fails)}/{len(results)} passed")
+    for name, _, detail in fails:
+        print(f"  FAIL {name} {detail}")
+    sys.exit(1 if fails else 0)
+
+
+# ---------- production-safe smoke modes ----------
+
+if "--readonly" in sys.argv:
+    # Zero writes — safe to run against production:
+    #   TEST_API_BASE=https://smellis-api.fly.dev python3 test_api.py --readonly
+    s, b = req("GET", "/health")
+    check("ro: health", s == 200 and b.get("ok") is True, f"status={s} {b}")
+
+    s, b = req("GET", "/api/meta")
+    check("ro: meta returns min version", s == 200 and bool(b.get("min_supported_ios_version")), str(b))
+
+    s, b = req("GET", "/api/catalog")
+    check("ro: catalog has programs+exercises",
+          s == 200 and len(b.get("programs", [])) > 0 and len(b.get("exercises", [])) > 0,
+          f"status={s} programs={len(b.get('programs', []))} exercises={len(b.get('exercises', []))}")
+
+    s, _ = req("GET", "/me")
+    check("ro: /me requires auth", s == 401, f"status={s}")
+    s, _ = req("GET", "/me", token="bogus-token-xyz")
+    check("ro: bogus token rejected", s == 401, f"status={s}")
+    s, _ = req("GET", "/api/data")
+    check("ro: /api/data requires auth", s == 401, f"status={s}")
+    s, _ = req("GET", "/api/admin/users")
+    check("ro: /api/admin/users requires auth", s in (401, 403), f"status={s}")
+    finish()
+
+if "--selfclean" in sys.argv:
+    # Write-path smoke that fully cleans up via DELETE /api/account —
+    # safe against production (brief write window, then self-deletes):
+    #   TEST_API_BASE=https://smellis-api.fly.dev python3 test_api.py --selfclean
+    import uuid
+    email = f"smoke-{uuid.uuid4().hex[:12]}@qareal.dev"
+    pw = "smoketest-pass-123"
+
+    s, b = req("POST", "/auth/signup", {"name": "Smoke", "email": email, "password": pw})
+    check("sc: signup", s == 200 and bool(b.get("token")), f"status={s}")
+    tok = b.get("token", "")
+
+    s, b = req("GET", "/me", token=tok)
+    check("sc: /me returns the account", s == 200 and (b.get("email") or "").lower() == email, f"status={s}")
+
+    s, b = req("GET", "/api/data", token=tok)
+    check("sc: initial data fetch", s == 200, f"status={s}")
+
+    blob = {"name": "Smoke", "unit": "lb", "themeMode": "dark", "logs": []}
+    s, _ = req("PUT", "/api/data", {"data": blob}, tok)
+    check("sc: data write", s == 200, f"status={s}")
+    s, b = req("GET", "/api/data", token=tok)
+    check("sc: data round-trips", s == 200 and b.get("name") == "Smoke", f"status={s}")
+
+    s, _ = req("DELETE", "/api/account", token=tok)
+    check("sc: self-delete", s in (200, 204), f"status={s}")
+    s, _ = req("GET", "/me", token=tok)
+    check("sc: token dead after delete", s == 401, f"status={s}")
+    s, _ = req("POST", "/auth/login", {"email": email, "password": pw})
+    check("sc: login fails after delete", s == 401, f"status={s}")
+    finish()
+
+
 # ---------- health / meta / catalog ----------
 s, b = req("GET", "/health")
 check("health", s == 200 and b.get("ok") is True)
@@ -268,8 +335,4 @@ s, _ = req("POST", "/auth/reset-password", {"token": raw2, "new_password": "rese
 check("expired reset token -> 400", s == 400, f"status={s}")
 
 # ---------- summary ----------
-fails = [r for r in results if not r[1]]
-print(f"\n{'='*50}\n{len(results)-len(fails)}/{len(results)} passed")
-for name, _, detail in fails:
-    print(f"  FAIL {name} {detail}")
-sys.exit(1 if fails else 0)
+finish()

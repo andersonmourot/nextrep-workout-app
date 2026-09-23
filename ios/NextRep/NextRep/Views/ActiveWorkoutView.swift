@@ -741,6 +741,7 @@ private struct SupersetSetRow: View {
                     .font(.title3)
             }
             .foregroundStyle(set.completed ? accent : Theme.textDim)
+            .accessibilityLabel(set.completed ? "Superset \(label) done" : "Complete superset \(label)")
         }
         .padding(10)
         .background(set.completed ? accent.opacity(0.14) : Theme.surface2.opacity(0.65))
@@ -792,6 +793,7 @@ private struct WorkoutSetRow: View {
                     .frame(width: 44, height: 34)
             }
             .foregroundStyle(set.completed ? accent : Theme.textDim)
+            .accessibilityLabel(set.completed ? "Set \(index + 1) done" : "Complete set \(index + 1)")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

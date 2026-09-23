@@ -397,6 +397,7 @@ private struct ProgramListRow: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("program-card-\(program.id)")
 
             if isManaging {
                 Button {

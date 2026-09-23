@@ -11,6 +11,10 @@ final class TimerTonePlayer: NSObject, AVAudioPlayerDelegate {
     static let shared = TimerTonePlayer()
 
     private var player: AVAudioPlayer?
+    /// When a scheduled rest-completion tone fired — used so the foreground
+    /// watcher doesn't double-play over it.
+    private(set) var lastPlayedCompletionAt: Double?
+    private var scheduledFor: Double?
 
     func play(soundId: String) {
         guard let wav = Self.tone(for: soundId) else {
@@ -39,7 +43,54 @@ final class TimerTonePlayer: NSObject, AVAudioPlayerDelegate {
         player?.play()
     }
 
+    /// Schedules the rest-complete tone on the device audio clock. With the
+    /// `audio` background mode the player fires even while the app is
+    /// suspended or the phone is on silent — unlike local notifications,
+    /// whose sound honors the Ring/Silent switch and Focus filters.
+    /// The session is armed with `.mixWithOthers` while waiting so the user's
+    /// music is not ducked for the whole rest period.
+    func scheduleCompletion(soundId: String, restEndsAt: Double) {
+        cancelScheduled()
+        let delay = (restEndsAt / 1000) - Date().timeIntervalSince1970
+        guard delay > 0.5, let wav = Self.tone(for: soundId) else {
+            return
+        }
+
+        #if os(iOS)
+        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+        try? AVAudioSession.sharedInstance().setActive(true, options: [])
+        #endif
+        do {
+            let scheduled = try AVAudioPlayer(data: wav)
+            scheduled.delegate = self
+            scheduled.prepareToPlay()
+            scheduled.play(atTime: scheduled.deviceCurrentTime + delay)
+            player = scheduled
+            scheduledFor = restEndsAt
+        } catch {
+            deactivateSession()
+        }
+    }
+
+    func cancelScheduled() {
+        guard scheduledFor != nil else { return }
+        player?.stop()
+        scheduledFor = nil
+        deactivateSession()
+    }
+
+    /// True when a scheduled tone already fired for `restEndsAt` — lets the
+    /// foreground watcher skip a duplicate play.
+    func didPlayCompletion(forRestEndsAt restEndsAt: Double) -> Bool {
+        guard let lastPlayedCompletionAt else { return false }
+        return abs(lastPlayedCompletionAt - restEndsAt) < 2000
+    }
+
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        if let scheduledFor {
+            lastPlayedCompletionAt = scheduledFor
+            self.scheduledFor = nil
+        }
         deactivateSession()
     }
 

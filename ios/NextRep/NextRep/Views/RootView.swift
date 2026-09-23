@@ -169,7 +169,8 @@ struct AppShellView: View {
             try? await Task.sleep(nanoseconds: 500_000_000)
         }
         guard !Task.isCancelled,
-              store.activeWorkout?.restEndsAt == endsAt else {
+              store.activeWorkout?.restEndsAt == endsAt,
+              !TimerTonePlayer.shared.didPlayCompletion(forRestEndsAt: endsAt) else {
             return
         }
         playNextRepTimerSound(store.appData.timerSound)

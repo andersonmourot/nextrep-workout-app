@@ -242,7 +242,7 @@ final class AppStore {
 
     func logout() {
         syncTask?.cancel()
-        restNotifier.cancelRestComplete()
+        cancelRestAlert()
         try? keychain.deleteToken()
         sessionToken = nil
         user = nil
@@ -1144,9 +1144,9 @@ final class AppStore {
         if completed && restSec > 0 {
             active.restEndsAt = Date().timeIntervalSince1970 * 1000 + Double(restSec * 1000)
             active.restTotal = restSec
-            scheduleRestNotification(seconds: restSec, exerciseName: exerciseName)
+            scheduleRestAlert(seconds: restSec, restEndsAt: active.restEndsAt ?? 0, exerciseName: exerciseName)
         } else if !completed {
-            restNotifier.cancelRestComplete()
+            cancelRestAlert()
         }
 
         activeWorkout = active
@@ -1162,7 +1162,7 @@ final class AppStore {
         active.restTotal = seconds
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         activeWorkout = active
-        scheduleRestNotification(seconds: seconds, exerciseName: exerciseName)
+        scheduleRestAlert(seconds: seconds, restEndsAt: active.restEndsAt ?? 0, exerciseName: exerciseName)
         scheduleSync()
     }
 
@@ -1175,7 +1175,7 @@ final class AppStore {
         active.restTotal = 0
         active.lastActivityAt = Date().timeIntervalSince1970 * 1000
         activeWorkout = active
-        restNotifier.cancelRestComplete()
+        cancelRestAlert()
         scheduleSync()
     }
 
@@ -1195,9 +1195,9 @@ final class AppStore {
 
         let remainingSeconds = Int(((active.restEndsAt ?? now) - now) / 1000)
         if remainingSeconds > 0 {
-            scheduleRestNotification(seconds: remainingSeconds, exerciseName: nil)
+            scheduleRestAlert(seconds: remainingSeconds, restEndsAt: active.restEndsAt ?? now, exerciseName: nil)
         } else {
-            restNotifier.cancelRestComplete()
+            cancelRestAlert()
         }
         scheduleSync()
     }
@@ -1225,7 +1225,7 @@ final class AppStore {
     func endWorkout() {
         activeWorkout = nil
         isWorkoutPresented = false
-        restNotifier.cancelRestComplete()
+        cancelRestAlert()
         scheduleSync()
     }
 
@@ -1313,7 +1313,7 @@ final class AppStore {
         appData.activeProgramId = program.id
         activeWorkout = nil
         addWorkoutLog(log, program: program)
-        restNotifier.cancelRestComplete()
+        cancelRestAlert()
         scheduleSync()
         return log
     }
@@ -1488,10 +1488,20 @@ final class AppStore {
         }
     }
 
-    private func scheduleRestNotification(seconds: Int, exerciseName: String?) {
+    /// Arms both completion paths: the local notification (lock-screen banner
+    /// + sound when notification settings allow) and a scheduled AVAudioPlayer
+    /// tone, which still fires while suspended or on silent via the audio
+    /// background mode.
+    private func scheduleRestAlert(seconds: Int, restEndsAt: Double, exerciseName: String?) {
+        TimerTonePlayer.shared.scheduleCompletion(soundId: appData.timerSound, restEndsAt: restEndsAt)
         Task {
             await restNotifier.scheduleRestComplete(after: seconds, exerciseName: exerciseName)
         }
+    }
+
+    private func cancelRestAlert() {
+        TimerTonePlayer.shared.cancelScheduled()
+        restNotifier.cancelRestComplete()
     }
 
     private func refreshSharedContent(token: String) async {

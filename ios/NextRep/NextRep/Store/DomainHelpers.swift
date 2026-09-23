@@ -297,3 +297,15 @@ private enum DomainDateFormatter {
         return formatter
     }()
 }
+
+/// Numeric dotted-version compare: "1.2" < "1.10.0", missing components = 0.
+func domainVersionIsOlder(_ a: String, than b: String) -> Bool {
+    let pa = a.split(separator: ".").map { Int($0) ?? 0 }
+    let pb = b.split(separator: ".").map { Int($0) ?? 0 }
+    for i in 0..<max(pa.count, pb.count) {
+        let x = i < pa.count ? pa[i] : 0
+        let y = i < pb.count ? pb[i] : 0
+        if x != y { return x < y }
+    }
+    return false
+}

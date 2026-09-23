@@ -17,6 +17,14 @@ enum APIError: LocalizedError {
     }
 }
 
+struct AppMeta: Codable, Equatable {
+    var minSupportedIOSVersion: String?
+
+    enum CodingKeys: String, CodingKey {
+        case minSupportedIOSVersion = "min_supported_ios_version"
+    }
+}
+
 struct APIMessageResponse: Codable, Equatable {
     var ok: Bool?
 }
@@ -123,6 +131,10 @@ final class APIClient {
 
     func catalog() async throws -> Catalog {
         try await request("/api/catalog")
+    }
+
+    func meta() async throws -> AppMeta {
+        try await request("/api/meta")
     }
 
     func adminUsers(token: String) async throws -> [AdminUser] {

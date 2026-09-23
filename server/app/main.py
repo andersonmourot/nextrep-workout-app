@@ -560,6 +560,19 @@ def health():
     return {"ok": True}
 
 
+# Minimum iOS version allowed to run. Empty/unset disables the gate entirely —
+# raise it via `flyctl secrets set MIN_IOS_VERSION=x.y` (no deploy needed) only
+# when a release genuinely breaks older builds. Clients fail open on errors.
+MIN_IOS_VERSION = os.environ.get("MIN_IOS_VERSION", "").strip()
+
+
+@app.get("/api/meta")
+def app_meta():
+    return {
+        "min_supported_ios_version": MIN_IOS_VERSION or None,
+    }
+
+
 # Built-in program/exercise catalog, shared by every client (web + native).
 # The bundled copy (generated from the app's seed data, baked into the image) is
 # the fallback. Admin edits are written to a writable copy on the data volume so

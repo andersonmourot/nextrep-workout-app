@@ -5,7 +5,9 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if store.user == nil {
+            if store.updateRequired {
+                UpdateRequiredView(storeURL: store.appStoreURL)
+            } else if store.user == nil {
                 NavigationStack {
                     AuthView()
                 }
@@ -16,6 +18,9 @@ struct RootView: View {
         }
         .task {
             await store.restoreSession()
+        }
+        .task {
+            await store.checkForUpdates()
         }
         .accentColor(Color(hex: store.appData.themeColor))
         .tint(Color(hex: store.appData.themeColor))
@@ -107,6 +112,16 @@ struct AppShellView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 58)
             }
+
+            if let version = store.updateAvailableVersion {
+                UpdateNudgeBanner(
+                    version: version,
+                    storeURL: store.appStoreURL,
+                    onDismiss: { store.dismissUpdateNudge() }
+                )
+                .padding(.horizontal, 16)
+                .padding(.bottom, activeWorkoutContext != nil ? 132 : 58)
+            }
         }
         .fullScreenCover(isPresented: Binding(
             get: { store.isWorkoutPresented },
@@ -128,6 +143,9 @@ struct AppShellView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 store.finishStaleWorkoutIfNeeded()
+                Task {
+                    await store.checkForUpdates()
+                }
             } else if phase == .background {
                 Task {
                     await store.syncNow()
@@ -185,6 +203,46 @@ struct AppShellView: View {
     }
 }
 
+/// Full-screen gate shown when the backend reports this build is below the
+/// minimum supported version. No way past — the only action is the App Store.
+private struct UpdateRequiredView: View {
+    let storeURL: URL?
+
+    var body: some View {
+        ZStack {
+            Theme.bg.ignoresSafeArea()
+
+            VStack(spacing: 16) {
+                Image(systemName: "arrow.down.circle.fill")
+                    .font(.system(size: 56, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+
+                Text("Update required")
+                    .font(.title.weight(.bold))
+                    .foregroundStyle(Theme.text)
+
+                Text("This version of NextRep is no longer supported. Updating takes a moment and keeps all your data.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textDim)
+                    .multilineTextAlignment(.center)
+
+                Button {
+                    if let storeURL {
+                        UIApplication.shared.open(storeURL)
+                    }
+                } label: {
+                    Text("Update on the App Store")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PrimaryButtonStyle())
+                .disabled(storeURL == nil)
+            }
+            .padding(32)
+            .frame(maxWidth: 400)
+        }
+    }
+}
+
 private extension View {
     func keyboardDismissToolbar() -> some View {
         toolbar {
@@ -239,6 +297,63 @@ private struct ResumeWorkoutBanner: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Dismissible "new version available" pill — tapping Update opens the App
+/// Store listing; dismissing snoozes it until a newer version ships.
+private struct UpdateNudgeBanner: View {
+    let version: String
+    let storeURL: URL?
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.app.fill")
+                .font(.title3)
+                .foregroundStyle(Theme.accentLight)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("NextRep \(version) available")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(Theme.text)
+                Text("Update for the latest improvements")
+                    .font(.caption)
+                    .foregroundStyle(Theme.textDim)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            Button("Update") {
+                if let storeURL {
+                    UIApplication.shared.open(storeURL)
+                }
+            }
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Theme.accent)
+            .clipShape(Capsule())
+            .disabled(storeURL == nil)
+
+            Button {
+                onDismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(Theme.textFaint)
+            }
+            .accessibilityLabel("Dismiss update notice")
+        }
+        .padding(14)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Theme.accent.opacity(0.35), lineWidth: 1)
+        }
     }
 }
 

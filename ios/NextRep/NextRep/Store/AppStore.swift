@@ -23,13 +23,21 @@ final class AppStore {
     var workoutPresentationDayId: String?
     var workoutPresentationWeek: Int?
 
+    // Version gating — `updateRequired` blocks the whole app; the soft nudge
+    // (`updateAvailableVersion`) is a dismissible banner.
+    var updateRequired = false
+    var updateAvailableVersion: String?
+    var appStoreURL: URL?
+
     private let apiClient: APIClient
     private let keychain: KeychainStore
     @ObservationIgnored private var restNotifier: RestTimerNotifier
     private var sessionToken: String?
     private var hasAttemptedRestore = false
     @ObservationIgnored private var syncTask: Task<Void, Never>?
+    @ObservationIgnored private var lastUpdateCheckAt: Date?
     private static let trashTTLMilliseconds: Double = 7 * 24 * 60 * 60 * 1000
+    private static let dismissedUpdateVersionKey = "nextrep.dismissedUpdateVersion"
     static let staleWorkoutTimeout: Double = 2 * 60 * 60 * 1000
 
     init(
@@ -136,6 +144,66 @@ final class AppStore {
             user = nil
             authError = error.localizedDescription
         }
+    }
+
+    /// Checks the backend minimum-version gate and the App Store for a newer
+    /// build. Fails open — any fetch error leaves the app usable. Called on
+    /// launch and when the app returns to the foreground (10-min throttle).
+    func checkForUpdates() async {
+        if let lastUpdateCheckAt, Date().timeIntervalSince(lastUpdateCheckAt) < 600 {
+            return
+        }
+        lastUpdateCheckAt = Date()
+
+        let current = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+
+        if !updateRequired,
+           let meta = try? await apiClient.meta(),
+           let minimum = meta.minSupportedIOSVersion,
+           !minimum.isEmpty,
+           domainVersionIsOlder(current, than: minimum) {
+            updateRequired = true
+        }
+
+        if let info = await fetchAppStoreInfo() {
+            appStoreURL = info.url
+            if domainVersionIsOlder(current, than: info.version),
+               info.version != UserDefaults.standard.string(forKey: Self.dismissedUpdateVersionKey) {
+                updateAvailableVersion = info.version
+            }
+        }
+    }
+
+    func dismissUpdateNudge() {
+        if let version = updateAvailableVersion {
+            UserDefaults.standard.set(version, forKey: Self.dismissedUpdateVersionKey)
+        }
+        updateAvailableVersion = nil
+    }
+
+    /// Resolves the live App Store listing for this bundle id — gives both the
+    /// latest published version and the canonical store URL, so we never have
+    /// to hardcode the App Store ID.
+    private func fetchAppStoreInfo() async -> (version: String, url: URL)? {
+        struct Lookup: Decodable {
+            struct Result: Decodable {
+                let version: String?
+                let trackViewUrl: String?
+            }
+            let results: [Result]
+        }
+
+        guard let bundleId = Bundle.main.bundleIdentifier,
+              let url = URL(string: "https://itunes.apple.com/lookup?bundleId=\(bundleId)&country=us"),
+              let (data, _) = try? await URLSession.shared.data(from: url),
+              let lookup = try? JSONDecoder().decode(Lookup.self, from: data),
+              let result = lookup.results.first,
+              let version = result.version,
+              let trackUrl = result.trackViewUrl,
+              let storeUrl = URL(string: trackUrl) else {
+            return nil
+        }
+        return (version, storeUrl)
     }
 
     func login(email: String, password: String) async {

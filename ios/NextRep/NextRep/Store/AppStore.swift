@@ -1146,6 +1146,8 @@ final class AppStore {
             active.restTotal = restSec
             scheduleRestAlert(seconds: restSec, restEndsAt: active.restEndsAt ?? 0, exerciseName: exerciseName)
         } else if !completed {
+            active.restEndsAt = nil
+            active.restTotal = 0
             cancelRestAlert()
         }
 

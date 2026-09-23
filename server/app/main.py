@@ -359,7 +359,7 @@ def _enrich(program: dict, sp: SharedProgram) -> dict:
     return out
 
 
-def _owner_custom_ex_names(owner: User) -> dict:
+def _owner_custom_ex_names(db: Session, owner: User) -> dict:
     """Map {exercise_id: name} for ALL of the owner's custom exercises (shared or
     not). Used to make shared programs self-contained so a follower who lacks the
     creator's custom-exercise library still sees the right name."""
@@ -373,6 +373,16 @@ def _owner_custom_ex_names(owner: User) -> dict:
         for e in exs:
             if isinstance(e, dict) and e.get("id") and e.get("name"):
                 out[e["id"]] = e["name"]
+    # The canonical store is authoritative for shared exercises — it updates
+    # immediately on edit, while the owner's blob lags until their next
+    # /api/data sync, so it overrides any stale blob name.
+    for se in db.query(SharedExercise).filter(SharedExercise.owner_id == owner.id).all():
+        try:
+            name = (json.loads(se.data) or {}).get("name")
+        except json.JSONDecodeError:
+            name = None
+        if name:
+            out[se.id] = name
     return out
 
 
@@ -412,7 +422,7 @@ def _program_out(db: Session, sp: SharedProgram) -> dict:
     program = json.loads(sp.data)
     owner = db.get(User, sp.owner_id)
     if owner is not None:
-        _fill_exercise_names(program, _owner_custom_ex_names(owner))
+        _fill_exercise_names(program, _owner_custom_ex_names(db, owner))
     return program
 
 

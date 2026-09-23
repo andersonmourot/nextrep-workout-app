@@ -10,6 +10,7 @@ struct ActiveWorkoutView: View {
     @State private var namesById: [String: String] = [:]
     @State private var hintsById: [String: String] = [:]
     @State private var swapTargetIndex: Int?
+    @State private var swapQuery = ""
     let program: Program
     let day: ProgramDay
     var week: Int = 1
@@ -118,26 +119,6 @@ struct ActiveWorkoutView: View {
                 }
             }
         }
-        .sheet(isPresented: Binding(
-            get: { swapTargetIndex != nil },
-            set: { if !$0 { swapTargetIndex = nil } }
-        )) {
-            if let index = swapTargetIndex {
-                ExerciseSwapSheet(
-                    accent: accent,
-                    currentName: store.activeWorkout.map {
-                        exerciseName(at: index, active: $0, lookup: namesById)
-                    } ?? ""
-                ) { newId in
-                    store.swapActiveExercise(
-                        exerciseIndex: index,
-                        newExerciseId: newId,
-                        fallbackIds: day.exercises.map(\.exerciseId)
-                    )
-                    swapTargetIndex = nil
-                }
-            }
-        }
     }
 
     private var accent: Color {
@@ -235,7 +216,9 @@ struct ActiveWorkoutView: View {
                         previousHint: { previousHintsById[resolvedExerciseId(at: $0, active: active)] },
                         cueText: { cueBinding(for: resolvedExerciseId(at: $0, active: active)) },
                         noteText: { noteBinding(for: resolvedExerciseId(at: $0, active: active)) },
-                        onSwap: { swapTargetIndex = $0 },
+                        onSwap: { swapTargetIndex = $0; swapQuery = "" },
+                        swapIndex: swapTargetIndex,
+                        swapEditor: { AnyView(swapEditor(index: $0, active: active, namesById: namesById)) },
                         onWeightSet: { exerciseIndex, setIndex, weight in
                             store.updateSet(exerciseIndex: exerciseIndex, setIndex: setIndex, weight: weight)
                         },
@@ -282,7 +265,10 @@ struct ActiveWorkoutView: View {
                                 exerciseName: exerciseName(at: exerciseIndex, active: active, lookup: namesById)
                             )
                         },
-                        onSwap: { swapTargetIndex = exerciseIndex }
+                        onSwap: { swapTargetIndex = exerciseIndex; swapQuery = "" },
+                        swapEditor: swapTargetIndex == exerciseIndex
+                            ? AnyView(swapEditor(index: exerciseIndex, active: active, namesById: namesById))
+                            : nil
                     )
                 }
             }
@@ -348,6 +334,39 @@ struct ActiveWorkoutView: View {
         return (lookup ?? namesById)[resolvedId] ?? resolvedId
     }
 
+    /// Inline free-text swap editor shown in place of an exercise header while
+    /// that slot is in swap mode. Matching a suggestion links the real
+    /// exercise; unmatched text is kept as a custom entry for today.
+    private func swapEditor(index: Int, active: ActiveWorkout, namesById: [String: String]) -> some View {
+        InlineSwapEditor(
+            accent: accent,
+            currentName: exerciseName(at: index, active: active, lookup: namesById),
+            query: $swapQuery,
+            onPick: { exercise in
+                store.swapActiveExercise(
+                    exerciseIndex: index,
+                    newExerciseId: exercise.id,
+                    fallbackIds: day.exercises.map(\.exerciseId)
+                )
+                swapTargetIndex = nil
+                swapQuery = ""
+            },
+            onUseFreeText: {
+                store.swapActiveExerciseFreeText(
+                    exerciseIndex: index,
+                    text: swapQuery,
+                    fallbackIds: day.exercises.map(\.exerciseId)
+                )
+                swapTargetIndex = nil
+                swapQuery = ""
+            },
+            onCancel: {
+                swapTargetIndex = nil
+                swapQuery = ""
+            }
+        )
+    }
+
     private func restSecondsAfterSet(exerciseIndex: Int, planned: PlannedExercise) -> Int {
         guard let groupId = planned.groupId, !groupId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return planned.restSec
@@ -405,10 +424,14 @@ private struct WorkoutExerciseCard: View {
     let onRepsSet: (Int, Int) -> Void
     let onToggleCompleted: (Int, Bool) -> Void
     let onSwap: () -> Void
+    let swapEditor: AnyView?
     @State private var showingNotes = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if let swapEditor {
+                swapEditor
+            } else {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(name)
@@ -476,6 +499,7 @@ private struct WorkoutExerciseCard: View {
                 }
                 .buttonStyle(.plain)
             }
+            }
 
             if showingNotes {
                 VStack(alignment: .leading, spacing: 10) {
@@ -530,6 +554,8 @@ private struct SupersetWorkoutCard: View {
     let cueText: (Int) -> Binding<String>
     let noteText: (Int) -> Binding<String>
     let onSwap: (Int) -> Void
+    let swapIndex: Int?
+    let swapEditor: (Int) -> AnyView
     let onWeightSet: (Int, Int, Double) -> Void
     let onRepsSet: (Int, Int, Int) -> Void
     let onToggleCompleted: (Int, Int, Bool) -> Void
@@ -609,6 +635,9 @@ private struct SupersetWorkoutCard: View {
     private var legend: some View {
         VStack(spacing: 8) {
             ForEach(Array(memberIndices.enumerated()), id: \.offset) { memberOffset, exerciseIndex in
+                if swapIndex == exerciseIndex {
+                    swapEditor(exerciseIndex)
+                } else {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 10) {
                         Text("\(group.label)\(memberOffset + 1)")
@@ -667,6 +696,7 @@ private struct SupersetWorkoutCard: View {
                 .padding(10)
                 .background(Theme.surface2.opacity(0.7))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
             }
         }
     }
@@ -965,77 +995,119 @@ private func formatWeight(_ weight: Double) -> String {
     return String(format: "%.1f", weight)
 }
 
-/// Picker for swapping the exercise in one slot of the active session.
-/// The choice only touches `activeWorkout.exerciseIds` — the program
+/// Inline free-text swap editor shown in place of an exercise header while
+/// that slot is in swap mode. Picking a suggestion links the real exercise;
+/// unmatched text is kept as a custom entry for today only — the program
 /// template and future days are never modified.
-private struct ExerciseSwapSheet: View {
+private struct InlineSwapEditor: View {
     @Environment(AppStore.self) private var store
-    @Environment(\.dismiss) private var dismiss
     let accent: Color
     let currentName: String
-    let onSelect: (String) -> Void
-    @State private var query = ""
+    @Binding var query: String
+    let onPick: (Exercise) -> Void
+    let onUseFreeText: () -> Void
+    let onCancel: () -> Void
+    @FocusState private var focused: Bool
 
-    private var filtered: [Exercise] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return store.allExercises }
-        return store.allExercises.filter { exercise in
-            exercise.name.localizedCaseInsensitiveContains(trimmed) ||
-                exercise.primaryMuscle.localizedCaseInsensitiveContains(trimmed) ||
-                exercise.equipment.localizedCaseInsensitiveContains(trimmed)
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var suggestions: [Exercise] {
+        guard !trimmedQuery.isEmpty else { return [] }
+        return Array(store.allExercises.filter {
+            $0.name.localizedCaseInsensitiveContains(trimmedQuery) ||
+                $0.primaryMuscle.localizedCaseInsensitiveContains(trimmedQuery) ||
+                $0.equipment.localizedCaseInsensitiveContains(trimmedQuery)
+        }.prefix(4))
+    }
+
+    private var hasExactMatch: Bool {
+        store.allExercises.contains {
+            $0.name.localizedCaseInsensitiveCompare(trimmedQuery) == .orderedSame
         }
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 8) {
-                    Text("Replacing \(currentName). This changes the exercise for today's workout only — the program template and other days stay unchanged.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.textDim)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                TextField("Exercise for today", text: $query)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.text)
+                    .tint(accent)
+                    .textInputAutocapitalization(.words)
+                    .autocorrectionDisabled()
+                    .focused($focused)
+                    .onSubmit { onUseFreeText() }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Theme.inputBg)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(accent.opacity(0.5), lineWidth: 1)
+                    }
 
-                    ForEach(filtered) { exercise in
+                Button(action: onCancel) {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Theme.textDim)
+                        .frame(width: 30, height: 30)
+                        .background(Theme.surface2)
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Cancel swap")
+            }
+
+            if trimmedQuery.isEmpty {
+                Text("Replacing \(currentName) — type a name, pick a match, or keep your own text.")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.textFaint)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(suggestions) { exercise in
                         Button {
-                            onSelect(exercise.id)
-                            dismiss()
+                            onPick(exercise)
                         } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(exercise.name)
-                                        .font(.subheadline.weight(.semibold))
-                                        .foregroundStyle(Theme.text)
-                                    Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
-                                        .font(.caption)
-                                        .foregroundStyle(Theme.textDim)
-                                }
-                                Spacer()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(exercise.name)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(Theme.text)
+                                Text("\(exercise.primaryMuscle) · \(exercise.equipment)")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.textDim)
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 11)
-                            .background(Theme.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
                         }
                         .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 16)
-                }
-                .padding(.bottom, 24)
-            }
-            .screenBackground()
-            .searchable(text: $query, prompt: "Search exercises")
-            .navigationTitle("Swap Exercise")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Cancel") {
-                        dismiss()
+
+                    if !hasExactMatch {
+                        Button(action: onUseFreeText) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Use \u{201C}\(trimmedQuery)\u{201D}")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(accent)
+                                Text("Not in library — save as today's exercise")
+                                    .font(.caption2)
+                                    .foregroundStyle(Theme.textDim)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 7)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .foregroundStyle(accent)
                 }
+                .background(Theme.surface2)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
-        .presentationDetents([.medium, .large])
+        .onAppear {
+            focused = true
+        }
     }
 }

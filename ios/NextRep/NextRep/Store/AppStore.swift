@@ -1202,6 +1202,42 @@ final class AppStore {
         scheduleSync()
     }
 
+    /// Free-text swap: an exact catalog/custom name links to that exercise;
+    /// anything else is stored as a lightweight custom exercise so the name
+    /// still appears in the log, history, and carryover.
+    func swapActiveExerciseFreeText(exerciseIndex: Int, text: String, fallbackIds: [String]) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        if let match = allExercises.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(trimmed) == .orderedSame
+        }) {
+            swapActiveExercise(exerciseIndex: exerciseIndex, newExerciseId: match.id, fallbackIds: fallbackIds)
+            return
+        }
+
+        // upsertCustomExercise (not saveCustomExercise) — a session swap must
+        // never relink matching names inside program templates.
+        let id = "custom-swap-\(activeWorkout?.dayId ?? "day")-\(exerciseIndex)"
+        upsertCustomExercise(Exercise(
+            id: id,
+            name: trimmed,
+            primaryMuscle: "Custom",
+            secondaryMuscles: [],
+            equipment: "Custom",
+            difficulty: "Beginner",
+            instructions: [],
+            tips: [],
+            photos: nil,
+            shared: false,
+            ownerName: nil,
+            ownerId: nil,
+            collaborative: false,
+            version: Int(Date().timeIntervalSince1970 * 1000)
+        ))
+        swapActiveExercise(exerciseIndex: exerciseIndex, newExerciseId: id, fallbackIds: fallbackIds)
+    }
+
     /// Swaps the exercise at `exerciseIndex` for this session only — the
     /// program template and other days are untouched. The workout log records
     /// the exercise actually performed.
